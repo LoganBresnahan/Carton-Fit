@@ -86,6 +86,13 @@ a geometry/layout oracle (backend-independent), not a Windows visual-fidelity ch
 and deliberately NOT a pixel-diff golden (flaky across backends). Slots into `/deploy`'s
 Playwright smoke as an agent-visible gate before dogfooding.
 
+**Reliable-capture finding (for the deploy gate + item 6):** `webContents.capturePage()`
+on an *offscreen* (`show:false`) window returns stale/arbitrary frames under SwiftShader
+— it caught idle/parsing frames while the DOM was already `done`. Use CDP
+`Page.captureScreenshot({fromSurface:true})` against a **shown** (`show:true`) window
+instead; that composites a fresh frame reliably. The DOM assertions (status, parts,
+counts) were correct throughout — only `capturePage` lied.
+
 ## Critical path
 
 `orbitcontrols-adapter` → `viewport-lifecycle-component` → `store-subscription-scene-swap` → `explicit-geometry-disposal`

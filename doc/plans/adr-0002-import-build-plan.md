@@ -82,16 +82,31 @@
       built in the pipeline, shown in the results panel ("18 parts · 5,040 tris ·
       481 ms").*
 
-### 5. Hardening: STL, errors, golden gate — **opus batch**
-- [ ] `stl-loader-path` · medium — extension dispatch + STLLoader; normalize STL's
-      single non-indexed mesh into the ImportedPart shape
-- [ ] `parse-failure-handling` · medium — error variant in the message union, surfaced
-      via DropZone's error slot; land before demoing real-world STEP files
-- [ ] `golden-step-parse-test` · medium · **verify** — `samples/` fixtures (simple
+### 5. Hardening: STL, errors, golden gate — **opus batch**  ✓ (commit)
+- [x] `stl-loader-path` · medium — extension dispatch + STLLoader; normalize STL's
+      single non-indexed mesh into the ImportedPart shape.
+      *Done: `workers/adapters/stlLoader.ts` (jsm adapter, arrived with its consumer as
+      planned) + pure `workers/stlToPart.ts` (`bufferGeometryToPart`, sequential
+      indices, unit-tested). Worker renamed `occt/step-import.worker.ts` →
+      `workers/import.worker.ts` (no longer occt-only; matches the shipshape
+      convention path) with a kind-dispatched STL branch. Render screenshot-verified:
+      the cube-10x10.stl renders solid/lit/framed.*
+- [x] `parse-failure-handling` · medium — error variant in the message union, surfaced
+      via DropZone's error slot; land before demoing real-world STEP files.
+      *Done (largely built incrementally phases 1/4; phase 5 confirmed + hardened):
+      ImportError variant → pipeline `sink.fail` → `ImportResult` error slot. Worker
+      wraps occt/STL in try/catch; !success and empty-mesh cases mapped. Verified: a
+      garbage .stp → status `failed`, "OpenCascade could not read this STEP file", no
+      crash. (Parse errors surface in the ImportResult panel co-located with
+      file/status; DropZone's own slot handles pre-dispatch extension rejection.)*
+- [x] `golden-step-parse-test` · medium · **verify** — `samples/` fixtures (simple
       part + nested assembly) with **hand-computed** volume/bbox/count goldens; verify
-      guards against tautological goldens. Note: occt WASM under Node/vitest is a
-      *different* asset-path problem than the browser worker — budget for it, don't
-      let it block earlier phases. Fixture sourcing can start early in parallel.
+      guards against tautological goldens.
+      *Done: `tests/golden-parse.test.ts` runs occt + STLLoader under vitest (the
+      feared Node asset problem doesn't exist — resolved phase 3). Goldens are
+      hand-computed, not snapshots: cube = 10³ = 1000 mm³ / 10×10×10 / closed (both
+      .stp and .stl); AS1 = 18 solids by part census + a plate-footprint bbox floor.
+      Anti-tautology guard satisfied — a wrong parser fails these.*
       *(Phase 3 resolved both carve-outs: occt runs under vitest as-is — see
       tests/assembly-import.test.ts — and samples/ now exists with SOURCES.md.
       Remaining here: the simple-part fixture + hand-computed goldens.)*

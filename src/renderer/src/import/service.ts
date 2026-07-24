@@ -11,13 +11,13 @@ import { storeImportSink } from '../store'
 // drop queues behind an in-flight parse rather than pre-empting it. Acceptable
 // for v1 (parses are sub-second); revisit alongside ADR-0002's import-time trigger.
 
-function createStepWorker(): Worker {
-  return new Worker(new URL('../workers/occt/step-import.worker.ts', import.meta.url), {
+function createImportWorker(): Worker {
+  return new Worker(new URL('../workers/import.worker.ts', import.meta.url), {
     type: 'module'
   })
 }
 
-const pipeline = createImportPipeline(createStepWorker(), storeImportSink())
+const pipeline = createImportPipeline(createImportWorker(), storeImportSink())
 
 /** Kick off an import of a picked/dropped file. Fire-and-forget: outcomes land
  *  in the store via the sink. */

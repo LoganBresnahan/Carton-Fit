@@ -9,8 +9,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 - [x] 0. Repo setup — vision doc, ADRs 0001–0004, CLAUDE.md, skills, this roadmap
 - [x] 1. Scaffold — electron-vite (React + TS) app boots; drag-drop reads a file and
       shows its name/size; `npm run dev` / `npm test` / typecheck all work
-- [ ] 2. Import + view — STEP parsing via occt-import-js in a worker; parts listed;
+- [x] 2. Import + view — STEP parsing via occt-import-js in a worker; parts listed;
       parts rendered in three.js with orbit controls; STL path too
+      (ADR-0002 import pipeline + ADR-0008 imperative-three viewport)
 - [ ] 3. Inputs panel — box dims (inner, or outer + wall thickness), mm ⇄ in toggle,
       clearances, max weight (default 35 lb), part weight (direct or density × volume),
       mode + quality selectors; values persisted (localStorage)
