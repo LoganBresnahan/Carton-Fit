@@ -2,6 +2,10 @@
 // runs in workers and vitest. Inputs are protocol geometry (flat xyz triplets +
 // triangle indices) in canonical millimeters.
 
+/** Comparisons against box/weight limits use this explicit epsilon (canonical
+ *  mm/g scale) — never a bare float <= on accumulated sums. */
+export const EPS = 1e-6
+
 export interface Aabb {
   min: [number, number, number]
   max: [number, number, number]
