@@ -42,7 +42,7 @@ const ASSESSMENT_SCHEMA = {
   properties: {
     id: { type: 'string' },
     status: { type: 'string', enum: ['todo', 'partial', 'done'] },
-    effort: { type: 'string', enum: ['low', 'medium', 'high', 'xhigh', 'ultracode'], description: 'reasoning-effort ladder; ultracode is the top rung and implies multi-agent orchestration' },
+    effort: { type: 'string', enum: ['low', 'medium', 'high', 'xhigh', 'max', 'ultracode'], description: 'reasoning-effort ladder; ultracode is the top rung and implies multi-agent orchestration' },
     hardness: { type: 'string', enum: ['mechanical', 'moderate', 'hard-reasoning'] },
     model: { type: 'string', enum: ['fable', 'opus'], description: 'which model should implement this slice — tracks hardness, not size' },
     needs_verification: { type: 'boolean', description: 'an adversarial verify pass is warranted' },
@@ -98,7 +98,7 @@ ALL sibling slices (id — title). In depends_on you MUST use only these exact i
 ${roster}
 
 Assess it using THIS project's effort philosophy — be calibrated, do NOT mark everything high:
-- effort is the ladder low | medium | high | xhigh | ultracode, and it tracks REASONING DIFFICULTY, not size. Mechanical wiring / UI forms / boilerplate / tests = low or medium. Geometry math with sharp edges (minimal OBB search, rotation matrices, clearance edge cases), placement heuristics, or worker/transferable protocol subtleties = high or xhigh (xhigh = the hardest single-context reasoning). 'ultracode' is the TOP rung and means multi-agent orchestration: assign it ONLY when the slice decomposes into parallel work AND is verification-worthy AND a single pass would miss things. Reserve it; most slices never reach it — over-marking is the exact failure this project warns about.
+- effort is the ladder low | medium | high | xhigh | max | ultracode, and it tracks REASONING DIFFICULTY, not size. Mechanical wiring / UI forms / boilerplate / tests = low or medium. Geometry math with sharp edges (minimal OBB search, rotation matrices, clearance edge cases), placement heuristics, or worker/transferable protocol subtleties = high or xhigh. 'max' = the hardest single-context reasoning — one agent, maximum thinking budget, still no orchestration. 'ultracode' is the TOP rung and means multi-agent orchestration: assign it ONLY when the slice decomposes into parallel work AND is verification-worthy AND a single pass would miss things. Reserve the top two rungs; most slices never reach them — over-marking is the exact failure this project warns about.
 - hardness: mechanical | moderate | hard-reasoning.
 - model: which model should IMPLEMENT this slice. 'fable' ONLY for hard-reasoning slices where a plausible-but-wrong implementation is the failure mode (subtle geometry math, placement heuristics, worker/IPC protocol edges); 'opus' for mechanical and moderate slices (wiring, UI forms, boilerplate, straightforward tests) where throughput matters. Track hardness, not size — a big mechanical slice is still 'opus'.
 - needs_verification (an adversarial verify pass) = true ONLY when a subtle bug would be costly and a single pass could plausibly ship it wrong (e.g. off-by-one in the clearance grid formula, a wrong-handed rotation matrix that renders fine but reports the wrong count, binding-constraint misattribution).
