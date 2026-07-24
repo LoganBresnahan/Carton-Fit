@@ -39,10 +39,21 @@
       satisfies the shipshape coverage gate now. `tests/viewport-scene.test.ts` (9
       tests: mesh/buffer adoption, shared material, hand-computed framing distances,
       aspect/fov monotonicity, degenerate fallback).
-### 2. Lifecycle component
-- [ ] `viewport-lifecycle-component` · medium — canvas ref, WebGLRenderer, controls via
+### 2. Lifecycle component  ✓ (commit)
+- [x] `viewport-lifecycle-component` · medium — canvas ref, WebGLRenderer, controls via
       adapter, ResizeObserver, teardown. StrictMode double-mount handled here.
       (`scene-builder-vitest` was pulled forward into phase 1.)
+      *Done: `viewport/Viewport.tsx` — renderer/camera/controls/lights/resize, empty
+      scene (parts arrive in phase 3). Renders on demand (controls 'change' + resize),
+      damping off (would need a per-frame loop on-demand avoids). Teardown disposes
+      controls+renderer and `forceContextLoss()` so StrictMode remount + HMR don't
+      accumulate contexts. Not mounted in App yet (phase 4 `app-viewport-integration`).*
+      **Carry-in for roadmap item 6 (Playwright e2e):** headless WSL2/CI has no GPU —
+      WebGL context creation fails on the llvmpipe path (`BindToCurrentSequence
+      failed`). Launch Electron with `--use-angle=swiftshader
+      --enable-unsafe-swiftshader --ignore-gpu-blocklist` for software WebGL. Verified
+      the component this way via CDP: live context, sized, contextLost=false, zero GL
+      errors across the StrictMode double-mount.
 ### 3. Store wiring + render-on-demand (same component file — one sitting)
 - [ ] `store-subscription-scene-swap` · medium — subscribe to parts slice; swap scene
       content through **one choke point** (the disposal hook lands there next phase)

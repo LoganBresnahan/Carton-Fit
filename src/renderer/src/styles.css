@@ -115,3 +115,18 @@ body {
 .parts-list li:last-child {
   border-bottom: none;
 }
+
+/* 3D viewport (ADR-0008). Fills its flex cell; the canvas fills the container,
+   with sizing driven by the ResizeObserver, not CSS-to-buffer coupling. */
+.viewport {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  position: relative;
+}
+
+.viewport canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
