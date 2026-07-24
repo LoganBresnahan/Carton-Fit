@@ -29,12 +29,23 @@
       not OpenCascade). `collectBuffers` dedupes by buffer identity; unit-tested.*
 
 ### 2. Worker shell + protocol consumers — **opus batch** (mutually independent)
-- [ ] `step-import-worker` · medium — Vite module-worker, lazy memoized occt init,
-      ReadStepFile on received bytes
-- [ ] `three-geometry-and-bboxes` · low — BufferGeometry + per-part AABBs
-- [ ] `mesh-volume` · medium · **verify** — signed-tetrahedron volume in `core/`;
+- [x] `step-import-worker` · medium — Vite module-worker, lazy memoized occt init,
+      ReadStepFile on received bytes.
+      *Done: `step-import.worker.ts` shell over the pure `occt-to-parts.ts` adapter
+      (unit-tested with fabricated occt meshes). Flat mesh mapping — assembly
+      transforms are phase 3. Not yet wired to the UI (phase 4 `drop-to-import-
+      pipeline`); its parts — loadOcct (phase-1 proven), ReadStepFile (proven on
+      real cubes in Node), the adapter (unit-tested) — are each verified.*
+- [x] `three-geometry-and-bboxes` · low — BufferGeometry + per-part AABBs.
+      *Done: pure `core/geometry.ts#computeAabb` (shared with packing) + three.js
+      `viewport/partGeometry.ts` adapter (three is outside core/ for purity).*
+- [x] `mesh-volume` · medium · **verify** — signed-tetrahedron volume in `core/`;
       closed-mesh detection must not falsely flag OCCT's duplicated-vertex meshes as
-      open (would warn on every real STEP part while passing hand-built-mesh tests)
+      open (would warn on every real STEP part while passing hand-built-mesh tests).
+      *Done & VERIFIED: `isClosedMesh` welds by *position* (quantized, extent-
+      relative tolerance), not index. Confirmed against real occt output — Cube
+      10×10 → closed, 1000 mm³; 300mm cube → 27e6 mm³; rounded-cube (84 curved
+      tris) → closed, 946 mm³ — not just hand-built fixtures.*
 
 ### 3. Assembly hierarchy extraction — **fable** · **verify** · high
 - [ ] `assembly-part-extraction` — recursive node traversal composing occt's flat
