@@ -1,5 +1,6 @@
 import DropZone from './components/DropZone'
 import ImportResult from './components/ImportResult'
+import Viewport from './viewport/Viewport'
 
 export default function App() {
   return (
@@ -8,8 +9,11 @@ export default function App() {
         <h1>Packaging Estimator</h1>
       </header>
       <main className="app-main">
-        <DropZone />
-        <ImportResult />
+        <div className="panel">
+          <DropZone />
+          <ImportResult />
+        </div>
+        <Viewport />
       </main>
     </div>
   )

@@ -54,19 +54,37 @@
       --enable-unsafe-swiftshader --ignore-gpu-blocklist` for software WebGL. Verified
       the component this way via CDP: live context, sized, contextLost=false, zero GL
       errors across the StrictMode double-mount.
-### 3. Store wiring + render-on-demand (same component file — one sitting)
-- [ ] `store-subscription-scene-swap` · medium — subscribe to parts slice; swap scene
-      content through **one choke point** (the disposal hook lands there next phase)
-- [ ] `render-on-demand` · low — invalidate() on controls change / swap / resize,
-      coalesced to one rAF; co-designed with the swap (swap calls invalidate)
-### 4. Disposal contract + App mount (keep tight behind phase 3 — swap creates garbage
-   until disposal lands)
-- [ ] `explicit-geometry-disposal` · medium · **disposal unit test required** (see
-      adjudication note) — dispose replaced geometries/materials at the swap choke
-      point + full teardown on unmount; shared-material double-dispose vs leak edge
-- [ ] `app-viewport-integration` · low — mount the island in App.tsx with real canvas
-      dimensions; closes roadmap item 2's view half. Mounted-canvas e2e deliberately
-      deferred to Playwright at roadmap item 6.
+### 3 + 4. Store wiring + render-on-demand + disposal + App mount  ✓ (one commit)
+> Collapsed phases 3 and 4 into one pass: the swap choke point and disposal are the
+> same code region, and mounting in App needs disposal to be re-import-safe — so
+> landing them together eliminates the phase 3→4 buffer-leak window the plan flagged
+> (risk #1) rather than just keeping it tight. Plus the approved graceful WebGL
+> fallback.
+- [x] `store-subscription-scene-swap` · medium — `Viewport.tsx` subscribes to the
+      parts slice (reference compare); `applyParts` swaps content through the one
+      `swapContent` choke point and reframes the camera via `frameBox`/`boundsOfParts`.
+- [x] `render-on-demand` · low — `invalidate()` coalesces swap/controls/resize into a
+      single rAF `renderer.render`.
+- [x] `explicit-geometry-disposal` · medium · **disposal unit test** ✓ — extracted to
+      pure `viewport/sceneContent.ts` (`swapContent`/`disposeObject`): disposes each
+      geometry once and the shared material once (not per-mesh). `tests/scene-content.
+      test.ts` spies dispose across two swaps + swap-to-null (unmount). Adjudication
+      satisfied: the silent-leak failure is now a failing test.
+- [x] `app-viewport-integration` · low — mounted in App.tsx (panel + viewport row
+      layout). Closes roadmap item 2's *view* half (STL still pending, ADR-0002 ph5).
+- [x] **graceful WebGL fallback** (approved add) — renderer creation wrapped; on failure
+      shows a "3D preview unavailable" panel instead of an uncaught three error.
+      Covers broken-driver / RDP / VM machines; normal Windows GPUs never hit it.
+
+**Screenshot verification (new capability):** the packaged app was driven through the
+real picker seam (CDP `setFileInputFiles`) with `samples/as1-oc-214.stp` under
+SwiftShader, the composited frame captured to PNG, and the agent *read the image* —
+confirming the assembly renders solid (correct winding), lit, world-space-positioned
+(rod through brackets, not stacked), and framed. This catches the render-correctness
+bugs DOM assertions can't (inside-out normals, stacked-at-origin, black lighting). It's
+a geometry/layout oracle (backend-independent), not a Windows visual-fidelity check —
+and deliberately NOT a pixel-diff golden (flaky across backends). Slots into `/deploy`'s
+Playwright smoke as an agent-visible gate before dogfooding.
 
 ## Critical path
 
