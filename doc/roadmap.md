@@ -7,7 +7,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 ## Now
 
 - [x] 0. Repo setup — vision doc, ADRs 0001–0004, CLAUDE.md, skills, this roadmap
-- [ ] 1. Scaffold — electron-vite (React + TS) app boots; drag-drop reads a file and
+- [x] 1. Scaffold — electron-vite (React + TS) app boots; drag-drop reads a file and
       shows its name/size; `npm run dev` / `npm test` / typecheck all work
 - [ ] 2. Import + view — STEP parsing via occt-import-js in a worker; parts listed;
       parts rendered in three.js with orbit controls; STL path too

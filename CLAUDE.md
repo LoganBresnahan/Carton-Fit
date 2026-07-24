@@ -50,5 +50,15 @@ when scope changes.
 
 ## Commands
 
-Scaffold not yet generated. Once it is: `npm run dev` (develop), `npm test` (vitest),
-`npm run build:win` (NSIS installer). Update this section when the scaffold lands.
+- `npm run dev` — Vite HMR + Electron window. **From a VSCode terminal, unset
+  `ELECTRON_RUN_AS_NODE` first** (`env -u ELECTRON_RUN_AS_NODE npm run dev`): VSCode
+  exports it, and it makes the Electron binary behave as plain Node — symptoms are a
+  bogus `electron --version` (prints the embedded Node version) and electron-vite
+  dying with "Error: Electron uninstall".
+- `npm test` — vitest (run twice for the ship bar, per `/shipshape`)
+- `npm run typecheck` — tsc
+- `npm run build` — electron-vite production build (installer targets land with
+  roadmap item 8)
+
+Version pins: vite 7 + `@vitejs/plugin-react` 5 — electron-vite 5 doesn't support
+vite 8 yet; revisit the pins when it does.
