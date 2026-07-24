@@ -65,12 +65,22 @@
       as-is (~0.4s), so phase 5's feared Node asset problem is already solved.*
 
 ### 4. Drop pipeline + instrumentation — **opus batch**
-- [ ] `drop-to-import-pipeline` · medium — File→ArrayBuffer→worker dispatch;
+- [x] `drop-to-import-pipeline` · medium — File→ArrayBuffer→worker dispatch;
       idle/parsing/done/failed status + parts list in Zustand; owns the
       re-drop-while-parsing race. If run concurrently with phase 3, keep the store's
       parts shape frozen to the protocol types.
-- [ ] `import-timing-instrumentation` · low — parse timing + part/triangle counts
+      *Done: `import/pipeline.ts` (worker + clock injected — the ADR-0005 layer-1
+      seam), `import/service.ts` (one persistent warm-occt worker; id-staleness
+      filter, not teardown, resolves the race), store import slice = the ImportSink.
+      DropZone hands off via the picker path; `ImportResult` renders status + parts.
+      Race + all transitions unit-tested against a stub; full stack proven in the
+      packaged file:// app driving the real picker seam via CDP setFileInputFiles
+      (18 parts, matches Playwright's item-6 approach). Removed the phase-1 probe.*
+- [x] `import-timing-instrumentation` · low — parse timing + part/triangle counts
       (same call site, added in the same touch)
+      *Done: `ImportStats` {elapsedMs (dispatch→response), partCount, triangleCount}
+      built in the pipeline, shown in the results panel ("18 parts · 5,040 tris ·
+      481 ms").*
 
 ### 5. Hardening: STL, errors, golden gate — **opus batch**
 - [ ] `stl-loader-path` · medium — extension dispatch + STLLoader; normalize STL's

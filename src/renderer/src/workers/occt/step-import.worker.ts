@@ -1,7 +1,7 @@
-// The real STEP import worker (ADR-0002 phase 2). Receives an ImportRequest,
-// parses off the UI thread with OpenCascade WASM, and returns protocol parts.
-// Supersedes occt-probe.worker — that was phase-1 proof that this module's
-// loadOcct()/asset wiring works in dev, packaged file://, and worker contexts.
+// The STEP import worker (ADR-0002). Receives an ImportRequest, parses off the
+// UI thread with OpenCascade WASM, and returns protocol parts. The import
+// pipeline (import/pipeline.ts) dispatches to it; the phase-1 loadOcct() asset
+// wiring it relies on is proven in dev, packaged file://, and worker contexts.
 import { loadOcct } from './loadOcct'
 import { extractParts } from './occt-to-parts'
 import {

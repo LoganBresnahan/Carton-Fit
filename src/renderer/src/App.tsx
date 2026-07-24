@@ -1,16 +1,7 @@
 import DropZone from './components/DropZone'
-import OcctProbe from './components/OcctProbe'
-import { useAppStore } from './store'
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
+import ImportResult from './components/ImportResult'
 
 export default function App() {
-  const file = useAppStore((s) => s.file)
-
   return (
     <div className="app">
       <header className="app-header">
@@ -18,12 +9,7 @@ export default function App() {
       </header>
       <main className="app-main">
         <DropZone />
-        <OcctProbe />
-        {file && (
-          <p className="file-info" data-testid="file-info">
-            Loaded <strong>{file.name}</strong> ({formatSize(file.sizeBytes)})
-          </p>
-        )}
+        <ImportResult />
       </main>
     </div>
   )

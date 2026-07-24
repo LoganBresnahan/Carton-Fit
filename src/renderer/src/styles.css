@@ -74,18 +74,44 @@ body {
   font-size: 0.9rem;
 }
 
-.file-info {
+.import-result {
+  width: min(480px, 90%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.import-file {
   color: var(--muted);
 }
 
-/* Phase-1 occt-probe scaffolding (ADR-0002); removed with the component. */
-.occt-status {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-.occt-status-ready {
-  color: var(--accent);
-}
-.occt-status-failed {
+.import-error {
   color: var(--error);
+}
+
+.import-stats {
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.parts-list {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+  max-height: 40vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.parts-list li {
+  padding: 0.35rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.parts-list li:last-child {
+  border-bottom: none;
 }

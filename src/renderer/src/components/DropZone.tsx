@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { useAppStore } from '../store'
+import { importFile } from '../import/service'
 
 const ACCEPTED = ['.stp', '.step', '.stl']
 
@@ -9,7 +9,6 @@ function accepted(name: string): boolean {
 }
 
 export default function DropZone() {
-  const setFile = useAppStore((s) => s.setFile)
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -21,7 +20,8 @@ export default function DropZone() {
       return
     }
     setError(null)
-    setFile({ name: file.name, sizeBytes: file.size })
+    // Hand off to the import pipeline; parse status + parts land in the store.
+    void importFile(file)
   }
 
   return (
