@@ -1,4 +1,5 @@
 import DropZone from './components/DropZone'
+import OcctProbe from './components/OcctProbe'
 import { useAppStore } from './store'
 
 function formatSize(bytes: number): string {
@@ -17,6 +18,7 @@ export default function App() {
       </header>
       <main className="app-main">
         <DropZone />
+        <OcctProbe />
         {file && (
           <p className="file-info" data-testid="file-info">
             Loaded <strong>{file.name}</strong> ({formatSize(file.sizeBytes)})
