@@ -30,21 +30,26 @@
 ## Phases (dependency-ordered, model-batched)
 
 ### 1. Packing contract — **opus** (land alone; highest-leverage review point)
-- [ ] `packing-types-contract` · medium — `core/packing/` types: modes, tiers,
-      request/result shapes, swappable placement-strategy seam, rotation-matrix
-      result shape, heuristic flag, binding-constraint field. Every other slice
-      consumes this; an inadequate seam forces rework across 11 consumers — don't rush.
+- [x] `packing-types-contract` · medium — `core/packing/types.ts` (a655288). Encodes
+      the swappable OrientationProvider + Fit/Quantity Strategy seam, Mat3 row-major /
+      proper-rotation convention, heuristic flag, and `binding` on every result. One
+      refinement absorbed while building the first consumer: OrientationOption.rotatedMin.
 
-### 2. Tier-1 mechanical math + UI shell — **opus batch** (+ ADR-0004 input fields)
-- [ ] `fast-aabb-orientations` · low — 6 axis-permutation enumeration over
-      `aabbSize`; clearance-padding semantics documented
-- [ ] `fast-grid-fill-quantity` · medium — floor-division counts × 6 orientations +
-      triple-loop placement generator (see adjudication 2)
-- [ ] `mode-tier-selectors-ui` · medium — store slice + Fit-check/Max-quantity and
-      Fast/Thorough/Nesting selectors, persisted; composes PackRequests before any
-      engine exists
-- [ ] `nesting-tier-disabled-stub` · low — tier 3 visible, disabled, "experimental /
-      coming later" (ADR-0003 requires it visible from day one)
+### 2. Tier-1 mechanical math + UI shell — **opus batch** (+ ADR-0004 input fields)  ✓
+- [x] `fast-aabb-orientations` · low — `orientations.ts` (576bf1c): 6 proper-rotation
+      candidates (det +1 tested), the 6 extent permutations, rotatedMin for placement.
+- [x] `fast-grid-fill-quantity` · medium — `quantityGrid.ts` (576bf1c): floor formula,
+      best-orientation pick, weight cap + binding attribution; edge roster tested.
+- [x] `mode-tier-selectors-ui` · medium — store settings slice + hand-rolled
+      localStorage persist (no middleware, ADR-0006) + `ModeTierSelectors` from the
+      contract's MODES/TIERS. Verified in the packaged app.
+- [x] `nesting-tier-disabled-stub` · low — tier 3 visible, disabled, "experimental /
+      coming later" (ADR-0003 requires it visible from day one). Data-driven from
+      TIERS[].enabled, so it's one domain fact, not a UI hardcode.
+- [x] **(item 3) ADR-0004 input fields** — `InputsPanel`: box dims (inner, or
+      outer+wall), mm⇄in toggle (display-only; storage canonical mm/g), between-parts +
+      wall clearances, max weight (default 35 lb), part weight (direct / density×volume).
+      Conversion confined to units.ts at the UI boundary. **Closes roadmap item 3.**
 
 ### 3. The two hard-geometry engines — **fable batch** · both **verify** (independent; start obb first — it's the effort-weighted bottleneck)
 - [ ] `obb-rotation-search` · **xhigh** · verify — pure-TS quickhull-3D (degenerate/

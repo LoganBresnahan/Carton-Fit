@@ -151,3 +151,108 @@ body {
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+/* Controls (mode/tier) + inputs panel (ADR-0003/0004). */
+.controls,
+.inputs {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.control-group {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+.control-group legend,
+.inputs h2 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0.4rem 0 0.35rem;
+  padding: 0;
+}
+
+.segmented {
+  display: flex;
+  gap: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2px;
+}
+.segment {
+  flex: 1;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+.segment.active {
+  background: var(--accent);
+  color: #0b0e13;
+  font-weight: 600;
+}
+.segment:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.segment-note {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+.segmented.small .segment {
+  font-size: 0.78rem;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.field.checkbox {
+  justify-content: flex-start;
+  color: var(--muted);
+}
+.field-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.field input[type='number'] {
+  width: 5.5rem;
+  padding: 0.3rem 0.4rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  text-align: right;
+}
+.field-unit {
+  width: 2.2rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.inputs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.unit-toggle {
+  padding: 0.25rem 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  cursor: pointer;
+}

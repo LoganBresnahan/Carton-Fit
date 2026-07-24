@@ -1,5 +1,7 @@
 import DropZone from './components/DropZone'
 import ImportResult from './components/ImportResult'
+import ModeTierSelectors from './components/ModeTierSelectors'
+import InputsPanel from './components/InputsPanel'
 import Viewport from './viewport/Viewport'
 
 export default function App() {
@@ -12,6 +14,8 @@ export default function App() {
         <div className="panel">
           <DropZone />
           <ImportResult />
+          <ModeTierSelectors />
+          <InputsPanel />
         </div>
         <Viewport />
       </main>

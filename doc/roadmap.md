@@ -12,9 +12,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 - [x] 2. Import + view — STEP parsing via occt-import-js in a worker; parts listed;
       parts rendered in three.js with orbit controls; STL path too
       (ADR-0002 import pipeline + ADR-0008 imperative-three viewport)
-- [ ] 3. Inputs panel — box dims (inner, or outer + wall thickness), mm ⇄ in toggle,
+- [x] 3. Inputs panel — box dims (inner, or outer + wall thickness), mm ⇄ in toggle,
       clearances, max weight (default 35 lb), part weight (direct or density × volume),
       mode + quality selectors; values persisted (localStorage)
+      (ADR-0003 contract + fast engines + selectors; ADR-0004 input fields)
 - [ ] 4. Fast engine + results — tier-1 packing in a worker; results panel (verdict /
       count / binding constraint / utilization); packed 3D view; vitest coverage for
       grid math, unit conversions, weight cap
