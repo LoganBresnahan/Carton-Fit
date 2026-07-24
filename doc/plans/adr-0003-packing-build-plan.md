@@ -51,7 +51,7 @@
       wall clearances, max weight (default 35 lb), part weight (direct / density×volume).
       Conversion confined to units.ts at the UI boundary. **Closes roadmap item 3.**
 
-### 3. The two hard-geometry engines — **fable batch** · both **verify** (independent; start obb first — it's the effort-weighted bottleneck)
+### 3. The two hard-geometry engines — **fable batch** · both **verify** (independent; start obb first — it's the effort-weighted bottleneck)  ✓
 - [x] `obb-rotation-search` · **xhigh** · verify — `convexHull3d.ts` + `obb.ts`
       (9d4a22b). The verify earned its rating: two adversarial agents confirmed a
       face-explosion→OOM on cylinder-like clouds (winding flip from centroid
@@ -60,10 +60,12 @@
       guards, rescue scan, area-ranked candidate cap). Hard invariants held
       throughout via the re-measure guard. Tripwire not tripped: failures were
       diagnosed, not ground against; stayed xhigh.
-- [ ] `fast-greedy-shelf-fitcheck` · high · verify — greedy shelf/row/layer with
-      per-part best-of-6 orientation; overlap-free arrangement coords; cumulative
-      weight as co-equal hard constraint + binding attribution. Verify: overlap
-      detection, false non-fit.
+- [x] `fast-greedy-shelf-fitcheck` · high · verify — `shelfFit.ts` (0f5f935).
+      Overlap-freedom/containment by construction; weight co-equal with
+      no-space-consumed rejections; binding = weight rejection > geometry
+      rejection > least-headroom. Verify: all core claims survived 9,500 seeded
+      cases; two corners fixed (0 ≥ 0 headroom tie, ulp-sensitive volume sort).
+      Also landed `EPS` in `core/geometry.ts` (the numeric convention artifact).
 
 ### 4. Tier-2 rotation composition — **fable** · **verify**
 - [ ] `thorough-placement-and-rotations` · high · verify — tier-1 placement on OBB
