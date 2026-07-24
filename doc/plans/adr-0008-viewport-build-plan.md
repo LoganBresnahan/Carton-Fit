@@ -18,21 +18,31 @@
 
 ## Phases (dependency-ordered, model-batched — all opus)
 
-### 1. Leaf adapters + pure builders
-- [ ] `orbitcontrols-adapter` · low — `viewport/adapters/orbitControls.ts`, the only
+### 1. Leaf adapters + pure builders  ✓ (commit)
+- [x] `orbitcontrols-adapter` · low — `viewport/adapters/orbitControls.ts`, the only
       file importing OrbitControls from three/examples/jsm (ADR-0008 one-file-per-path
-      rule)
-- [ ] `stl-loader-adapter` · low — same pattern for STLLoader. No consumer until
-      ADR-0002's `stl-loader-path`; rides along for pattern symmetry, deferrable free.
-- [ ] `scene-from-parts-builder` · low — pure fn: ImportedPart[] → Group of meshes via
-      the existing `partToBufferGeometry`
-- [ ] `camera-framing-builder` · medium — pure fit-camera-to-AABB (aspect-aware fov,
-      degenerate-box guard) on `partAabb`/union
-### 2. Lifecycle component + builder tests
+      rule). *Import path `three/examples/jsm/controls/OrbitControls.js` — the aliased
+      `three/addons/*` works at runtime but @types/three ships types only under
+      examples/jsm, so that's the typed path.*
+- [ ] `stl-loader-adapter` · low — same pattern for STLLoader. **Deferred** (was
+      "deferrable free" in the synthesis): no consumer until ADR-0002's `stl-loader-
+      path`, so it lands *there* with a consumer rather than as dead code now.
+- [x] `scene-from-parts-builder` · low — pure fn: ImportedPart[] → Group of meshes via
+      the existing `partToBufferGeometry`. *One shared material across the group (the
+      disposal-dedup contract); meshes named per part.*
+- [x] `camera-framing-builder` · medium — pure fit-camera-to-AABB (aspect-aware fov,
+      degenerate-box guard) on `partAabb`/union. *`frameBox` fits the bounding sphere
+      to the tighter of vertical/horizontal half-fov; `boundsOfParts` unions part
+      boxes; empty box → unit-sphere fallback, no NaN.*
+- [x] `scene-builder-vitest` · low — **pulled forward from phase 2**: testing pure
+      builders in the commit that introduces them beats deferring a phase and
+      satisfies the shipshape coverage gate now. `tests/viewport-scene.test.ts` (9
+      tests: mesh/buffer adoption, shared material, hand-computed framing distances,
+      aspect/fov monotonicity, degenerate fallback).
+### 2. Lifecycle component
 - [ ] `viewport-lifecycle-component` · medium — canvas ref, WebGLRenderer, controls via
       adapter, ResizeObserver, teardown. StrictMode double-mount handled here.
-- [ ] `scene-builder-vitest` · low — mesh counts, buffer adoption, framing for a known
-      AABB; the `partGeometry.test.ts` Node-three pattern
+      (`scene-builder-vitest` was pulled forward into phase 1.)
 ### 3. Store wiring + render-on-demand (same component file — one sitting)
 - [ ] `store-subscription-scene-swap` · medium — subscribe to parts slice; swap scene
       content through **one choke point** (the disposal hook lands there next phase)
