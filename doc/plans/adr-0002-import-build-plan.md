@@ -13,15 +13,20 @@
 ## Phases (dependency-ordered, model-batched)
 
 ### 1. Foundations: occt dep + typed protocol — **opus batch**
-- [ ] `occt-wasm-dependency` · medium — add occt-import-js + electron-vite WASM asset
+- [x] `occt-wasm-dependency` · medium — add occt-import-js + electron-vite WASM asset
       wiring. **Prove locateFile/asset-URL in dev AND packaged file:// AND worker
       context before phase 2**, or the worker slice re-litigates it.
-- [ ] `worker-mesh-protocol` · medium — typed request/response union + transfer-list
+      *Done: `loadOcct` points Emscripten's `locateFile` at a Vite `?url` asset;
+      proven ready in dev (http), packaged `file://`, and worker context via the
+      `occt-probe` harness (superseded by `step-import-worker` in phase 2).*
+- [x] `worker-mesh-protocol` · medium — typed request/response union + transfer-list
       discipline. Sharp edges to respect even though it's Opus work: transfer lists
       name underlying ArrayBuffers (not views); buffers shared by views transfer once;
       occt output views over the WASM heap get copied to fresh buffers first.
       Backend-independent by design (this is the ADR's swap seam). **Freeze before
       phase 2.**
+      *Done & frozen: `workers/import-protocol.ts` (occt-agnostic — names meshes,
+      not OpenCascade). `collectBuffers` dedupes by buffer identity; unit-tested.*
 
 ### 2. Worker shell + protocol consumers — **opus batch** (mutually independent)
 - [ ] `step-import-worker` · medium — Vite module-worker, lazy memoized occt init,
