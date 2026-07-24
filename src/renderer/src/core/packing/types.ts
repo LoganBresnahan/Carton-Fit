@@ -99,11 +99,14 @@ export interface PackRequest {
 // with the SAME signature — no contract change. This is why placement is a function
 // type, not baked into the engines.
 
-/** One candidate way to place a part: its box extent (mm) and the proper rotation
- *  that realizes it. */
+/** One candidate way to place a part: the box extent (mm), the proper rotation that
+ *  realizes it, and where that rotated part's AABB min corner sits. A placement's
+ *  translation = targetCorner − rotatedMin, so the part's box min lands exactly at
+ *  the target grid corner. */
 export interface OrientationOption {
   extent: Vec3
   rotation: Mat3
+  rotatedMin: Vec3
 }
 
 /** A part reduced to its candidate orientations + weight — the strategy's input. */
