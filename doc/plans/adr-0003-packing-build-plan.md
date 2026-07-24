@@ -52,10 +52,14 @@
       Conversion confined to units.ts at the UI boundary. **Closes roadmap item 3.**
 
 ### 3. The two hard-geometry engines — **fable batch** · both **verify** (independent; start obb first — it's the effort-weighted bottleneck)
-- [ ] `obb-rotation-search` · **xhigh** · verify — pure-TS quickhull-3D (degenerate/
-      coplanar meshes, epsilon robustness) + hull-face-aligned rotation search +
-      correctly-handed part→OBB matrix. Verify: known-OBB fixtures, rotated-shape
-      invariance, hull degeneracy. See adjudication 1's tripwire.
+- [x] `obb-rotation-search` · **xhigh** · verify — `convexHull3d.ts` + `obb.ts`
+      (9d4a22b). The verify earned its rating: two adversarial agents confirmed a
+      face-explosion→OOM on cylinder-like clouds (winding flip from centroid
+      orientation), an orphan-leak, and a 10–26 s search on smooth shapes — all
+      fixed structurally (inherited winding, two-threshold flood-fill, reachable
+      guards, rescue scan, area-ranked candidate cap). Hard invariants held
+      throughout via the re-measure guard. Tripwire not tripped: failures were
+      diagnosed, not ground against; stayed xhigh.
 - [ ] `fast-greedy-shelf-fitcheck` · high · verify — greedy shelf/row/layer with
       per-part best-of-6 orientation; overlap-free arrangement coords; cumulative
       weight as co-equal hard constraint + binding attribution. Verify: overlap
