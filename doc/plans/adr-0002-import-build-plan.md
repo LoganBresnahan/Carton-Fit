@@ -48,11 +48,21 @@
       tris) → closed, 946 mm³ — not just hand-built fixtures.*
 
 ### 3. Assembly hierarchy extraction — **fable** · **verify** · high
-- [ ] `assembly-part-extraction` — recursive node traversal composing occt's flat
+- [x] `assembly-part-extraction` — recursive node traversal composing occt's flat
       16-float transforms (row/column-major convention and composition order are the
       trap), duplicating shared meshes per instance, baking transforms into positions,
       normals without translation. Renders plausibly on flat files; corrupts bboxes
       silently on nested/instanced ones. Test against a nested/instanced assembly.
+      *Done — premise overturned (ADR-0002 addendum): occt-import-js already bakes
+      composed world transforms into per-instance mesh entries (verified in its C++
+      and empirically); nodes carry no transform field. No matrix math written.
+      Remaining substance shipped: `extractParts` walks the tree for instance-
+      disambiguated naming ("bolt", "bolt (2)", node-name fallback, unreferenced-mesh
+      safety net); verify landed as `tests/assembly-import.test.ts` + committed
+      `samples/as1-oc-214.stp` (18 parts, all closed, instances volume-equal at
+      distinct world positions, rotations permute extents) — doubles as the guard on
+      the baked-transform assumption. Bonus de-risk: occt WASM runs under vitest
+      as-is (~0.4s), so phase 5's feared Node asset problem is already solved.*
 
 ### 4. Drop pipeline + instrumentation — **opus batch**
 - [ ] `drop-to-import-pipeline` · medium — File→ArrayBuffer→worker dispatch;
@@ -72,6 +82,9 @@
       guards against tautological goldens. Note: occt WASM under Node/vitest is a
       *different* asset-path problem than the browser worker — budget for it, don't
       let it block earlier phases. Fixture sourcing can start early in parallel.
+      *(Phase 3 resolved both carve-outs: occt runs under vitest as-is — see
+      tests/assembly-import.test.ts — and samples/ now exists with SOURCES.md.
+      Remaining here: the simple-part fixture + hand-computed goldens.)*
 
 ## Critical path
 

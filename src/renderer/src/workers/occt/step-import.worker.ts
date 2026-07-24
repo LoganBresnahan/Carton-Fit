@@ -3,7 +3,7 @@
 // Supersedes occt-probe.worker — that was phase-1 proof that this module's
 // loadOcct()/asset wiring works in dev, packaged file://, and worker contexts.
 import { loadOcct } from './loadOcct'
-import { occtMeshesToParts } from './occt-to-parts'
+import { extractParts } from './occt-to-parts'
 import {
   resultTransferables,
   type ImportRequest,
@@ -26,7 +26,9 @@ async function handle(request: ImportRequest): Promise<ImportResult> {
     if (!result.success) {
       return { id: request.id, ok: false, error: 'OpenCascade could not read this STEP file' }
     }
-    const parts = occtMeshesToParts(result.meshes)
+    // Assembly-aware: geometry arrives world-space-baked from occt; extractParts
+    // adds instance-disambiguated names from the node tree (ADR-0002 addendum).
+    const parts = extractParts(result)
     if (parts.length === 0) {
       return { id: request.id, ok: false, error: 'STEP file parsed but contained no meshes' }
     }

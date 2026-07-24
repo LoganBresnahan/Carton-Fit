@@ -38,3 +38,27 @@ bounding boxes from them. STL (and later OBJ) load through three.js's own loader
 - Tier-3 nesting gets built and needs exact geometry or better tessellation control.
 - Real-world STEP files surface that occt-import-js mis-parses.
 - Import time on large assemblies becomes a complaint (options: caching, native sidecar).
+
+## Addendum (2026-07-24): assembly transforms are baked by the library
+
+Planning assumed we would traverse occt's node tree composing per-node transform
+matrices and baking them into vertices ourselves. Inspection of occt-import-js
+0.0.23 (source + empirical dump of nested CAx-IF assemblies) shows the library
+already does all of it internally: `EnumerateVertices` applies each face's fully
+composed `TopLoc_Location` transformation, normals are transformed as directions
+(rotation-only by construction), shared products are emitted as **separate
+per-instance mesh entries** with world-space coordinates, and nodes carry **no
+transformation field** at all.
+
+**Decision:** trust occt's baked world coordinates; do no transform math in our
+adapter. The node tree is used only for part *naming* (instance disambiguation).
+
+**Consequences:** eliminates the highest-risk slice of the import plan (matrix
+convention/composition-order bugs can't exist in code that doesn't exist);
+per-instance duplication costs memory on huge assemblies — acceptable for v1,
+already covered by the import-time revisit trigger above.
+
+**Guard:** `tests/assembly-import.test.ts` parses `samples/as1-oc-214.stp` (a
+nested, instanced assembly) and asserts instances land at distinct world
+positions with volume preserved. If a future occt-import-js emits local
+coordinates + node transforms instead, that test fails loudly — revisit here.
