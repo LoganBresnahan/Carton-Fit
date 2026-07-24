@@ -45,6 +45,9 @@ the packed carton.
 - Best orientation per part, volume utilization %, total package weight.
 - 3D view: the carton (wireframe + translucent walls) with parts placed in their
   computed positions and orientations; toggle between model view and packed view.
+- **Saved configurations & history**: box/constraint setups can be saved as named
+  configurations and reloaded; every estimate is recorded (file, settings, result) as
+  a queryable history.
 
 ## Non-goals for v1
 
@@ -55,7 +58,9 @@ the packed carton.
 
 ## Technical direction
 
-Electron + TypeScript + React, three.js viewport, `occt-import-js` (OpenCascade WASM)
-for STEP parsing in a web worker, packing math in a worker, `electron-builder` for
-installers (Windows NSIS primary). Renderer code is plain web tech so the shell could
-move to Tauri later without rewriting the app.
+Electron + TypeScript + React with one Zustand store (lean-dependency rule: adding a
+runtime dep requires an ADR), three.js viewport, `occt-import-js` (OpenCascade WASM)
+for STEP parsing in a web worker, packing math in a worker, `better-sqlite3` in the
+main process for configurations/history, `electron-builder` for installers (Windows
+NSIS primary). Renderer code is plain web tech so the shell could move to Tauri later
+without rewriting the app.

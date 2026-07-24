@@ -2,5 +2,9 @@ node_modules/
 dist/
 out/
 release/
+dist-live/
+dist-live.prev/
+test-results/
+playwright-report/
 *.log
 .DS_Store
