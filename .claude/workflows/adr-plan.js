@@ -38,12 +38,13 @@ const SLICE_SCHEMA = {
 
 const ASSESSMENT_SCHEMA = {
   type: 'object', additionalProperties: false,
-  required: ['id', 'status', 'effort', 'hardness', 'needs_verification', 'needs_ultracode', 'skills', 'risk', 'depends_on', 'rationale'],
+  required: ['id', 'status', 'effort', 'hardness', 'model', 'needs_verification', 'needs_ultracode', 'skills', 'risk', 'depends_on', 'rationale'],
   properties: {
     id: { type: 'string' },
     status: { type: 'string', enum: ['todo', 'partial', 'done'] },
     effort: { type: 'string', enum: ['low', 'medium', 'high', 'max'] },
     hardness: { type: 'string', enum: ['mechanical', 'moderate', 'hard-reasoning'] },
+    model: { type: 'string', enum: ['fable', 'opus'], description: 'which model should implement this slice — tracks hardness, not size' },
     needs_verification: { type: 'boolean', description: 'an adversarial verify pass is warranted' },
     needs_ultracode: { type: 'boolean', description: 'decomposes into parallel work AND verification-worthy AND single-pass-would-miss' },
     skills: { type: 'array', items: { type: 'string' }, description: 'packaging-estimator skills that apply: shipshape, orient' },
@@ -59,10 +60,11 @@ const PLAN_SCHEMA = {
     ordered_phases: {
       type: 'array',
       items: {
-        type: 'object', additionalProperties: false, required: ['phase', 'slice_ids', 'why'],
+        type: 'object', additionalProperties: false, required: ['phase', 'slice_ids', 'model', 'why'],
         properties: {
           phase: { type: 'string', description: 'e.g. "0. already landed" or "1. grid math + orientation search"' },
           slice_ids: { type: 'array', items: { type: 'string' } },
+          model: { type: 'string', enum: ['fable', 'opus', 'mixed'], description: 'dominant implementation model for this phase, from the slice assessments' },
           why: { type: 'string' },
         },
       },
@@ -99,6 +101,7 @@ ${roster}
 Assess it using THIS project's effort philosophy — be calibrated, do NOT mark everything high:
 - effort tracks REASONING DIFFICULTY, not size. Mechanical wiring / UI forms / boilerplate / tests = low or medium. Geometry math with sharp edges (minimal OBB search, rotation matrices, clearance edge cases), placement heuristics, or worker/transferable protocol subtleties = high or max.
 - hardness: mechanical | moderate | hard-reasoning.
+- model: which model should IMPLEMENT this slice. 'fable' ONLY for hard-reasoning slices where a plausible-but-wrong implementation is the failure mode (subtle geometry math, placement heuristics, worker/IPC protocol edges); 'opus' for mechanical and moderate slices (wiring, UI forms, boilerplate, straightforward tests) where throughput matters. Track hardness, not size — a big mechanical slice is still 'opus'.
 - needs_verification (an adversarial verify pass) = true ONLY when a subtle bug would be costly and a single pass could plausibly ship it wrong (e.g. off-by-one in the clearance grid formula, a wrong-handed rotation matrix that renders fine but reports the wrong count, binding-constraint misattribution).
 - needs_ultracode = true ONLY when the slice decomposes into parallel work AND is verification-worthy AND a single pass would miss things. Reserve it; most slices are false — over-marking is the exact failure this project warns about.
 - skills: which packaging-estimator skills apply — shipshape (pre-commit gate: tests green twice, docs, conventions), orient (rarely).
@@ -118,7 +121,7 @@ ${JSON.stringify(assessed, null, 2)}
 Their titles / what-they-entail:
 ${JSON.stringify(slices, null, 2)}
 
-Produce a dependency-respecting build plan: group slices into ordered phases (respect depends_on; put any already-'done' slices in a phase 0), identify the critical path, and in 'notes' call out what to batch, which slices genuinely warrant ultracode/adversarial-verify AND which explicitly do NOT, and any sequencing risks. Keep it tight and actionable — this is the checklist a developer follows to build the ADR.`,
+Produce a dependency-respecting build plan: group slices into ordered phases (respect depends_on; put any already-'done' slices in a phase 0), identify the critical path, and in 'notes' call out what to batch, which slices genuinely warrant ultracode/adversarial-verify AND which explicitly do NOT, and any sequencing risks. Prefer grouping same-model slices into the same phase where dependencies allow, and set each phase's 'model' from its slices ('mixed' only when unavoidable) — the maintainer batches Fable work and Opus work separately. Keep it tight and actionable — this is the checklist a developer follows to build the ADR.`,
   { label: 'synthesize', phase: 'Plan', schema: PLAN_SCHEMA }
 )
 
