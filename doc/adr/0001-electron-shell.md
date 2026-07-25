@@ -20,7 +20,11 @@ dmg, Linux AppImage.
 
 - One bundled Chromium everywhere: the WebGL viewport and WASM parser run on a single
   known engine — no per-OS webview differences to test.
-- Windows NSIS installers cross-build routinely from Linux/WSL, our dev environment.
+- ~~Windows NSIS installers cross-build routinely from Linux/WSL, our dev environment.~~
+  **Corrected by ADR-0010 (2026-07-25):** measured false. NSIS builds its uninstaller by
+  *executing* the installer, so the target needs wine on Linux. Release artifacts are
+  built per-platform in CI instead; local WSL builds stay wine-free (`win zip`,
+  `linux dir`). The shell decision itself is unaffected.
 - Cost: ~80–100 MB installer and Chromium-sized RAM footprint; acceptable for an
   engineering utility.
 - The renderer (viewport, parser, packing engine — ~90% of the app) is plain web tech,

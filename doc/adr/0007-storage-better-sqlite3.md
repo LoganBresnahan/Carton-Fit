@@ -46,6 +46,13 @@ wrapper was explicitly designed to mimic — and port the reference patterns:
 - We adopt a native module: the ABI is pinned to the Electron version. Prebuilds make
   this routine, but we **don't chase new Electron majors** until better-sqlite3
   prebuilds exist for them (checking this is part of any Electron upgrade).
+  - **Amended by ADR-0010 (2026-07-25):** the prebuild assumption is shakier than
+    written. Measured: better-sqlite3 **v13.x publishes no prebuilt binaries at all**
+    (v12.12.0 publishes 145, covering Electron ABIs 121–148). Native modules also cannot
+    be cross-compiled for Windows from Linux — that needs MSVC. So when item 7 lands:
+    **pin a version that ships prebuilds** (v12.x today) to keep local WSL packaging
+    working, and rely on CI's per-platform runners as the fallback that compiles
+    natively when no prebuild matches.
 - No wrapper layer: no legacy call sites to preserve, so better-sqlite3's API is used
   directly.
 

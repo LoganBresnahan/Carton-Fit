@@ -43,8 +43,11 @@ compression: normal
 npmRebuild: false
 
 win:
+  # zip FIRST: it is what a WSL build can actually produce (ADR-0010). nsis is
+  # kept configured because CI's windows-latest runner builds it natively, and
+  # `electron-builder --win nsis` there needs no extra config.
   target:
-    - target: nsis
+    - target: zip
       arch: [x64]
   # Keep executable EDITING (icon, product name, version stamped onto the exe —
   # done natively by electron-builder's app-builder), but skip code SIGNING,
