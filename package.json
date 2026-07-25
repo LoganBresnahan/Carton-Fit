@@ -21,6 +21,7 @@
     "package": "electron-vite build && electron-builder --linux dir"
   },
   "dependencies": {
+    "better-sqlite3": "12.11.1",
     "occt-import-js": "^0.0.23",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

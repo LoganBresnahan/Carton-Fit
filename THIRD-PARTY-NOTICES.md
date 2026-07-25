@@ -93,6 +93,11 @@ mechanically against `package.json` (`/shipshape` does).
 | `react-dom` | 19.2.8 | MIT | https://github.com/facebook/react |
 | `three` (three.js) | 0.185.1 | MIT | https://github.com/mrdoob/three.js |
 | `zustand` | 5.0.14 | MIT | https://github.com/pmndrs/zustand |
+| `better-sqlite3` | 12.11.1 | MIT | https://github.com/WiseLibs/better-sqlite3 |
+
+`better-sqlite3` is a native module: it ships as a compiled `.node` binary outside
+`app.asar` rather than bundled into the JavaScript, and it embeds
+[SQLite](https://sqlite.org), which is in the **public domain**.
 
 > The MIT License grants permission free of charge to any person obtaining a
 > copy of the software to deal in it without restriction, provided the above
@@ -102,8 +107,7 @@ mechanically against `package.json` (`/shipshape` does).
 
 Build-time-only tooling (TypeScript, Vite, electron-vite, electron-builder,
 vitest, Playwright — MIT and Apache-2.0) does not form part of the distributed
-binary and is therefore not listed. `better-sqlite3` (MIT) will join the table
-above when storage lands.
+binary and is therefore not listed.
 
 ---
 

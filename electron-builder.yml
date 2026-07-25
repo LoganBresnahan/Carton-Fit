@@ -47,7 +47,7 @@ files:
 
 # Deterministic-ish archives; no auto-update wiring yet (roadmap "Later").
 compression: normal
-npmRebuild: false
+npmRebuild: true
 
 # LGPL RELINK SEAM (ADR-0011). occt-import-js is LGPL-2.1, and the LGPL's whole
 # point is that a recipient can substitute their own build of the library. The

@@ -28,6 +28,13 @@ ABI. Measured 2026-07-25: better-sqlite3 **v13.x publishes no prebuilt binaries 
 (v12.12.0 publishes 145), and prebuild coverage always lags new Electron majors — we are
 on Electron 43.
 
+> **Correction (ADR-0013, 2026-07-25):** the v12.12.0 figure above was read off
+> GitHub releases and wrongly assumed npm parity — **v12.12.0 was never published to
+> npm.** The highest npm 12.x is 12.11.1, covering only up to ABI 146 while Electron
+> 43 needs 148. The conclusion below (build per-platform in CI) survives intact and
+> is in fact strengthened; only the "pin a version that ships prebuilds" remedy
+> fails. ADR-0013 replaces it with compiling from source.
+
 So wine would buy exactly one build step, today, and is powerless against the constraint
 most likely to break Linux-only builds next.
 

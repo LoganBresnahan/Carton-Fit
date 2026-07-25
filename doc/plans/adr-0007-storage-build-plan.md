@@ -37,13 +37,23 @@
 
 ## Phases (dependency-ordered)
 
-### 1. Dependency root · **opus**
-- [ ] `dep-better-sqlite3-pinned` · low — add better-sqlite3 pinned to v12.x
+### 1. Dependency root · **opus** ✅ *complete*
+- [x] `dep-better-sqlite3-pinned` · low — add better-sqlite3 pinned to v12.x
       (v13 ships zero prebuilds; v12.12.0 covers Electron ABIs 121–148 —
       ADR-0007's ADR-0010 amendment). Confirm install resolves a prebuild, no
       compile. Note the pin under CLAUDE.md's "Version pins".
-- [ ] **0b (adjudication 1)** — better-sqlite3 line in `THIRD-PARTY-NOTICES.md`
+      *The slice's own premise was false and checking it first is what saved the
+      phase: **v12.12.0 is not on npm** (GitHub release only), and no npm version
+      has an Electron-ABI-148 prebuild. Escalated to the maintainer, who chose
+      compile-from-source → **ADR-0013**, which supersedes ADR-0007's prebuild
+      bullet and corrects ADR-0010's measurement. Pinned exactly **12.11.1**, now
+      only for its Node-ABI prebuild (`npm ci` ~1 s); `npmRebuild` flipped to
+      `true`. Measured: Electron rebuild 61 s, Node restore 0.5 s.*
+- [x] **0b (adjudication 1)** — better-sqlite3 line in `THIRD-PARTY-NOTICES.md`
       (MIT, version, source repo) in the same commit as the dependency.
+      *Done, plus a note that it is a native module shipping as a `.node` outside
+      app.asar and embeds public-domain SQLite. `/shipshape`'s coverage gate
+      passes (6/6 runtime deps).*
 
 ### 2. Build config + DB foundation + docs · **opus batch**
 - [ ] `vite-externalize-native-module` · low — externalize better-sqlite3 in
@@ -65,15 +75,28 @@
 - [ ] `v1-schema` · low — migration 1: `configurations` (named presets, UNIQUE
       name) + `estimates` (file name, content hash, settings snapshot TEXT/JSON,
       result JSON, timestamp; index for recency queries).
-- [ ] `packaging-prebuilt-verification` · medium — the native-module packaging
-      proof. Expect to touch `npmRebuild`, `files`, and `asarUnpack` in
-      electron-builder.yml (adjudication 2). Prove: `npm run package` (linux
-      dir) + `--win zip` fetch prebuilds without node-gyp/MSVC; the `.node` file
-      lands unpacked; the packaged binary opens a DB (minimal require-and-open —
-      does not need the full layer). **Exit criterion: a green `release.yml`
-      dispatch** (adjudication 3) — Windows leg packages and its e2e passes.
-      This slice *is* the verify pass for the native path; run it early so an
-      ABI surprise lands before phases 4–6 stack on the dependency.
+- [ ] `packaging-prebuilt-verification` · medium — **renamed in spirit by
+      ADR-0013: this is now a compile-from-source proof, not a prebuild fetch.**
+      Prove the packaged app carries a *working* module: the `.node` is built for
+      **Electron ABI 148** (not Node's 141) and lives **outside** app.asar, and
+      the packaged binary can open a DB. **Exit criterion: a green `release.yml`
+      dispatch** (adjudication 3) — the Windows leg compiles with MSVC and its
+      e2e passes.
+      **Two failures already measured during phase 1 — both live, both silent:**
+      1. `npm run package` **did not rebuild for Electron.** After packaging,
+         `node -e "new (require('better-sqlite3'))(':memory:')"` still works,
+         proving the binary is still ABI 141. `npmRebuild: true` alone was not
+         enough; @electron/rebuild apparently skipped an already-"built" module.
+         The packaged app would therefore ship a binary its own runtime cannot
+         load.
+      2. **The `.node` is inside app.asar** (`asar list` confirms
+         `/node_modules/better-sqlite3/build/Release/better_sqlite3.node`).
+         electron-builder normally auto-unpacks native modules; our explicit
+         `asarUnpack` (the ADR-0011 wasm glob) appears to have replaced that
+         default. Add a `**/*.node` entry — and keep the wasm glob, which is
+         load-bearing for licence compliance.
+      Neither breaks anything *yet*, because no code imports the module — which
+      is exactly why this slice runs before phases 4–6 stack on it.
 
 ### 4. Store classes + DB tests · **opus batch**
 - [ ] `configurations-store-class` · low — CRUD over `configurations`; prepared

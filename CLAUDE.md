@@ -99,4 +99,15 @@ output; locally, `--win zip` cross-builds fine and `/deploy` fetches the CI
 artifact when one exists for the sha.
 
 Version pins: vite 7 + `@vitejs/plugin-react` 5 — electron-vite 5 doesn't support
-vite 8 yet; revisit the pins when it does.
+vite 8 yet; revisit the pins when it does. **`better-sqlite3` is pinned exactly to
+12.11.1** (ADR-0013) — not for Electron prebuilds, which exist at *no* npm version
+for our ABI 148, but for its Node-ABI prebuild that keeps `npm ci` at ~1 s.
+
+**Native module reality (ADR-0013):** `better-sqlite3` is compiled from source
+against Electron at package time (`npmRebuild: true`), so a build toolchain —
+`gcc`, `g++`, `make`, `python3` — is a development prerequisite, and Windows
+compiles with MSVC on the CI runner. One `.node` file holds one ABI, so **after
+`npm run package`, `npm test` fails until `npm rebuild better-sqlite3`** (0.5 s)
+restores the Node build. CI is ordered to avoid this; local workflows are not.
+An Electron upgrade no longer needs a matching prebuild — it just has to compile,
+which CI checks on every push.
