@@ -32,17 +32,39 @@
 
 ## Phases (dependency-ordered, batched by tag-push cost)
 
-### 1. Foundations — the two workflow files · **opus batch**
-- [ ] `ci-verify-workflow` · medium — `.github/workflows/ci.yml`, one ubuntu job on
+### 1. Foundations — the two workflow files · **opus batch** ✅ *complete*
+- [x] `ci-verify-workflow` · medium — `.github/workflows/ci.yml`, one ubuntu job on
       push/PR: `npm ci` → typecheck → vitest → `npm run package` →
       `xvfb-run npm run e2e:packaged`. Playwright traces uploaded on failure only.
       First-ever CI for this repo: xvfb + SwiftShader unknowns fail loudly;
       iterate to green.
-- [ ] `release-windows-leg` · medium — `.github/workflows/release.yml` on `v*` +
+      *Done: green on the FIRST run — 16/16 e2e in ~56 s, whole job ~1m30s. The
+      two anticipated runner gaps were fixed in the environment, not the harness
+      (ADR-0005 keeps launch flags harness-only): `xvfb-run -a`, and
+      `kernel.apparmor_restrict_unprivileged_userns=0` for Chromium's sandbox on
+      Ubuntu 24.04. `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` on `npm ci` — these
+      specs launch our Electron binary, never a browser. Node pinned to 24 LTS,
+      deliberately not the maintainer's local 25.x.*
+- [x] `release-windows-leg` · medium — `.github/workflows/release.yml` on `v*` +
       `workflow_dispatch` (adjudication 2): windows-latest, `npm ci` → build →
       `electron-builder --win nsis zip`. The yml's `win.target` lists only zip;
       the CLI override supplies nsis — deliberate (ADR-0010), don't "fix" the yml.
       Independent of ci.yml — don't let xvfb debugging block starting this.
+      *Done in 2 runs (~3m20s each). **ADR-0010 confirmed empirically: the NSIS
+      `Setup.exe` and its uninstaller build natively on windows-latest, no wine.**
+      Artifact: `windows-installer`, 245 MB (Setup.exe + zip). One fix needed —
+      `--publish never`: electron-builder detects CI and silently enables its own
+      GitHub publisher, failing on a missing `GH_TOKEN`. We don't want that
+      publisher at all; giving it a token would hand it phase 3's draft-vs-public
+      decision. Also bumped upload-artifact v4 → v7 (v4 targets deprecated Node 20).*
+
+> **Finding for phase 2 — `asar-integrity-off-check-windows` is not hypothetical.**
+> The Windows build logs `updating asar integrity executable resource`, so
+> electron-builder *does* embed integrity hashes into the exe on this platform —
+> something the Linux build never did. Whether they are ENFORCED depends on the
+> `EnableEmbeddedAsarIntegrityValidation` fuse, and that gap is exactly what the
+> slice must measure. Do not read "integrity resource updated" as "enforcement on"
+> — nor as "off". Measure the fuse, and make the check fail when it's flipped.
 
 ### 2. release.yml fan-out — gates, second leg, Windows smoke · **opus batch, one tag/dispatch**
 - [ ] `version-match-gate` · low — early step: strip `v` from the tag, compare to
