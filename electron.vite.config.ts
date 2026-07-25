@@ -1,9 +1,20 @@
-import { defineConfig } from 'electron-vite'
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  main: {},
-  preload: {},
+  // better-sqlite3 is a NATIVE module: a compiled .node binary that Rollup
+  // cannot bundle and must be `require`d from node_modules at runtime
+  // (ADR-0007, ADR-0013). externalizeDepsPlugin leaves every `dependencies`
+  // entry external in the main/preload builds, which is the electron-vite
+  // idiom for exactly this.
+  //
+  // The RENDERER deliberately does not get this plugin: it bundles everything
+  // (react, three, zustand, the occt wasm) so the packaged app needs nothing
+  // from node_modules — and `core/` must stay DB-free, so nothing in the
+  // renderer may reach better-sqlite3 in the first place. Storage is reached
+  // over IPC.
+  main: { plugins: [externalizeDepsPlugin()] },
+  preload: { plugins: [externalizeDepsPlugin()] },
   renderer: {
     plugins: [react()],
     // Relative base so hashed assets (incl. the occt .wasm) resolve under the

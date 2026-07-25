@@ -55,21 +55,51 @@
       app.asar and embeds public-domain SQLite. `/shipshape`'s coverage gate
       passes (6/6 runtime deps).*
 
-### 2. Build config + DB foundation + docs · **opus batch**
-- [ ] `vite-externalize-native-module` · low — externalize better-sqlite3 in
+### 2. Build config + DB foundation + docs · **opus batch** ✅ *complete*
+- [x] `vite-externalize-native-module` · low — externalize better-sqlite3 in
       `electron.vite.config.ts` main config (currently `{}`); standard
       `externalizeDepsPlugin` / `rollupOptions.external` idiom.
-- [ ] `db-open-with-recovery` · medium — `src/main/db/`: open sequence with
+      *Done via `externalizeDepsPlugin()` on **main and preload**. The renderer
+      deliberately does not get it — it bundles everything so the packaged app
+      needs nothing from node_modules, and `core/` must stay DB-free anyway.
+      Build verified green.*
+- [x] `db-open-with-recovery` · medium — `src/main/db/`: open sequence with
       `journal_mode=WAL`, `busy_timeout=5000`, `foreign_keys=ON`;
       corruption → quarantine (timestamped rename, collision-safe) → recreate;
       never crash the main process. **Takes the DB path as a parameter**
       (adjudication 4); main passes `app.getPath('userData')`.
-- [ ] `migrations-user-version` · medium — ordered migration list, each wrapped
+      *Done: `src/main/db/open.ts`, path AND clock both injected (deterministic
+      quarantine names for tests). Two things the slice description missed:
+      (a) better-sqlite3 opens **lazily**, so a corrupt file constructs a
+      Database without complaint — the open sequence forces a header read
+      (`pragma('user_version')`) or corruption surfaces later, somewhere with no
+      recovery path; (b) the handle is closed on the failure path before the
+      rename, since an open handle blocks rename on Windows.*
+      **Measured, and it contradicts the obvious test:** SQLite deletes the
+      `-wal` itself on close, so in the normal corruption path the sidecar is
+      already gone by quarantine time. The sidecar rename is belt-and-braces for
+      when `close()` fails. Phase 4 must NOT assert the sidecar gets renamed
+      normally — it cannot. (Noted at the code site too.)
+- [x] `migrations-user-version` · medium — ordered migration list, each wrapped
       in one transaction with its `user_version` bump; idempotent on reopen;
       one `migrations.ts` as the single source of truth.
-- [ ] `electron-upgrade-abi-guard` · low — CLAUDE.md paragraph: Electron
+      *Done: `src/main/db/migrations.ts`. `MIGRATIONS` is empty until v1-schema
+      (phase 3). Beyond the slice as written: an **append-only contiguity
+      assert** (a mis-numbered migration otherwise silently never runs) and a
+      **refusal to open a database newer than the build understands** — an old
+      app silently proceeding against a newer schema could write data it cannot
+      represent.*
+- [x] `electron-upgrade-abi-guard` · low — CLAUDE.md paragraph: Electron
       upgrades must check better-sqlite3 prebuilds exist for the target ABI
       (wait or pin otherwise). Floater — rides in this batch's commit.
+      *Landed early, in phase 1's ADR-0013 commit — and **inverted by it**: the
+      guard is no longer "does a prebuild exist for this ABI" but "does it still
+      compile", which CI answers on every push. CLAUDE.md says exactly that.*
+
+> **Scratch-verified, not shipped as tests.** A throwaway spec exercised fresh
+> open (pragmas applied, version 0) and the recovery path (quarantine created,
+> fresh DB usable), then was deleted — `db-layer-tests` in phase 4 owns the real
+> ones. It is what surfaced the WAL-sidecar finding above.
 
 ### 3. Schema + packaging proof · **opus batch**
 - [ ] `v1-schema` · low — migration 1: `configurations` (named presets, UNIQUE
