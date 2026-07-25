@@ -109,17 +109,31 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         reported position includes the window frame but the constructor's does
         not — twenty launches walked it off the screen. See ADR-0014's
         consequences; the e2e guard is three launches, mutation-tested.
-      — carry-in: translucent carton walls (VISION says "wireframe + translucent
-      walls"; item 4 shipped the wireframe only, which reads clearly against a
-      dense pack — revisit when adding depth cues)
-      — carry-in: **the installer ships the 7.3 MB OCCT wasm twice.**
-      `electron-builder.yml`'s comment claims the narrow `files` list means
-      "nothing from node_modules at runtime", but electron-builder includes
-      production deps regardless, so `app.asar` carries both the vite-emitted
-      asset (the live one) and `node_modules/occt-import-js/dist/`. Excluding it
-      would cut ~7 MB — but that copy also carries the LGPL text ADR-0011's
-      notices cite, so the exclusion must keep `LICENSE.md`/`license.occt.txt`.
-      Not urgent; the comment is wrong today either way.
+      — carry-in **closed as WON'T DO** (2026-07-25): translucent carton walls.
+      Prototyped and screenshotted before deciding, both sparse (one 10 mm cube
+      in a 12 in carton) and dense (343 cubes in a 3 in carton). Dense is
+      pixel-identical — the parts occlude every wall. Sparse gains a tint so
+      faint it takes flipping between the two images to see. The technique is
+      fighting the dark theme: a translucent wall can only tint toward
+      slightly-lighter grey, and the opacity needed to read clearly is the
+      opacity that hazes the parts behind it. Depth already comes from the
+      shaded parts, not the container. VISION amended to say wireframe, so this
+      stops reading as unfinished work.
+      - [x] **the installer shipped the 7.6 MB OCCT wasm twice** — fixed, and it
+        was the smaller half of the problem. electron-builder includes
+        production deps whatever the `files` list says, so the app carried all
+        12 MB of occt-import-js (duplicate wasm, C++ sources, 3.9 MB of tests)
+        AND all 28 MB of better-sqlite3 (the sqlite3 amalgamation, plus 15 MB of
+        compiler object files), against 54 KB and 2.2 MB actually used at
+        runtime. Exclusions are written as removals, never an allow-list,
+        because the pruned copy carries the LGPL texts ADR-0011's notices cite
+        by name — an over-broad exclude here is a licence violation, not a size
+        win. **MEASURED: install footprint 62 MB → 35 MB; the Windows zip only
+        141.7 MB from 149.3 MB, because C++ sources compress to nearly nothing
+        while the wasm is incompressible** — so the download win really is just
+        the duplicate wasm, and the other 20 MB is disk after install. Verified
+        by the full packaged e2e (30/30, STEP import and storage both exercise
+        the pruned tree) and both ADR-0011 compliance checks.
 - [x] 10. CI + GitHub releases — **owns the Windows `Setup.exe`** (ADR-0010). A GitHub
       Actions matrix builds each platform on its own runner: `windows-latest` produces
       the NSIS installer natively (no wine) and compiles native modules with MSVC when

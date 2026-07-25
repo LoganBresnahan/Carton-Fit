@@ -67,8 +67,13 @@ product decisions:
 
 - Fit verdict or max count, and whether geometry or weight was the limiting factor.
 - Best orientation per part, volume utilization %, total package weight.
-- 3D view: the carton (wireframe + translucent walls) with parts placed in their
-  computed positions and orientations; toggle between model view and packed view.
+- 3D view: the carton as a **wireframe** with parts placed in their computed
+  positions and orientations; toggle between model view and packed view.
+  (Translucent walls were specified here originally and tried in 2026-07;
+  rejected. Depth already comes from the shaded parts occluding each other, and
+  against the dark theme a wall can only tint toward slightly-lighter grey —
+  visible enough to help means opaque enough to haze the results it sits in
+  front of. Twelve crisp lines mark the boundary better.)
 - **Saved configurations & history**: box/constraint setups can be saved as named
   configurations and reloaded; every estimate is recorded (file, settings, result) as
   a queryable history.

@@ -19,18 +19,14 @@
 #   See ADR-0010 for the decision this forced.
 #
 # The renderer is fully bundled by vite (three, react, zustand and the 7.6 MB
-# occt WASM all land in out/renderer/assets), so the app needs nothing from
-# node_modules at runtime.
-#   MEASURED CAVEAT: the narrow `files` list below does NOT actually keep
-#   node_modules out — electron-builder includes production dependencies
-#   regardless, so app.asar carries a second, unused copy of the occt wasm
-#   (~7.3 MB) under node_modules/occt-import-js/dist/. See the carry-in on
-#   roadmap item 9; note that copy also carries the LGPL text THIRD-PARTY-
-#   NOTICES.md cites, so any exclusion must keep the licence files.
-# The bundling story changes when
-# better-sqlite3 arrives (ADR-0007): a native module cannot be bundled and must
-# be shipped unpacked, which is also the point where cross-building gets harder
-# (see VISION "Target platform vs. development platform").
+# occt WASM all land in out/renderer/assets). better-sqlite3 is the exception
+# (ADR-0007/0013): a native module cannot be bundled and ships unpacked, which
+# is also where cross-building gets harder (see VISION "Target platform vs.
+# development platform").
+#
+# A narrow `files` list does NOT keep node_modules out — electron-builder
+# includes production dependencies regardless — which is why the exclusions
+# below exist and why they are stated as removals rather than as an allow-list.
 
 appId: com.loganbresnahan.packagingestimator
 productName: Packaging Estimator
@@ -49,10 +45,46 @@ directories:
 # done to it and why.
 icon: build/icon.png
 
-# Only the electron-vite output plus the manifest electron needs to find `main`.
+# The electron-vite output plus the manifest electron needs to find `main` —
+# AND the production dependencies, which electron-builder includes whether or
+# not they are listed here. That is what the exclusions below are for.
+#
+# MEASURED (2026-07-25, roadmap item 9): unpruned, the app carried 12 MB of
+# occt-import-js and 28 MB of better-sqlite3, of which 54 KB and 2.2 MB
+# respectively are used at runtime. The rest was C++ sources, the sqlite3
+# amalgamation, compiler object files, and a SECOND copy of the 7.6 MB OCCT
+# wasm.
 files:
   - out/**
   - package.json
+
+  # occt-import-js is bundled by vite: the JS glue is inlined into
+  # out/renderer/assets/import.worker-*.js and the wasm is emitted as a hashed
+  # asset (`?url` in loadOcct.ts), which is the copy the app actually loads and
+  # the one asarUnpack exposes for the LGPL relink. The package copy is dead
+  # weight — but its LICENCE TEXTS ARE NOT. ADR-0011's notices cite
+  # `license.occt.txt` and `license.occt-import-js.txt` by name, so these
+  # exclusions name what goes rather than what stays: an over-broad exclude here
+  # is a licence violation, not a size win.
+  - '!node_modules/occt-import-js/dist/occt-import-js.wasm'
+  - '!node_modules/occt-import-js/dist/occt-import-js.js'
+  - '!node_modules/occt-import-js/dist/occt-import-js-worker.js'
+  - '!node_modules/occt-import-js/{test,tools,examples,occt-import-js}'
+  - '!node_modules/occt-import-js/{CMakeLists.txt,start_server.bat}'
+
+  # better-sqlite3 is loaded at runtime from node_modules (main process), so
+  # lib/, package.json and build/Release/better_sqlite3.node all stay — as does
+  # LICENSE, which THIRD-PARTY-NOTICES.md cites. What goes is everything needed
+  # only to BUILD it: the sqlite3 amalgamation, the C++ sources, and the
+  # compiler's object files, which alone are 15 MB.
+  - '!node_modules/better-sqlite3/{src,deps,docs}'
+  - '!node_modules/better-sqlite3/build/{deps,Makefile,binding.Makefile,config.gypi}'
+  - '!node_modules/better-sqlite3/build/*.mk'
+  - '!node_modules/better-sqlite3/build/Release/{obj,obj.target,.deps}'
+  - '!node_modules/better-sqlite3/build/Release/test_extension.node'
+  # Fetches prebuilt binaries at INSTALL time; ADR-0013 compiles from source, so
+  # it never runs in the packaged app.
+  - '!node_modules/prebuild-install'
 
 # Deterministic-ish archives; no auto-update wiring yet (roadmap "Later").
 compression: normal
