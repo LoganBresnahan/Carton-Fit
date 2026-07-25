@@ -98,8 +98,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         checkerboard was painted into the image), carried a generator watermark,
         and filled only 63% of its canvas. See `build/ICON.md`; the unprocessed
         art is kept as `build/icon-source.png`.
-      - window state persistence per ADR-0014 (JSON in userData, NOT SQLite —
-        bounds are needed before the lazily-opened database exists)
+      - [x] window state persistence per ADR-0014 (JSON in userData, NOT SQLite
+        — bounds are needed before the lazily-opened database exists). Size,
+        position and maximized survive a restart; bounds are validated against
+        the displays attached RIGHT NOW, so a position on an unplugged monitor
+        is dropped rather than opening the window somewhere unreachable. A
+        corrupt or hand-edited file falls back to defaults field by field.
+        Implementing it surfaced a real bug that "does it restore?" would never
+        have caught: the window crept +6,+27 EVERY launch on WSLg, because the
+        reported position includes the window frame but the constructor's does
+        not — twenty launches walked it off the screen. See ADR-0014's
+        consequences; the e2e guard is three launches, mutation-tested.
       — carry-in: translucent carton walls (VISION says "wireframe + translucent
       walls"; item 4 shipped the wireframe only, which reads clearly against a
       dense pack — revisit when adding depth cues)

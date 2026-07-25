@@ -55,6 +55,18 @@ written by the main process.
 - No schema migration, so item 9 does not touch the database at all.
 - The file is trivially inspectable and deletable, which is a real support
   affordance for "the window opens somewhere strange".
+- **Measured while implementing: a saved position cannot be the reported
+  position.** On WSLg, `BrowserWindow` interprets x/y as *excluding* the window
+  frame while `getNormalBounds()` reports a position *including* it, so writing
+  back what is reported adds the decoration size on every launch — +6,+27 each
+  time, walking the window off the screen in about twenty launches. Timing
+  cannot fix it: bounds read 0,0 before the window is mapped, then equal the
+  requested position, and only later gain the offset — and on Windows they never
+  gain it. So the rule is positional rather than temporal — a difference smaller
+  than a window frame from the position we *asked* for is treated as the same
+  position, and the offset it reveals is then applied to genuine user moves. The
+  e2e guard is three launches asserting the third lands exactly where the second
+  did, mutation-tested by restoring the naive behaviour.
 - If a third piece of small main-process state appears, that is the signal to
   generalize this into a proper settings file rather than adding a third
   mechanism — noted as a revisit trigger rather than built speculatively.
