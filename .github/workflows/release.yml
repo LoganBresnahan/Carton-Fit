@@ -4,12 +4,22 @@
 # generates its uninstaller by executing the installer, which needs wine), and
 # native modules cannot be cross-compiled for Windows at all. So the installer is
 # built here, on windows-latest, natively — this workflow owns the ship artifact.
+# Confirmed empirically on the first run: Setup.exe + uninstaller, no wine.
 #
-# BUILD PLAN STATUS (doc/plans/adr-0012-ci-build-plan.md): phase 1 lands the
-# Windows leg only. Still to come: the version-match gate and the Linux AppImage
-# leg (phase 2), the packaged e2e + compliance checks on this runner (phases 2–3),
-# and the draft-release upload (phase 3). Until then artifacts are ordinary
-# workflow artifacts — nothing is published anywhere.
+# The Windows leg does not just BUILD; it verifies itself, because it is the only
+# machine that can. It runs the full packaged e2e suite and the ADR-0011
+# compliance check on the bytes it just produced.
+#
+# BUILD PLAN STATUS (doc/plans/adr-0012-ci-build-plan.md): phases 1–2 landed.
+# Still to come: the LGPL wasm-substitution check and the draft-release upload
+# (phase 3). Until then artifacts are ordinary workflow artifacts — nothing is
+# published anywhere.
+#
+# Two jobs rather than one `strategy.matrix`: ADR-0012 says "two-leg matrix", but
+# the legs are not symmetric — Windows builds two targets and runs two
+# verification steps that have no Linux counterpart. Expressing that as a matrix
+# means `if: matrix.os == ...` on half the steps, which is harder to read than
+# two named jobs. Same platforms, same artifacts; presentation only.
 
 name: Release
 
@@ -18,15 +28,37 @@ on:
     tags: ['v*']
   # Iteration trigger. release.yml can only really be exercised on a Windows
   # runner, and tagging to test it would either burn version numbers or fail the
-  # version-match gate arriving in phase 2. Dispatch builds and checks; it never
-  # publishes.
+  # version gate below. Dispatch builds and verifies; it never publishes.
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  # Cheap, fast, and first: refuse to build a mislabeled installer. The job
+  # always runs (rather than carrying an `if:` on the job itself) so the build
+  # legs can depend on it normally — a skipped dependency would skip them too.
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tag must match package.json version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p "require('./package.json').version")"
+          echo "tag=$TAG package.json=$PKG"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG."
+            echo "::error::Bump package.json (or retag) — one honest version per installer."
+            exit 1
+          fi
+      - name: Note (dispatch run)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: echo "workflow_dispatch — version gate skipped, nothing will be published."
+
   windows:
+    needs: gate
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -48,16 +80,45 @@ jobs:
       # build can produce, and this runner is the only place nsis can be built.
       # Do not "fix" the yml by adding nsis there — it would break local /deploy.
       #
-      # Produces: release/*Setup*.exe (the ship artifact) and release/*-win.zip.
+      # `--publish never`: electron-builder detects CI and silently switches on
+      # its own GitHub publisher, which then dies on a missing GH_TOKEN. We do
+      # not want its publisher — ADR-0012 puts artifacts on a DRAFT release,
+      # created explicitly in phase 3, so a human decides what goes public.
       #
-      # `--publish never` is required, not cosmetic: electron-builder detects CI
-      # and silently switches on its own GitHub publisher, which then dies with
-      # "GitHub Personal Access Token is not set". We do not want its publisher
-      # at all — ADR-0012 puts artifacts on a DRAFT release, created explicitly
-      # in phase 3, precisely so nothing reaches the public without a human.
-      # Handing electron-builder a token would hand it that decision.
+      # Produces: release/*Setup*.exe (ship), release/*-win.zip, release/win-unpacked/.
       - name: Package (nsis + zip)
         run: npx electron-builder --win nsis zip --publish never
+
+      # Instant, so it runs before the slow e2e. `--self-test` first mutates a
+      # copy of the binary and requires the checker to notice — a compliance
+      # check that cannot fail is worse than no check, and this is the one class
+      # of check that stays green while the thing it guards silently rots.
+      - name: ASAR integrity must not be enforced (ADR-0011)
+        run: node scripts/check-asar-integrity-fuse.mjs --self-test "release/win-unpacked/Packaging Estimator.exe"
+
+      # The whole point of building here (ADR-0012): verify the shipped bytes on
+      # the platform that ships them. Windows runners have a real desktop
+      # session, so no xvfb — but the SwiftShader flags in e2e/harness.ts still
+      # matter, since the runner has no GPU.
+      #
+      # PACKAGED_APP is set as an env block rather than via the `e2e:packaged`
+      # npm script: that script hardcodes a POSIX `VAR=x cmd` prefix AND the
+      # linux-unpacked path, neither of which works here. An env block needs no
+      # `cross-env` dependency and no second npm script.
+      - name: E2E against the packaged Windows build
+        run: npx playwright test
+        env:
+          PACKAGED_APP: release/win-unpacked/Packaging Estimator.exe
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-windows
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v7
@@ -66,5 +127,40 @@ jobs:
           path: |
             release/*.exe
             release/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  linux:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Build
+        run: npm run build
+
+      # CLI override again: electron-builder.yml's linux.target is `dir` (the
+      # e2e smoke target), not AppImage. AppImage is the distributable form and
+      # only CI needs it, so it stays out of the local config.
+      #
+      # No e2e here — ci.yml already runs the packaged Linux smoke on every
+      # push, so repeating it on tag would cost minutes to re-prove a green.
+      - name: Package (AppImage)
+        run: npx electron-builder --linux AppImage --publish never
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-appimage
+          path: release/*.AppImage
           if-no-files-found: error
           retention-days: 14
