@@ -56,9 +56,23 @@ when scope changes.
   bogus `electron --version` (prints the embedded Node version) and electron-vite
   dying with "Error: Electron uninstall".
 - `npm test` — vitest (run twice for the ship bar, per `/shipshape`)
-- `npm run typecheck` — tsc
-- `npm run build` — electron-vite production build (installer targets land with
-  roadmap item 8)
+- `npm run typecheck` — tsc (covers `src`, `tests`, `e2e`, `samples`)
+- `npm run build` — electron-vite production build → `out/`
+- `npm run package` — build + `electron-builder --linux dir` → `release/linux-unpacked`
+  (the e2e smoke target)
+- `npm run e2e` — Playwright-Electron specs against `out/`
+- `npm run e2e:packaged` — the same specs against the packaged binary. **This is the
+  deploy gate**: dev-mode green does not count (ADR-0005), because packaged builds
+  fail in packaged-only ways — `file://` asset paths, WASM loading, workers.
+
+E2E needs a display and software GL (ADR-0005): WSLg supplies the display locally,
+CI will need `xvfb` (installed nowhere yet), and the SwiftShader flags live in
+`e2e/harness.ts` — harness-only, never in shipped code.
+
+**Windows installers need `wine`** (measured, correcting ADR-0001): `makensis` runs
+natively on Linux, but NSIS builds its uninstaller by *executing* the installer, so
+the `nsis` target dies with `spawn wine ENOENT` without it. `--win zip` has no
+uninstaller and cross-builds fine. See ADR-0010.
 
 Version pins: vite 7 + `@vitejs/plugin-react` 5 — electron-vite 5 doesn't support
 vite 8 yet; revisit the pins when it does.

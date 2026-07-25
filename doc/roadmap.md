@@ -29,17 +29,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       (ADR-0003 phases 3–4. The tier selector now runs end-to-end: switching to
       Thorough re-packs through the OBB provider and renders the composed
       rotations. Nesting stays visible-but-disabled from phase 2.)
-- [ ] 6. E2E harness + golden samples — Playwright `_electron.launch()` specs in
+- [x] 6. E2E harness + golden samples — Playwright `_electron.launch()` specs in
       `e2e/`; `samples/` golden parts with hand-computed expected results shared by
       unit, e2e, and dogfood layers (ADR-0005); DropZone keeps the picker path e2e
       depends on
-      — carry-in: **write the specs CI-ready** (ADR-0005 display consequences).
-      Locally WSLg supplies the display; a GitHub runner will not, and `xvfb` is not
-      installed anywhere yet — so specs must not assume a fixed-size display, and the
-      SwiftShader flags must live in the harness config, never in app code. Goldens
-      already hand-computed and verified against the production build during item 4:
-      cube-10x10 → 30³ = 27,000 @ 95% fill in a 12 in box, 7³ = 343 @ 78% in 3 in;
-      AS1 → 18 parts fit; 5 lb cap with 0.01 lb parts → exactly 500, weight-bound.
+      (16 specs: `smoke.spec.ts` is the deploy gate — boot, both import paths, and
+      one test per hand-computed golden in `samples/goldens.ts`; `packing-ui.spec.ts`
+      covers auto-run, truncated layouts, unplaced parts, the unit picker, the view
+      toggle, persistence, and unit conversion. Green against BOTH `out/` and the
+      packaged `linux-unpacked` binary. Written CI-ready: no fixed-size display
+      assumed, SwiftShader confined to `e2e/harness.ts`. `xvfb` remains the one
+      unmet CI prerequisite.)
 
 ## Next
 

@@ -15,5 +15,13 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["src", "tests", "electron.vite.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "tests",
+    "e2e",
+    "samples",
+    "electron.vite.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ]
 }
