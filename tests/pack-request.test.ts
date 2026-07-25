@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildPackRequest, partWeightG } from '../src/renderer/src/packing/request'
+import { buildPackRequest, openMeshParts, partWeightG } from '../src/renderer/src/packing/request'
 import { useAppStore, type PackingSettings } from '../src/renderer/src/store'
 import type { ImportedPart } from '../src/renderer/src/workers/import-protocol'
 
@@ -30,6 +30,15 @@ function cubePart(name = 'cube', size = 10): ImportedPart {
     1, 2, 6, 1, 6, 5 // +x
   ])
   return { name, positions, normals: null, indices }
+}
+
+/** The same cube with its +z face dropped — 10 triangles, an open shell.
+ *  Mirrors `samples/cube-10x10-open.stl`, which pins the same fact end-to-end. */
+function openCubePart(name = 'open-cube', size = 10): ImportedPart {
+  const part = cubePart(name, size)
+  // The +z face is the second pair of triangles (indices 6..11).
+  const indices = new Uint32Array([...part.indices.slice(0, 6), ...part.indices.slice(12)])
+  return { ...part, indices }
 }
 
 describe('partWeightG', () => {
@@ -137,11 +146,68 @@ describe('buildPackRequest', () => {
     expect(request?.parts.map((p) => p.name)).toEqual(['a', 'b'])
   })
 
+  it('still builds a request for an open mesh — warning, not blocking', () => {
+    // The estimate is worth showing; what it must not do is show a
+    // density-derived weight without saying the volume behind it is junk.
+    const request = buildPackRequest([openCubePart()], settings({ weightMode: 'density' }))
+    expect(request?.parts).toHaveLength(1)
+  })
+
   it('shares the imported positions rather than copying them', () => {
     // The worker gets a structured-clone copy at postMessage; building the
     // request must not copy on the main thread too (see pack-protocol).
     const part = cubePart()
     const request = buildPackRequest([part], settings())
     expect(request?.parts[0].positions).toBe(part.positions)
+  })
+})
+
+// The silent-wrong-answer guard (roadmap item 9). `isClosedMesh` was written and
+// tested during item 2 but never called, so density mode over an open mesh
+// produced a confident, wrong weight — and weight is a HARD constraint, so it
+// became a wrong part count. These pin the gate that closes that path.
+describe('openMeshParts', () => {
+  it('names an open part whose weight is being derived from its volume', () => {
+    const open = openMeshParts([openCubePart('shell')], settings({ weightMode: 'density' }))
+    expect(open).toEqual(['shell'])
+  })
+
+  it('says nothing about closed parts', () => {
+    expect(openMeshParts([cubePart('solid')], settings({ weightMode: 'density' }))).toEqual([])
+  })
+
+  it('reports exactly the open parts in a mixed file', () => {
+    const parts = [cubePart('a'), openCubePart('b'), cubePart('c'), openCubePart('d')]
+    expect(openMeshParts(parts, settings({ weightMode: 'density' }))).toEqual(['b', 'd'])
+  })
+
+  it('stays silent in direct-weight mode — no volume, no exposure', () => {
+    // The mesh is just as open; the number the user gets no longer depends on it.
+    const open = openMeshParts([openCubePart()], settings({ weightMode: 'direct' }))
+    expect(open).toEqual([])
+  })
+
+  it('ignores parts the request does not pack (max-quantity selection)', () => {
+    // Only the chosen part's weight is spent, so only its mesh matters.
+    const parts = [cubePart('chosen'), openCubePart('ignored')]
+    const s = settings({ weightMode: 'density', mode: 'max-quantity' })
+    expect(openMeshParts(parts, s, 'chosen')).toEqual([])
+    expect(openMeshParts(parts, s, 'ignored')).toEqual(['ignored'])
+  })
+
+  it('warns about every part in fit-check, where all of them are packed', () => {
+    const parts = [cubePart('a'), openCubePart('b')]
+    const s = settings({ weightMode: 'density', mode: 'fit-check' })
+    expect(openMeshParts(parts, s, 'a')).toEqual(['b'])
+  })
+
+  it('quantifies the error it is warning about', () => {
+    // Not a rounding wobble: dropping the +z face loses the origin-to-face
+    // pyramid, so the sum returns 1000 − (1/3 × 100 × 10) = 666.67 mm³ for a
+    // part that occupies a full 10 mm cube. At 1 g/cm³ that is 0.67 g reported
+    // for a 1 g part — 33% light, against a hard cap.
+    const density = settings({ weightMode: 'density', densityGPerCm3: 1 })
+    expect(partWeightG(cubePart(), density)).toBeCloseTo(1, 9)
+    expect(partWeightG(openCubePart(), density)).toBeCloseTo(2 / 3, 9)
   })
 })

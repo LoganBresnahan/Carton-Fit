@@ -12,6 +12,9 @@
   --muted: #9aa3b5;
   --accent: #5b9dd9;
   --error: #e07a6a;
+  /* Distinct from --error: the estimate succeeded, but a number in it cannot
+     be trusted. Amber, so it does not read as a failure. */
+  --warn: #d9a441;
 }
 
 body {
@@ -328,6 +331,17 @@ body {
 .results-error {
   color: var(--error);
   font-size: 0.85rem;
+}
+/* Louder than .results-note on purpose — this one says the answer is wrong,
+   not that the drawing is partial. */
+.results-warning {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--warn);
+  border-left: 3px solid var(--warn);
+  background: rgba(217, 164, 65, 0.08);
+  padding: 0.4rem 0.55rem;
+  border-radius: 0 3px 3px 0;
 }
 .results-note {
   font-size: 0.78rem;

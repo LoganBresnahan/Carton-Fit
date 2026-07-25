@@ -77,13 +77,18 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       wearing a ship label. Revisit when a Mac is available.
 - [ ] 9. Polish — error states, app icon, window state persistence (ADR-0014)
       Scoped 2026-07-25 against what actually exists:
-      - **open-mesh volume warning — the real gap, and not cosmetic.**
-        `isClosedMesh` exists in `core/geometry.ts` and is unit-tested, but
-        NOTHING calls it, while `packing/request.ts` computes `meshVolume`
-        unconditionally. In density mode on an open mesh the app therefore
-        reports a wrong weight silently — and weight is a hard constraint, so it
-        becomes a wrong part count stated with full confidence. Last known
-        silent-wrong-answer path in the product; do this first.
+      - [x] **open-mesh volume warning** — shipped as **ADR-0015** (flag an
+        unmeasurable input, do not refuse the estimate). `isClosedMesh` had been
+        written and tested in item 2 but never called, so density mode over an
+        open mesh reported a wrong weight silently — and weight is a hard
+        constraint, so it became a wrong part count stated with full confidence.
+        `openMeshParts` now gates it, scoped to the parts actually packed and
+        skipped outside density mode; the results panel qualifies the whole
+        answer, not just the weight line. New golden `cube-10x10-open.stl` (the
+        cube minus its +z face: perfect 10 mm bbox, 666.67 mm³ instead of 1000 —
+        33% light) pins it at the unit, golden, and e2e layers, and the e2e was
+        mutation-tested to prove it can fail. Last known silent-wrong-answer
+        path in the product, now closed.
       - unparseable-file errors and pack failures are ALREADY surfaced
         (`ImportResult`, `ResultsPanel`) — the item text was stale. What remains
         is making `storageError` visible outside the configurations panel.

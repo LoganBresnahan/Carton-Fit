@@ -1,4 +1,4 @@
-import { meshVolume } from '../core/geometry'
+import { isClosedMesh, meshVolume } from '../core/geometry'
 import { densityWeightG } from '../core/units'
 import { innerCartonMm, type PackingSettings } from '../store'
 import type { PackPart, PackRequest } from '../core/packing/types'
@@ -24,10 +24,50 @@ function volumeOf(part: ImportedPart): number {
 }
 
 /** Per-part weight in grams, from whichever ADR-0004 source the user selected.
- *  Direct entry is per part, so it applies to each part in a multi-part file. */
+ *  Direct entry is per part, so it applies to each part in a multi-part file.
+ *  On an open mesh the density branch is WRONG, not approximate — see
+ *  {@link openMeshParts}, which is what makes that visible instead of silent. */
 export function partWeightG(part: ImportedPart, settings: PackingSettings): number {
   if (settings.weightMode === 'direct') return settings.partWeightG
   return densityWeightG(settings.densityGPerCm3, volumeOf(part))
+}
+
+// Closedness is as expensive as the volume it qualifies and just as stable per
+// part, so it memoizes the same way. Computed lazily — direct-weight mode never
+// asks, and neither does an untouched session.
+const closedCache = new WeakMap<ImportedPart, boolean>()
+
+function isClosed(part: ImportedPart): boolean {
+  const cached = closedCache.get(part)
+  if (cached !== undefined) return cached
+  const closed = isClosedMesh(part.positions, part.indices)
+  closedCache.set(part, closed)
+  return closed
+}
+
+/**
+ * Names of the parts whose weight is currently being derived from a meaningless
+ * volume: density mode over a mesh that is not watertight.
+ *
+ * `meshVolume`'s signed-tetrahedron sum only cancels correctly when every edge
+ * is shared by two triangles. On an open mesh it still returns a number, so
+ * nothing throws and nothing looks wrong — the app reports a confident weight
+ * that is simply false. Weight is a hard constraint (ADR-0004), so that becomes
+ * a wrong part count and a possibly wrong binding constraint.
+ *
+ * Scoped to the parts the request actually packs, so a max-quantity run that
+ * replicates one chosen part does not warn about parts whose weight it never
+ * spends. Empty in direct-weight mode: no volume, no exposure.
+ */
+export function openMeshParts(
+  parts: readonly ImportedPart[],
+  settings: PackingSettings,
+  unitPartName: string | null = null
+): string[] {
+  if (settings.weightMode !== 'density') return []
+  return partsForRequest(parts, settings, unitPartName)
+    .filter((part) => !isClosed(part))
+    .map((part) => part.name)
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   bindingLabel,
+  openMeshWarning,
   packedWeightG,
   truncatedLayout,
   utilizationPercent,
@@ -140,6 +141,31 @@ describe('packedWeightG', () => {
   it('sums a composed multi-part unit', () => {
     const result = qty({ count: 5, placements: [placement] })
     expect(packedWeightG(result, request([10, 20, 30]))).toBe(300) // 5 × 60
+  })
+})
+
+describe('openMeshWarning', () => {
+  it('says nothing when every packed part is closed', () => {
+    expect(openMeshWarning([])).toBeNull()
+  })
+
+  it('names the part and tells the user how to get a trustworthy number', () => {
+    const message = openMeshWarning(['bracket'])
+    expect(message).toContain('bracket')
+    expect(message).toMatch(/is not a closed mesh/)
+    // The actionable half matters as much as the diagnosis: "not watertight"
+    // alone reads as a modelling nitpick, not "the count above is wrong".
+    expect(message).toMatch(/weight directly/i)
+  })
+
+  it('agrees in number for several parts', () => {
+    expect(openMeshWarning(['a', 'b'])).toMatch(/are not closed meshes/)
+  })
+
+  it('caps the list rather than printing a whole assembly', () => {
+    const message = openMeshWarning(['a', 'b', 'c', 'd', 'e'])
+    expect(message).toContain('and 2 more')
+    expect(message).not.toContain('“d”')
   })
 })
 

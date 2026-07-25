@@ -1,12 +1,14 @@
 import { useAppStore } from '../store'
 import {
   bindingLabel,
+  openMeshWarning,
   packedWeightG,
   truncatedLayout,
   utilizationPercent,
   verdictCaption,
   verdictHeadline
 } from '../packing/verdict'
+import { openMeshParts } from '../packing/request'
 import { gToWeight, weightUnitLabel } from '../core/units'
 
 // Thin declarative island (ADR-0006): reads the pack slice and renders the
@@ -22,6 +24,13 @@ export default function ResultsPanel() {
   const error = useAppStore((s) => s.packError)
   const elapsedMs = useAppStore((s) => s.packElapsedMs)
   const unitSystem = useAppStore((s) => s.settings.unitSystem)
+  const parts = useAppStore((s) => s.parts)
+  const settings = useAppStore((s) => s.settings)
+  const unitPartName = useAppStore((s) => s.unitPartName)
+
+  // Cheap after the first call per part (memoized in packing/request.ts), and
+  // skipped entirely outside density mode.
+  const openMesh = openMeshWarning(openMeshParts(parts, settings, unitPartName))
 
   if (status === 'idle' && !result) return null
 
@@ -66,6 +75,16 @@ export default function ResultsPanel() {
       <p className="results-caption" data-testid="results-caption">
         {verdictCaption(result)}
       </p>
+
+      {/* Qualifies the whole answer, not just the weight line: a wrong weight
+          produces a wrong count and can mis-attribute the binding constraint.
+          So it sits above the facts, where the reader cannot take the number
+          and leave. */}
+      {openMesh && (
+        <p className="results-warning" data-testid="results-open-mesh" role="alert">
+          {openMesh}
+        </p>
+      )}
 
       <dl className="results-facts">
         <div>

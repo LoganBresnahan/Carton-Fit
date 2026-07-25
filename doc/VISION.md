@@ -46,7 +46,7 @@ product decisions:
 | Units | mm ⇄ inches toggle (weights in kg ⇄ lb correspondingly). |
 | Clearances | Part-to-part and part-to-wall padding (dunnage/foam allowance). |
 | Max package weight | User-settable, **default 35 lb**. |
-| Part weight | Entered directly per part, **or** derived from a material/density selection using the mesh volume computed from the model. |
+| Part weight | Entered directly per part, **or** derived from a material/density selection using the mesh volume computed from the model. Volume is only meaningful on a **closed** mesh, so a density weight over an open one is flagged in the results rather than reported as fact. |
 
 ## Modes (user-selectable)
 

@@ -83,6 +83,27 @@ export function packedWeightG(result: PackResult, request: PackRequest): number 
 }
 
 /**
+ * The warning for parts whose density-derived weight rests on a meaningless
+ * volume (see `packing/request.ts` `openMeshParts`), or null when there are none.
+ *
+ * Worded to say what to DO, because the user can fix this in one click by
+ * entering the weight directly — and because "not watertight" alone reads as a
+ * modelling nitpick rather than "the number above is wrong".
+ */
+export function openMeshWarning(openParts: readonly string[]): string | null {
+  if (openParts.length === 0) return null
+  const shown = openParts.slice(0, 3).map((name) => `“${name}”`)
+  const rest = openParts.length - shown.length
+  const list = rest > 0 ? `${shown.join(', ')} and ${rest} more` : shown.join(', ')
+  const subject =
+    openParts.length === 1 ? `${list} is not a closed mesh` : `${list} are not closed meshes`
+  return (
+    `${subject}, so the volume behind this weight is unreliable — and weight is a ` +
+    `hard limit here. Enter the part weight directly for a trustworthy count.`
+  )
+}
+
+/**
  * True when the reported count exceeds the placements actually materialized.
  * The engine caps materialization (MAX_GRID_PLACEMENTS) because a weightless
  * 1 mm part in a 600 mm carton counts 2e8 copies; `count` stays true, so the

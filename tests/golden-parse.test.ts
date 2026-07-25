@@ -59,6 +59,21 @@ describe('STL golden: cube-10x10.stl', () => {
   })
 })
 
+describe('STL golden: cube-10x10-open.stl (the open-mesh trap)', () => {
+  it('measures 10 mm on every axis yet reports 2/3 of its volume', () => {
+    // The whole reason the app must warn: nothing here throws and nothing looks
+    // wrong. The bounding box is right, the mesh loads, and the volume is
+    // quietly 33% light because the +z face is missing (see samples/goldens.ts).
+    const ab = new Uint8Array(sampleBuffer('cube-10x10-open.stl')).buffer
+    const part = bufferGeometryToPart(new STLLoader().parse(ab), 'cube-10x10-open')
+    const size = aabbSize(computeAabb(part.positions))
+    expect(size).toEqual([10, 10, 10])
+    expect(part.indices.length / 3).toBe(10) // 12 − the two making the +z face
+    expect(isClosedMesh(part.positions, part.indices)).toBe(false)
+    expect(meshVolume(part.positions, part.indices)).toBeCloseTo(2000 / 3, 3)
+  })
+})
+
 describe('STEP golden: as1-oc-214.stp (nested instanced assembly)', () => {
   it('extracts the 18 solids of the AS1 assembly', () => {
     const result = occt.ReadStepFile(new Uint8Array(sampleBuffer('as1-oc-214.stp')), {

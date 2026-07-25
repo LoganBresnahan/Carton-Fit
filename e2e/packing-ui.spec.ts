@@ -7,7 +7,7 @@ import {
   waitForEstimate,
   type AppHandle
 } from './harness'
-import { AS1_ASSEMBLY, CUBE_STL } from '../samples/goldens'
+import { AS1_ASSEMBLY, CUBE_STL, OPEN_CUBE_STL } from '../samples/goldens'
 
 // The interaction layer the deploy gate does not cover: auto-run, the unit
 // picker, the model/packed toggle, truncated layouts, and settings persistence.
@@ -144,6 +144,42 @@ test('persists carton settings across a restart (roadmap item 3)', async () => {
   await expect(page.locator('[data-testid="dim-0"]')).toHaveValue('7')
   await expect(page.locator('[data-testid="dim-1"]')).toHaveValue('8')
   await expect(page.locator('[data-testid="dim-2"]')).toHaveValue('9')
+})
+
+// Roadmap item 9. The one place the app could state a wrong answer with full
+// confidence: density mode multiplies a mesh volume that an open mesh makes
+// meaningless, and weight is a hard constraint, so the part count inherits the
+// error. The warning must appear exactly when the wrong number is on screen.
+test('warns when a density weight rests on an open mesh', async () => {
+  const { page } = handle
+  const warning = page.locator('[data-testid="results-open-mesh"]')
+
+  await importSample(page, OPEN_CUBE_STL.file)
+  await setCarton(page, [12, 12, 12])
+  await waitForEstimate(page)
+  // Direct weight does not touch the volume, so there is nothing to warn about.
+  await expect(warning).toHaveCount(0)
+
+  await page.click('[data-testid="weight-density"]')
+  await waitForEstimate(page)
+  await expect(warning).toBeVisible()
+  await expect(warning).toContainText(/not a closed mesh/)
+
+  // And it clears the moment the answer stops depending on the volume.
+  await page.click('[data-testid="weight-direct"]')
+  await waitForEstimate(page)
+  await expect(warning).toHaveCount(0)
+})
+
+test('stays quiet about a closed mesh in density mode', async () => {
+  // The negative half: a warning that fires on every part is noise, and would
+  // train the user to ignore the one case that matters.
+  const { page } = handle
+  await importSample(page, CUBE_STL.file)
+  await page.click('[data-testid="weight-density"]')
+  await setCarton(page, [12, 12, 12])
+  await waitForEstimate(page)
+  await expect(page.locator('[data-testid="results-open-mesh"]')).toHaveCount(0)
 })
 
 test('converts display units without changing the stored answer', async () => {

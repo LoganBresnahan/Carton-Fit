@@ -21,8 +21,13 @@ export interface GoldenPart {
   triangleCount?: number
   /** Bounding box in millimetres. */
   sizeMm?: [number, number, number]
-  /** Enclosed volume in mm³ (closed meshes only). */
+  /** What the signed-tetrahedron sum returns, in mm³. This is the TRUE enclosed
+   *  volume only when `closedMesh !== false`; on an open mesh it is the number
+   *  the sum happens to produce, recorded so the error is pinned rather than
+   *  merely asserted to be "wrong". */
   volumeMm3?: number
+  /** False for a deliberately open mesh (see OPEN_CUBE_STL). Absent means closed. */
+  closedMesh?: boolean
 }
 
 export const CUBE_STL: GoldenPart = {
@@ -38,6 +43,25 @@ export const CUBE_STEP: GoldenPart = {
   partCount: 1,
   sizeMm: [10, 10, 10],
   volumeMm3: 1000
+}
+
+/**
+ * The same 10 mm cube with its +z face removed — 10 triangles instead of 12.
+ *
+ * Exists to pin the open-mesh path (roadmap item 9). Density mode derives weight
+ * from mesh volume, and on an open mesh that volume is not approximate, it is
+ * wrong: the missing face leaves the origin-to-face pyramid unaccounted for, so
+ * the sum returns 1000 − (1/3 × 100 × 10) = 666.67 mm³ for a part that plainly
+ * occupies a 10 mm cube. A 33% weight error, silently, against a HARD
+ * constraint — which is why the app must warn rather than answer.
+ */
+export const OPEN_CUBE_STL: GoldenPart = {
+  file: 'cube-10x10-open.stl',
+  partCount: 1,
+  triangleCount: 10, // 12 − the two that made the +z face
+  sizeMm: [10, 10, 10],
+  volumeMm3: 2000 / 3, // 666.67 — the WRONG answer, by hand: 1000 − 333.33
+  closedMesh: false
 }
 
 export const AS1_ASSEMBLY: GoldenPart = {
