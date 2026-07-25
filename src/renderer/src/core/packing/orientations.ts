@@ -7,8 +7,9 @@ import type { Mat3, OrientationOption, OrientationProvider, Vec3 } from './types
 // symmetry group, not from reflections. This is the fast tier's OrientationProvider.
 
 /** The 6 proper rotations that produce the 6 distinct extent permutations.
- *  Row-major, applied as v' = M · v. */
-const ROTATIONS: readonly Mat3[] = [
+ *  Row-major, applied as v' = M · v. Shared with the thorough tier, which
+ *  composes them onto the part→OBB rotation. */
+export const AXIS_ROTATIONS: readonly Mat3[] = [
   [1, 0, 0, 0, 1, 0, 0, 0, 1], //   identity            → (x, y, z)
   [0, -1, 0, 1, 0, 0, 0, 0, 1], //  90° about Z         → (y, x, z)
   [0, 0, 1, 0, 1, 0, -1, 0, 0], //  90° about Y         → (z, y, x)
@@ -16,6 +17,17 @@ const ROTATIONS: readonly Mat3[] = [
   [0, 0, 1, 1, 0, 0, 0, 1, 0], //   120° about diagonal → (z, x, y)
   [0, 1, 0, 0, 0, 1, 1, 0, 0] //    120° the other way  → (y, z, x)
 ]
+
+/** Row-major product: applying mulMat3(a, b) is applying b, then a. */
+export function mulMat3(a: Mat3, b: Mat3): Mat3 {
+  const m: number[] = new Array(9)
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      m[r * 3 + c] = a[r * 3] * b[c] + a[r * 3 + 1] * b[3 + c] + a[r * 3 + 2] * b[6 + c]
+    }
+  }
+  return m as unknown as Mat3
+}
 
 export function applyMat3(m: Mat3, v: Vec3): Vec3 {
   return [
@@ -36,7 +48,7 @@ export function det3(m: Mat3): number {
 
 /** AABB of an axis-aligned box after rotation by `m`, via its 8 transformed corners.
  *  Exact for the 90°-multiple rotations here (a rotated box is again axis-aligned). */
-function rotatedAabb(min: Vec3, max: Vec3, m: Mat3): { min: Vec3; max: Vec3 } {
+export function rotatedAabb(min: Vec3, max: Vec3, m: Mat3): { min: Vec3; max: Vec3 } {
   const lo: [number, number, number] = [Infinity, Infinity, Infinity]
   const hi: [number, number, number] = [-Infinity, -Infinity, -Infinity]
   for (let cx = 0; cx < 2; cx++) {
@@ -56,7 +68,7 @@ function rotatedAabb(min: Vec3, max: Vec3, m: Mat3): { min: Vec3; max: Vec3 } {
 /** The fast tier's OrientationProvider: AABB → 6 oriented candidates. */
 export const aabbOrientations: OrientationProvider = (part) => {
   const box = computeAabb(part.positions)
-  return ROTATIONS.map((m): OrientationOption => {
+  return AXIS_ROTATIONS.map((m): OrientationOption => {
     const r = rotatedAabb(box.min, box.max, m)
     return {
       rotation: m,

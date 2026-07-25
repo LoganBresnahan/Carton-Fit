@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { MAX_GRID_PLACEMENTS } from '../src/renderer/src/core/packing/quantityGrid'
 import { aabbOrientations, det3 } from '../src/renderer/src/core/packing/orientations'
 import { gridFillQuantity } from '../src/renderer/src/core/packing/quantityGrid'
 import type { Clearances, PackBox, PackPart, Vec3 } from '../src/renderer/src/core/packing/types'
@@ -85,6 +86,30 @@ describe('gridFillQuantity — counts', () => {
     const r = gridFillQuantity(unit('rod', [90, 5, 5]), [100, 100, 100], NO_CLEARANCE, Infinity)
     // best orientation: 90 along one axis (1), 5×5 across the 100×100 face (20×20) = 400
     expect(r.count).toBe(400)
+  })
+})
+
+describe('gridFillQuantity — materialization cap', () => {
+  it('reports the true count but materializes at most MAX_GRID_PLACEMENTS', () => {
+    // A weightless 1 mm part in a 600 mm carton counts 2.16e8 copies — building
+    // an object per copy OOMed the process (thorough-tier verify finding).
+    const r = gridFillQuantity(unit('tiny', [1, 1, 1]), [600, 600, 600], NO_CLEARANCE, Infinity)
+    expect(r.count).toBe(600 * 600 * 600)
+    expect(r.placements.length).toBe(MAX_GRID_PLACEMENTS)
+    expect(r.binding).toBe('geometry')
+  })
+
+  it('treats sub-EPS extents as unpackable (degenerate, not near-infinite)', () => {
+    const flat: PackBox = {
+      name: 'flat',
+      weightG: 0,
+      orientations: [
+        { extent: [10, 10, 1e-7], rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1], rotatedMin: [0, 0, 0] }
+      ]
+    }
+    const r = gridFillQuantity(flat, [100, 100, 100], NO_CLEARANCE, Infinity)
+    expect(r.count).toBe(0)
+    expect(r.binding).toBe('geometry')
   })
 })
 

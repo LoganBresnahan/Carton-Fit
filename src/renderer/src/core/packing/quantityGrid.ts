@@ -1,3 +1,4 @@
+import { EPS } from '../geometry'
 import type {
   Clearances,
   OrientationOption,
@@ -8,6 +9,12 @@ import type {
   Vec3
 } from './types'
 
+/** `count` always reports the true number, but only this many placements are
+ *  materialized: a weightless 1 mm part in a 600 mm carton counts 2e8 copies,
+ *  and building an object per copy OOMs long before any renderer could draw
+ *  them. Phase 5's results layer decides how to present a truncated layout. */
+export const MAX_GRID_PLACEMENTS = 50_000
+
 // fast-grid-fill-quantity (ADR-0003): how many copies of one unit fit, packed on a
 // regular grid. For each candidate orientation, count a 3D grid of the box inside the
 // carton's usable interior, pick the orientation that fits the most, then apply the
@@ -16,9 +23,10 @@ import type {
 /** Count of size-`e` boxes that fit along a `usable`-length run with `gap` between
  *  them. From n·e + (n−1)·gap ≤ usable, so n = floor((usable + gap) / (e + gap)).
  *  Guards the edge cases the plan calls out: exact fit, off-by-one, e larger than
- *  usable, and non-positive usable. */
-function countAlong(usable: number, e: number, gap: number): number {
-  if (usable <= 0 || e <= 0) return 0
+ *  usable, and non-positive usable. Extents at or below `degenerate` count as
+ *  zero, not as near-infinite packability (see bestGrid). */
+function countAlong(usable: number, e: number, gap: number, degenerate: number): number {
+  if (usable <= 0 || e <= degenerate) return 0
   const n = Math.floor((usable + gap) / (e + gap))
   return n > 0 ? n : 0
 }
@@ -38,10 +46,18 @@ function bestGrid(unit: PackBox, carton: Vec3, clearances: Clearances): GridFit 
   ]
   let best: GridFit | null = null
   for (const option of unit.orientations) {
+    const [ex, ey, ez] = option.extent
+    // Degenerate-extent bar, RELATIVE to the part's own scale: float32
+    // quantization leaves ~(size × 6e-8) of residual thickness on a rotated
+    // flat part — a 30 mm sheet came back 1.4e-6 mm "thick" and dividing by it
+    // produced a 1.8e8 count that OOMed the process (verify finding). 1e-5 of
+    // the largest extent sits well above that noise and well below any real
+    // feature (a 1000 mm sheet 0.1 mm thick is 1e-4 of its size).
+    const degenerate = Math.max(EPS, Math.max(ex, ey, ez) * 1e-5)
     const counts: [number, number, number] = [
-      countAlong(usable[0], option.extent[0], clearances.betweenParts),
-      countAlong(usable[1], option.extent[1], clearances.betweenParts),
-      countAlong(usable[2], option.extent[2], clearances.betweenParts)
+      countAlong(usable[0], ex, clearances.betweenParts, degenerate),
+      countAlong(usable[1], ey, clearances.betweenParts, degenerate),
+      countAlong(usable[2], ez, clearances.betweenParts, degenerate)
     ]
     const total = counts[0] * counts[1] * counts[2]
     if (!best || total > best.total) best = { counts, total, option }
@@ -103,7 +119,9 @@ export const gridFillQuantity: QuantityStrategy = (unit, carton, clearances, max
     geometryCount === 0 ? 'geometry' : weightCount <= geometryCount ? 'weight' : 'geometry'
 
   const placements =
-    grid && count > 0 ? gridPlacements(unit, grid.option, grid.counts, clearances, count) : []
+    grid && count > 0
+      ? gridPlacements(unit, grid.option, grid.counts, clearances, Math.min(count, MAX_GRID_PLACEMENTS))
+      : []
 
   return { count, placements, binding }
 }
