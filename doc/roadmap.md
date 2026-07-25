@@ -75,15 +75,24 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       — carry-in: **mac dmg still undocumented and unbuilt.** ADR-0012 declines a
       macOS runner on purpose — a dmg nobody can dogfood is an untested artifact
       wearing a ship label. Revisit when a Mac is available.
-- [ ] 9. Polish — error states (unparseable file, open mesh volume warning), app icon,
-      window state persistence
+- [ ] 9. Polish — error states, app icon, window state persistence (ADR-0014)
+      Scoped 2026-07-25 against what actually exists:
+      - **open-mesh volume warning — the real gap, and not cosmetic.**
+        `isClosedMesh` exists in `core/geometry.ts` and is unit-tested, but
+        NOTHING calls it, while `packing/request.ts` computes `meshVolume`
+        unconditionally. In density mode on an open mesh the app therefore
+        reports a wrong weight silently — and weight is a hard constraint, so it
+        becomes a wrong part count stated with full confidence. Last known
+        silent-wrong-answer path in the product; do this first.
+      - unparseable-file errors and pack failures are ALREADY surfaced
+        (`ImportResult`, `ResultsPanel`) — the item text was stale. What remains
+        is making `storageError` visible outside the configurations panel.
+      - app icon: `build/icon.png` (1024², transparent) + electron-builder wiring
+      - window state persistence per ADR-0014 (JSON in userData, NOT SQLite —
+        bounds are needed before the lazily-opened database exists)
       — carry-in: translucent carton walls (VISION says "wireframe + translucent
       walls"; item 4 shipped the wireframe only, which reads clearly against a
       dense pack — revisit when adding depth cues)
-      — carry-in: **history needs a UI, and probably needs thinning.** Item 7
-      records every estimate but nothing reads them back yet. Whatever displays
-      history should also address the volume problem noted on item 7 —
-      consecutive rows sharing a content hash and settings are noise.
       — carry-in: **the installer ships the 7.3 MB OCCT wasm twice.**
       `electron-builder.yml`'s comment claims the narrow `files` list means
       "nothing from node_modules at runtime", but electron-builder includes
@@ -120,6 +129,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       — carry-in: **code signing.** The `Setup.exe` is unsigned, so SmartScreen
       warns. ADR-0010 says certificates belong on this same runner; revisit how
       they are held before adding it.
+
+- [ ] 11. Estimate history UI — read back what item 7 records: a browsable list
+      (file, settings, result, when), and the thinning decision that comes with
+      it. Split out of item 9 on 2026-07-25 because it is a feature with its own
+      UI surface, not polish, and because displaying history forces a product
+      call VISION has not made: "every estimate is recorded" predates ADR-0009
+      removing the compute button, so an estimate is now every debounced
+      re-pack — dozens of near-identical rows per session. Collapsing
+      consecutive rows sharing content hash + settings is the likely answer;
+      either way it needs an ADR and a VISION amendment, not a silent narrowing.
+      `estimatesForContent(hash)` already exists for the per-part view.
 
 ## Later
 
