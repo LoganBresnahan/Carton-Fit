@@ -117,8 +117,8 @@
 > it). Now deleted from the child env instead. A Linux-only e2e would never have
 > surfaced this, which is the argument for the Windows leg in one example.
 
-### 3. Compliance + draft release · **opus batch, one tag/dispatch**
-- [ ] `wasm-substitution-check-windows` · medium · **verify** — automate ADR-0011's
+### 3. Compliance + draft release · **opus batch** ✅ *complete*
+- [x] `wasm-substitution-check-windows` · medium · **verify** — automate ADR-0011's
       manual test in the Windows leg: overwrite the **asarUnpack'd** wasm in
       `win-unpacked` with junk, launch via the packaged harness, import a
       `samples/` STEP, assert *failure*; restore. Verify shape: (a) confirm the
@@ -126,11 +126,34 @@
       replaced copy is the loaded one — app.asar carries a second, unused wasm
       (roadmap item 9 carry-in), and replacing that one is the trap.
       Discharges roadmap item 10's ADR-0011 carry-in.
-- [ ] `draft-release-upload` · medium — both legs' artifacts converge on ONE
+      *Done: `e2e-compliance/lgpl-wasm-substitution.spec.ts` + its own
+      `playwright.compliance.config.ts`, so a spec that corrupts the build can
+      never run during an ordinary `npm run e2e`. **3/3 green on Windows** —
+      the LGPL guarantee now holds on the platform that ships, discharging the
+      carry-in. Restores in `afterAll`, and asserts the unpacked assets dir holds
+      exactly ONE wasm so an `asarUnpack` scope change fails loudly.*
+      **Verify satisfied both ways:** (a) a baseline import runs BEFORE tampering,
+      so "import failed" can't pass for the wrong reason; and the spec was
+      mutation-tested — rewriting the substitution to write the original bytes
+      back makes it FAIL, proving the assertion has teeth. (b) breaking the
+      unpacked copy breaks the app, which is the direct proof that copy is the
+      loaded one.
+- [x] `draft-release-upload` · medium — both legs' artifacts converge on ONE
       **draft** release for the tag (create-if-missing/append semantics;
       `contents: write`). Eyeball `draft: true` before the tag push — the silent
       failure here is auto-publishing an undogfooded build. Skipped under
       `workflow_dispatch`.
+      *Done as a THIRD job (`needs: [windows, linux]`) rather than an upload step
+      per leg — two legs racing to create-or-append one release is a real race,
+      and this must happen exactly once. Only job in either workflow with
+      `contents: write`, granted at job scope. Notes come from
+      `.github/release-notes.md`: a heredoc inside a YAML block scalar depends on
+      two indentation rules agreeing and is silently mangled when they don't.*
+      **Exercised for real by tagging `v0.1.0`** (gate passed, versions matched):
+      draft created with all three assets — `Setup.exe` 102 MB, `-win.zip`
+      143 MB, `.AppImage` 131 MB — and `isDraft: true` confirmed via the API,
+      not by reading the YAML. A dispatch run immediately before it skipped this
+      job in 0 s, proving "dispatch never publishes" too.
 
 ### 4. Consumption + optimization · **opus batch**
 - [ ] `deploy-fetch-path` · medium — amend `.claude/skills/deploy/SKILL.md` step 1:
