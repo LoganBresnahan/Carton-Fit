@@ -1,0 +1,75 @@
+# electron-builder configuration (ADR-0001: Electron shell, electron-builder
+# producing installers; roadmap item 8).
+#
+# One `npm run build` (electron-vite → out/) feeds every target, so the bytes
+# that get smoke-tested are the bytes that ship:
+#   - win nsis  → the SHIP artifact, a Windows Setup.exe
+#   - win zip   → wine-free fallback: the same packaged app, just archived
+#   - linux dir → the SMOKE target, unpacked so Playwright can launch it under
+#                 WSLg without installing anything
+#
+# CROSS-BUILD REALITY (measured 2026-07-25, correcting ADR-0001's "NSIS
+# installers cross-build routinely from Linux/WSL"):
+#   Packaging both platforms works natively, and `makensis` itself has a Linux
+#   build that electron-builder downloads and runs. But NSIS generates its
+#   UNINSTALLER by executing the freshly built installer once — running a
+#   Windows .exe — so the nsis target requires **wine** on Linux and fails with
+#   `spawn wine ENOENT` without it. `win zip` has no uninstaller and therefore
+#   needs no wine, which is why it exists here as the fallback.
+#   See ADR-0010 for the decision this forced.
+#
+# The renderer is fully bundled by vite (three, react, zustand and the 7.6 MB
+# occt WASM all land in out/renderer/assets), so the app needs nothing from
+# node_modules at runtime — hence the narrow `files` list. That changes when
+# better-sqlite3 arrives (ADR-0007): a native module cannot be bundled and must
+# be shipped unpacked, which is also the point where cross-building gets harder
+# (see VISION "Target platform vs. development platform").
+
+appId: com.loganbresnahan.packagingestimator
+productName: Packaging Estimator
+copyright: Copyright © 2026 Logan Bresnahan
+
+directories:
+  buildResources: build
+  output: release
+
+# Only the electron-vite output plus the manifest electron needs to find `main`.
+files:
+  - out/**
+  - package.json
+
+# Deterministic-ish archives; no auto-update wiring yet (roadmap "Later").
+compression: normal
+npmRebuild: false
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  # Keep executable EDITING (icon, product name, version stamped onto the exe —
+  # done natively by electron-builder's app-builder), but skip code SIGNING,
+  # which shells out to signtool.exe under wine and is the one step that cannot
+  # cross-build from WSL. No certificate exists yet anyway; the consequence is
+  # a SmartScreen warning on first run, which the dogfood handoff must state
+  # rather than hide.
+  signAndEditExecutable: true
+  signExecutable: false
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Packaging Estimator
+
+linux:
+  target:
+    - target: dir
+      arch: [x64]
+  category: Utility
+  synopsis: Estimate how CAD parts pack into shipping cartons
+
+mac:
+  target: dmg
+  category: public.app-category.productivity
