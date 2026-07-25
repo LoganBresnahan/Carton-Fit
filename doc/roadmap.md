@@ -46,25 +46,35 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 - [ ] 7. Persistence — better-sqlite3 in the main process behind IPC (ADR-0007):
       `configurations` (named presets) + `estimates` (history); save/load UI;
       migrations via `PRAGMA user_version`; open-with-recovery
-- [ ] 8. Installers + /deploy live — electron-builder: Windows NSIS (primary) +
+- [x] 8. Installers + /deploy live — electron-builder: Windows NSIS (primary) +
       linux-unpacked smoke target; `/deploy` skill runs end-to-end (packaged smoke,
       dist-live staging, dogfood handoff); mac build documented
+      (`/deploy` runs end-to-end and shipped its first build at 1ccc1fc: 143 MB
+      Windows zip + linux-unpacked smoke target from one build, 16/16 e2e green
+      against the PACKAGED binary, staged to `dist-live/` with rollback.)
+      — carry-in: **the NSIS `Setup.exe` is not built yet.** ADR-0010: NSIS needs
+      wine on Linux (its uninstaller runs the installer), and wine was rejected
+      because it does nothing for item 7's native modules. The installer is CI's
+      job — see the CI item below, which now owns the ship artifact. Until then
+      the zip is unsigned (SmartScreen warns) with no Start-menu entry or
+      uninstaller. mac dmg also still undocumented.
 - [ ] 9. Polish — error states (unparseable file, open mesh volume warning), app icon,
       window state persistence
       — carry-in: translucent carton walls (VISION says "wireframe + translucent
       walls"; item 4 shipped the wireframe only, which reads clearly against a
       dense pack — revisit when adding depth cues)
+- [ ] 10. CI + GitHub releases — **owns the Windows `Setup.exe`** (ADR-0010). A GitHub
+      Actions matrix builds each platform on its own runner: `windows-latest` produces
+      the NSIS installer natively (no wine) and compiles native modules with MSVC when
+      no prebuild matches, which also de-risks item 7. Publish installers as release
+      artifacts on tag; `/deploy` then fetches the CI artifact for a sha instead of
+      building it. Prerequisites already known: the runner needs **`xvfb`** (no WSLg
+      there) plus the SwiftShader flags already in `e2e/harness.ts`; vitest and
+      typecheck need nothing special. Reuse `/deploy`'s staging semantics rather than
+      duplicating them.
 
 ## Later
 
-- **CI + GitHub releases** — run the three ADR-0005 layers on GitHub Actions and publish
-  the Windows `Setup.exe` as a release artifact on tag. Known prerequisites, so the
-  design work is already done: the runner needs **`xvfb`** (no WSLg there) plus the
-  SwiftShader flags for Electron e2e; `vitest` and `typecheck` need nothing special.
-  Pairs with item 8 — once installers build reproducibly, the release step is a tag
-  trigger over the same command. Wire `/deploy`'s staging semantics to it rather than
-  duplicating them. (ADR-0005 revisit trigger: "CI lands → wire the same three layers
-  there; deploy grows a tag/release step.")
 - More import formats (OBJ, IGES — near-free via occt-import-js)
 - Tier-3 true nesting (experimental; see ADR-0003 revisit triggers)
 - Box tare weight; material density library (ADR-0004 revisit triggers)
