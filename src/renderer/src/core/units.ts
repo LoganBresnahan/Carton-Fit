@@ -12,6 +12,17 @@ export const gToLb = (g: number): number => g / G_PER_LB
 export const kgToG = (kg: number): number => kg * G_PER_KG
 export const gToKg = (g: number): number => g / G_PER_KG
 
+/** 1 cm³ = 1000 mm³. Densities are quoted per cm³ but mesh volume is mm³
+ *  (canonical), so this is the bridge — and, being a conversion constant, it
+ *  lives here with the others (ADR-0004). */
+export const MM3_PER_CM3 = 1000
+
+/** Part weight from a material density and a mesh volume (ADR-0004's second
+ *  weight source). Exact only for closed meshes — the open-mesh warning is
+ *  roadmap item 9. */
+export const densityWeightG = (densityGPerCm3: number, volumeMm3: number): number =>
+  (densityGPerCm3 * volumeMm3) / MM3_PER_CM3
+
 export type UnitSystem = 'metric' | 'imperial'
 
 export const lengthToMm = (value: number, units: UnitSystem): number =>

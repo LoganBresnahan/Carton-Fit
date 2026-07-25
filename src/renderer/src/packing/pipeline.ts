@@ -1,9 +1,5 @@
-import type {
-  PackJob,
-  PackRequest,
-  PackResponse,
-  PackResult
-} from '../workers/pack-protocol'
+import type { PackJob, PackRequest, PackResponse } from '../workers/pack-protocol'
+import type { PackSink } from './types'
 
 // The pack pipeline (ADR-0003 phase 5): main-thread orchestration between the
 // settings/parts spine and the pack worker. Pure and worker-injected, exactly
@@ -22,14 +18,6 @@ export interface PackWorkerLike {
   onmessage: ((event: MessageEvent<PackResponse>) => void) | null
   postMessage(message: PackJob): void
   terminate(): void
-}
-
-/** Where the pipeline writes pack outcomes. The store implements this (item 4);
- *  tests pass spies. Keeps dispatch logic out of components and testable. */
-export interface PackSink {
-  begin(): void
-  succeed(result: PackResult, elapsedMs: number): void
-  fail(error: string): void
 }
 
 export interface PackPipeline {

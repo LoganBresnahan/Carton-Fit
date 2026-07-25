@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  createPackPipeline,
-  type PackSink,
-  type PackWorkerLike
-} from '../src/renderer/src/packing/pipeline'
+import { createPackPipeline, type PackWorkerLike } from '../src/renderer/src/packing/pipeline'
 import type { PackJob, PackResponse, PackRequest, PackResult } from '../src/renderer/src/workers/pack-protocol'
+import type { PackSink } from '../src/renderer/src/packing/types'
 
 // Stub worker: records jobs and lets the test push responses, so the pipeline's
 // dispatch + staleness logic runs with no real Worker and no engine (ADR-0005

@@ -1,13 +1,15 @@
 import { create } from 'zustand'
 import type { ImportedPart } from './workers/import-protocol'
 import type { ImportSink, ImportStats, ImportStatus, LoadedFile } from './import/types'
-import type { PackMode, QualityTier, Vec3 } from './core/packing/types'
+import type { PackMode, PackResult, QualityTier, Vec3 } from './core/packing/types'
+import type { PackSink, PackStatus } from './packing/types'
 import type { UnitSystem } from './core/units'
 import { DEFAULT_MAX_WEIGHT_G, inToMm } from './core/units'
 
-// The app's data spine (ADR-0006). Two slices: the import outcome (worker/pipeline
-// writes it) and the packing settings (the inputs panel writes them, persisted to
-// localStorage by hand — ADR-0006 bans state middleware, so no zustand/persist).
+// The app's data spine (ADR-0006). Three slices: the import outcome (worker/
+// pipeline writes it), the packing settings (the inputs panel writes them,
+// persisted to localStorage by hand — ADR-0006 bans state middleware, so no
+// zustand/persist), and the pack outcome (the pack pipeline writes it).
 
 export type { LoadedFile } from './import/types'
 
@@ -87,6 +89,24 @@ interface AppState {
   // --- settings slice ---
   settings: PackingSettings
   updateSettings: (patch: Partial<PackingSettings>) => void
+
+  // --- pack slice ---
+  packStatus: PackStatus
+  packResult: PackResult | null
+  packError: string | null
+  packElapsedMs: number | null
+  packBegan: () => void
+  packSucceeded: (result: PackResult, elapsedMs: number) => void
+  packFailed: (error: string) => void
+}
+
+/** Cleared pack state — a result belongs to the file and inputs that produced
+ *  it, so any new import must drop it rather than show a stale estimate. */
+const NO_PACK = {
+  packStatus: 'idle' as PackStatus,
+  packResult: null,
+  packError: null,
+  packElapsedMs: null
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -96,13 +116,22 @@ export const useAppStore = create<AppState>((set) => ({
   error: null,
   stats: null,
 
-  beginImport: (file) => set({ status: 'parsing', file, parts: [], error: null, stats: null }),
+  beginImport: (file) =>
+    set({ status: 'parsing', file, parts: [], error: null, stats: null, ...NO_PACK }),
   importSucceeded: (parts, stats) => set({ status: 'done', parts, stats, error: null }),
-  importFailed: (error) => set({ status: 'failed', error, parts: [], stats: null }),
-  resetImport: () => set({ status: 'idle', file: null, parts: [], error: null, stats: null }),
+  importFailed: (error) => set({ status: 'failed', error, parts: [], stats: null, ...NO_PACK }),
+  resetImport: () =>
+    set({ status: 'idle', file: null, parts: [], error: null, stats: null, ...NO_PACK }),
 
   settings: loadSettings(),
-  updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } }))
+  updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+
+  ...NO_PACK,
+  packBegan: () => set({ packStatus: 'packing', packError: null }),
+  packSucceeded: (packResult, packElapsedMs) =>
+    set({ packStatus: 'done', packResult, packElapsedMs, packError: null }),
+  packFailed: (packError) =>
+    set({ packStatus: 'failed', packError, packResult: null, packElapsedMs: null })
 }))
 
 // Persist settings whenever they change (the object identity changes on updateSettings).
@@ -116,5 +145,14 @@ export function storeImportSink(): ImportSink {
     begin: (file) => useAppStore.getState().beginImport(file),
     succeed: (parts, stats) => useAppStore.getState().importSucceeded(parts, stats),
     fail: (error) => useAppStore.getState().importFailed(error)
+  }
+}
+
+/** Adapt the store's actions to the pack pipeline's PackSink. */
+export function storePackSink(): PackSink {
+  return {
+    begin: () => useAppStore.getState().packBegan(),
+    succeed: (result, elapsedMs) => useAppStore.getState().packSucceeded(result, elapsedMs),
+    fail: (error) => useAppStore.getState().packFailed(error)
   }
 }

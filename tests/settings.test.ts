@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { innerCartonMm, useAppStore, type PackingSettings } from '../src/renderer/src/store'
+import type { PackResult } from '../src/renderer/src/core/packing/types'
 
 function settings(patch: Partial<PackingSettings> = {}): PackingSettings {
   return { ...useAppStore.getState().settings, ...patch }
@@ -38,5 +39,65 @@ describe('settings slice', () => {
     expect(after.tier).toBe('thorough')
     expect(after.mode).toBe(before.mode) // untouched field preserved
     expect(after).not.toBe(before) // new identity → persistence subscription fires
+  })
+})
+
+describe('pack slice', () => {
+  const result: PackResult = {
+    mode: 'fit-check',
+    tier: 'fast',
+    fits: true,
+    unplaced: [],
+    placements: [],
+    binding: 'geometry',
+    heuristic: true,
+    utilization: 0.25
+  }
+
+  beforeEach(() => {
+    useAppStore.getState().resetImport()
+  })
+
+  it('starts idle with no result', () => {
+    const s = useAppStore.getState()
+    expect(s.packStatus).toBe('idle')
+    expect(s.packResult).toBeNull()
+  })
+
+  it('walks begin → succeed, recording the result and elapsed time', () => {
+    useAppStore.getState().packBegan()
+    expect(useAppStore.getState().packStatus).toBe('packing')
+
+    useAppStore.getState().packSucceeded(result, 42)
+    const s = useAppStore.getState()
+    expect(s.packStatus).toBe('done')
+    expect(s.packResult).toBe(result)
+    expect(s.packElapsedMs).toBe(42)
+    expect(s.packError).toBeNull()
+  })
+
+  it('keeps the previous result while a new pack is in flight', () => {
+    // The panel shows the prior estimate (dimmed) rather than flashing empty.
+    useAppStore.getState().packSucceeded(result, 10)
+    useAppStore.getState().packBegan()
+    expect(useAppStore.getState().packResult).toBe(result)
+  })
+
+  it('drops the result on failure', () => {
+    useAppStore.getState().packSucceeded(result, 10)
+    useAppStore.getState().packFailed('worker died')
+    const s = useAppStore.getState()
+    expect(s.packStatus).toBe('failed')
+    expect(s.packError).toBe('worker died')
+    expect(s.packResult).toBeNull()
+  })
+
+  it('clears a stale estimate when a new import begins', () => {
+    useAppStore.getState().packSucceeded(result, 10)
+    useAppStore.getState().beginImport({ name: 'next.stp', sizeBytes: 1 })
+    const s = useAppStore.getState()
+    expect(s.packStatus).toBe('idle')
+    expect(s.packResult).toBeNull()
+    expect(s.packElapsedMs).toBeNull()
   })
 })
