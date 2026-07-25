@@ -4,6 +4,7 @@ import ModeTierSelectors from './components/ModeTierSelectors'
 import InputsPanel from './components/InputsPanel'
 import ResultsPanel from './components/ResultsPanel'
 import UnitPicker from './components/UnitPicker'
+import { ConfigurationsPanel } from './components/ConfigurationsPanel'
 import ViewToggle from './components/ViewToggle'
 import Viewport from './viewport/Viewport'
 
@@ -23,6 +24,7 @@ export default function App() {
             <ModeTierSelectors />
             <UnitPicker />
             <InputsPanel />
+            <ConfigurationsPanel />
           </div>
           <ResultsPanel />
         </div>

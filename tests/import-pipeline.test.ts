@@ -81,7 +81,10 @@ describe('createImportPipeline', () => {
 
     expect(sink.succeed).toHaveBeenCalledWith(
       [expect.objectContaining({ name: 'a' }), expect.objectContaining({ name: 'b' })],
-      { elapsedMs: 42, partCount: 2, triangleCount: 10 }
+      { elapsedMs: 42, partCount: 2, triangleCount: 10 },
+      // SHA-256 of the stub's bytes, captured before the buffer is transferred
+      // (ADR-0007 history identity).
+      expect.stringMatching(/^[0-9a-f]{64}$/)
     )
   })
 
@@ -126,7 +129,8 @@ describe('createImportPipeline', () => {
     expect(sink.succeed).toHaveBeenCalledTimes(1)
     expect(sink.succeed).toHaveBeenCalledWith(
       [expect.objectContaining({ name: 'winner' })],
-      expect.anything()
+      expect.anything(),
+      expect.any(String)
     )
   })
 

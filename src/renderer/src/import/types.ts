@@ -24,6 +24,11 @@ export interface ImportStats {
  *  component and testable without a real Worker (ADR-0005 test pyramid). */
 export interface ImportSink {
   begin(file: LoadedFile): void
-  succeed(parts: ImportedPart[], stats: ImportStats): void
+  /**
+   * @param contentHash SHA-256 of the file's bytes, captured before they are
+   * transferred to the worker (ADR-0007 history identity). Null when hashing
+   * was unavailable — history still records, keyed on nothing but the name.
+   */
+  succeed(parts: ImportedPart[], stats: ImportStats, contentHash: string | null): void
   fail(error: string): void
 }

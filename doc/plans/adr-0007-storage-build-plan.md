@@ -264,8 +264,8 @@ shipped an installer that dies the first time a user saves a preset.
       empty. Coverage includes a restart (presets survive), and that a rejected
       call surfaces as an error rather than a silent no-op.
 
-### 6. Renderer wiring · **opus**
-- [ ] `renderer-save-load-and-history-wiring` · medium — Zustand actions over
+### 6. Renderer wiring · **opus** ✅ *complete*
+- [x] `renderer-save-load-and-history-wiring` · medium — Zustand actions over
       the bridge, save/load configurations UI, auto-record on pack completion.
       Two real edges (confirmed against store.ts): async IPC results must not
       race a new import (store already documents stale-estimate invalidation);
@@ -274,6 +274,40 @@ shipped an installer that dies the first time a user saves a preset.
       unused in the field, a blank slate is fine. Settings may simply start
       empty; delete the old key or ignore it, don't port it.
       One careful pass + e2e per `/shipshape`; no verify pass.
+      *Done: `storage/history.ts` (recording subscription, mirroring
+      `packing/service.ts`), `storage/configurations.ts` (async actions, keeping
+      the store a synchronous spine per ADR-0006), a `configurations` store
+      slice, and `ConfigurationsPanel.tsx`.*
+      ***Exactly-once keys on the identity of the `packResult` object***, not on
+      "status is done" — a Zustand subscriber fires on every state write, so the
+      trigger has to be the transition. Keying on value instead would silently
+      drop the legitimate case of a re-pack whose result happens to be equal;
+      there is a test for exactly that, plus one for StrictMode double-invocation
+      and one proving unrelated writes (viewMode, unitPartName, settings) record
+      nothing.
+      *A prerequisite the slice did not mention: **`estimates.content_hash` had
+      no source**. Added `import/contentHash.ts` (SHA-256) and threaded it
+      through the import pipeline — computed **before** `postMessage`, because
+      the ArrayBuffer is transferred and detached at dispatch, so that is the
+      last moment the bytes exist on this thread. `crypto.subtle` under `file://`
+      was **measured** in the packaged app rather than assumed (`isSecureContext`
+      is true in Electron; it is not in a plain browser).*
+      *Loading a preset **merges** over live settings rather than replacing them:
+      a preset written by an older build lacks fields this build knows about, and
+      replacing would leave them `undefined` and break the inputs.*
+      *Storage failures land in `storageError` for the UI, never as an unhandled
+      rejection — "no presets" and "presets are broken" must look different to a
+      user. 14 unit tests + 3 UI e2e specs; suite 244, packaged e2e 25/25.*
+
+> **Carry-in raised, not silently resolved: history volume under auto-run.**
+> VISION says "every estimate is recorded", written when an estimate meant a
+> button press. ADR-0009 then removed the button, so an estimate is now every
+> debounced re-pack — meaning a few minutes of tuning a carton writes dozens of
+> rows, most of them intermediate states nobody wants to read back. I
+> implemented VISION literally (record every completed pack) because VISION is
+> the source of truth and narrowing it is the maintainer's call, not mine. The
+> fix, when history grows a UI, is probably to collapse consecutive rows sharing
+> a content hash and settings. Pinned to roadmap item 9.
 
 ## Critical path
 

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { ImportedPart } from './workers/import-protocol'
 import type { ImportSink, ImportStats, ImportStatus, LoadedFile } from './import/types'
+import type { ConfigurationSummary } from '../../shared/storage'
 import type { PackMode, PackRequest, PackResult, QualityTier, Vec3 } from './core/packing/types'
 import type { PackSink, PackStatus } from './packing/types'
 import type { UnitSystem } from './core/units'
@@ -93,7 +94,13 @@ interface AppState {
   error: string | null
   stats: ImportStats | null
   beginImport: (file: LoadedFile) => void
-  importSucceeded: (parts: ImportedPart[], stats: ImportStats) => void
+  /** SHA-256 of the imported file's bytes — history identity (ADR-0007). */
+  contentHash: string | null
+  importSucceeded: (
+    parts: ImportedPart[],
+    stats: ImportStats,
+    contentHash: string | null
+  ) => void
   importFailed: (error: string) => void
   resetImport: () => void
 
@@ -122,6 +129,14 @@ interface AppState {
   packRequest: PackRequest | null
   packError: string | null
   packElapsedMs: number | null
+  // --- saved configurations slice (ADR-0007) ---
+  /** Named presets, as listed by the main process. */
+  configurations: ConfigurationSummary[]
+  /** Last storage failure, for surfacing rather than swallowing. */
+  storageError: string | null
+  setConfigurations: (configurations: ConfigurationSummary[]) => void
+  setStorageError: (storageError: string | null) => void
+
   packBegan: () => void
   packSucceeded: (result: PackResult, request: PackRequest, elapsedMs: number) => void
   packFailed: (error: string) => void
@@ -143,6 +158,7 @@ export const useAppStore = create<AppState>((set) => ({
   parts: [],
   error: null,
   stats: null,
+  contentHash: null,
 
   beginImport: (file) =>
     set({
@@ -151,12 +167,22 @@ export const useAppStore = create<AppState>((set) => ({
       parts: [],
       error: null,
       stats: null,
+      contentHash: null,
       unitPartName: null,
       ...NO_PACK
     }),
-  importSucceeded: (parts, stats) => set({ status: 'done', parts, stats, error: null }),
+  importSucceeded: (parts, stats, contentHash) =>
+    set({ status: 'done', parts, stats, contentHash, error: null }),
   importFailed: (error) =>
-    set({ status: 'failed', error, parts: [], stats: null, unitPartName: null, ...NO_PACK }),
+    set({
+      status: 'failed',
+      error,
+      parts: [],
+      stats: null,
+      contentHash: null,
+      unitPartName: null,
+      ...NO_PACK
+    }),
   resetImport: () =>
     set({
       status: 'idle',
@@ -164,6 +190,7 @@ export const useAppStore = create<AppState>((set) => ({
       parts: [],
       error: null,
       stats: null,
+      contentHash: null,
       unitPartName: null,
       ...NO_PACK
     }),
@@ -178,6 +205,11 @@ export const useAppStore = create<AppState>((set) => ({
   setViewMode: (viewMode) => set({ viewMode }),
 
   ...NO_PACK,
+  configurations: [],
+  storageError: null,
+  setConfigurations: (configurations) => set({ configurations, storageError: null }),
+  setStorageError: (storageError) => set({ storageError }),
+
   packBegan: () => set({ packStatus: 'packing', packError: null }),
   packSucceeded: (packResult, packRequest, packElapsedMs) =>
     set({ packStatus: 'done', packResult, packRequest, packElapsedMs, packError: null }),
@@ -194,7 +226,8 @@ useAppStore.subscribe((state, prev) => {
 export function storeImportSink(): ImportSink {
   return {
     begin: (file) => useAppStore.getState().beginImport(file),
-    succeed: (parts, stats) => useAppStore.getState().importSucceeded(parts, stats),
+    succeed: (parts, stats, contentHash) =>
+      useAppStore.getState().importSucceeded(parts, stats, contentHash),
     fail: (error) => useAppStore.getState().importFailed(error)
   }
 }

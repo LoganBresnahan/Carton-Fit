@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { launchApp } from './harness'
+import { importSample, launchApp, waitForEstimate } from './harness'
 
 /**
  * The storage contract, exercised across all three processes (ADR-0007).
@@ -141,6 +141,85 @@ test.describe('storage across main/preload/renderer', () => {
         }
       })
       expect(message).toMatch(/name/i)
+    } finally {
+      await app.close()
+    }
+  })
+})
+
+/**
+ * The saved-configurations UI (VISION: setups can be saved and reloaded).
+ *
+ * The unit tests drive the storage service with a fake API; these prove the
+ * panel is wired to it — that Save reaches SQLite in the main process and Load
+ * puts the values back into the real inputs.
+ */
+test.describe('saved configurations UI', () => {
+  test.skip(!process.env.PACKAGED_APP, 'needs the Electron-ABI build of better-sqlite3')
+
+  test('saves the current carton and restores it after changing the inputs', async () => {
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    try {
+      await page.waitForSelector('[data-testid="configurations-panel"]')
+      await expect(page.locator('[data-testid="config-empty"]')).toBeVisible()
+
+      // A carton worth remembering, in the UI's display units.
+      await page.fill('[data-testid="dim-0"]', '18')
+      await page.fill('[data-testid="config-name"]', 'Big box')
+      await page.click('[data-testid="config-save"]')
+      await expect(page.locator('[data-testid="config-item"]')).toHaveCount(1)
+
+      // Change the inputs, then load the preset back.
+      await page.fill('[data-testid="dim-0"]', '4')
+      await expect(page.locator('[data-testid="dim-0"]')).toHaveValue('4')
+
+      await page.click('[data-testid="config-load-Big box"]')
+      await expect(page.locator('[data-testid="dim-0"]')).toHaveValue('18')
+    } finally {
+      await app.close()
+    }
+  })
+
+  test('a saved configuration survives a restart', async () => {
+    const profile = [`--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`]
+
+    const first = await launchApp(profile)
+    try {
+      await first.page.fill('[data-testid="dim-1"]', '7')
+      await first.page.fill('[data-testid="config-name"]', 'Persisted setup')
+      await first.page.click('[data-testid="config-save"]')
+      await expect(first.page.locator('[data-testid="config-item"]')).toHaveCount(1)
+    } finally {
+      await first.app.close()
+    }
+
+    const second = await launchApp(profile)
+    try {
+      // Listed on mount, from SQLite, in a brand-new process.
+      await expect(second.page.locator('[data-testid="config-item"]')).toHaveCount(1)
+      await second.page.click('[data-testid="config-load-Persisted setup"]')
+      await expect(second.page.locator('[data-testid="dim-1"]')).toHaveValue('7')
+    } finally {
+      await second.app.close()
+    }
+  })
+
+  test('estimates are recorded to history as they complete', async () => {
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    try {
+      await importSample(page, 'cube-10x10.stp')
+      await waitForEstimate(page)
+
+      const history = await page.evaluate(() => window.api.storage.recentEstimates())
+      expect(history.length).toBeGreaterThan(0)
+      expect(history[0].fileName).toBe('cube-10x10.stp')
+      // The hash is real, not a placeholder — history threads across renames.
+      expect(history[0].contentHash).toMatch(/^[0-9a-f]{64}$/)
+      expect(history[0].result).toBeTruthy()
     } finally {
       await app.close()
     }

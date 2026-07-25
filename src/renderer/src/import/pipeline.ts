@@ -6,6 +6,7 @@ import {
   type ImportResult
 } from '../workers/import-protocol'
 import type { ImportSink, ImportStats } from './types'
+import { sha256Hex } from './contentHash'
 
 // The drop→import pipeline (ADR-0002 `drop-to-import-pipeline`). Pure main-thread
 // orchestration: File → ArrayBuffer → worker dispatch → sink. The worker and the
@@ -64,6 +65,9 @@ export function createImportPipeline(
   // dropped — this is how a re-drop supersedes the previous file.
   let latestId = 0
   const startedAt = new Map<number, number>()
+  // Keyed by import id, like startedAt: a superseded import must not hand its
+  // hash to the one that replaced it.
+  const hashes = new Map<number, string | null>()
 
   worker.onmessage = (event) => {
     const result = event.data
@@ -71,7 +75,12 @@ export function createImportPipeline(
     startedAt.delete(result.id)
     if (result.id !== latestId) return // superseded by a newer drop
     if (result.ok) {
-      sink.succeed(result.parts, statsFor(result.parts, t0 === undefined ? 0 : now() - t0))
+      sink.succeed(
+        result.parts,
+        statsFor(result.parts, t0 === undefined ? 0 : now() - t0),
+        hashes.get(result.id) ?? null
+      )
+      hashes.delete(result.id)
     } else {
       sink.fail(result.error)
     }
@@ -95,6 +104,17 @@ export function createImportPipeline(
       return
     }
     if (id !== latestId) return // a newer drop arrived while reading the file
+
+    // Hash BEFORE dispatch: postMessage transfers the ArrayBuffer, detaching it
+    // here, so this is the last moment the bytes exist on this thread. Failure
+    // must not sink an import that would otherwise succeed — history identity
+    // is worth less than the estimate itself.
+    try {
+      hashes.set(id, await sha256Hex(bytes))
+    } catch {
+      hashes.set(id, null)
+    }
+    if (id !== latestId) return // hashing is async; a newer drop may have landed
 
     startedAt.set(id, now())
     const request: ImportRequest = { id, kind, bytes, fileName: file.name }

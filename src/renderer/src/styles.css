@@ -409,3 +409,52 @@ body {
   font-size: 0.78rem;
   cursor: pointer;
 }
+
+/* Saved configurations (ADR-0007). Deliberately plain: this panel sits in the
+   same scrolling column as the inputs, so it borrows their spacing rather than
+   introducing a second visual language. */
+.config-save {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.config-save input {
+  flex: 1;
+  min-width: 0;
+}
+
+.config-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.config-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* The name takes the slack so the two buttons stay put down the list, and a
+   long preset name truncates instead of pushing them off the panel. */
+.config-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  opacity: 0.65;
+  font-size: 0.9em;
+}
+
+.error {
+  color: #b3261e;
+  font-size: 0.9em;
+}

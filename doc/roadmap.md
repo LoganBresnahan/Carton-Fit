@@ -43,9 +43,25 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 
 ## Next
 
-- [ ] 7. Persistence — better-sqlite3 in the main process behind IPC (ADR-0007):
+- [x] 7. Persistence — better-sqlite3 in the main process behind IPC (ADR-0007):
       `configurations` (named presets) + `estimates` (history); save/load UI;
       migrations via `PRAGMA user_version`; open-with-recovery
+      (ADR-0007 shipped in six plan phases. **ADR-0013 supersedes its prebuild
+      assumption**: the pinned version both ADRs named is not on npm and no npm
+      release has an Electron-ABI-148 prebuild, so better-sqlite3 is compiled
+      from source — `npmRebuild` + `buildDependenciesFromSource`, with Windows
+      compiling under MSVC in CI. Packaging hid three separate silent failures
+      that each shipped an unloadable module; `e2e/native-module.spec.ts` now
+      guards them. The DB tests caught a data-loss bug where a database written
+      by a newer build was quarantined instead of refused. Save/load UI plus
+      auto-recorded history, keyed on a SHA-256 content hash so history survives
+      a rename.)
+      — carry-in: **history volume under auto-run.** VISION's "every estimate is
+      recorded" predates ADR-0009 removing the compute button, so an estimate is
+      now every debounced re-pack — dozens of rows per session, mostly
+      intermediate. Implemented literally on purpose; collapsing consecutive
+      rows with the same content hash + settings is the likely fix when history
+      grows a UI. See item 9.
 - [x] 8. Installers + /deploy live — electron-builder: Windows NSIS (primary) +
       linux-unpacked smoke target; `/deploy` skill runs end-to-end (packaged smoke,
       dist-live staging, dogfood handoff); mac build documented
@@ -64,6 +80,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       — carry-in: translucent carton walls (VISION says "wireframe + translucent
       walls"; item 4 shipped the wireframe only, which reads clearly against a
       dense pack — revisit when adding depth cues)
+      — carry-in: **history needs a UI, and probably needs thinning.** Item 7
+      records every estimate but nothing reads them back yet. Whatever displays
+      history should also address the volume problem noted on item 7 —
+      consecutive rows sharing a content hash and settings are noise.
       — carry-in: **the installer ships the 7.3 MB OCCT wasm twice.**
       `electron-builder.yml`'s comment claims the narrow `files` list means
       "nothing from node_modules at runtime", but electron-builder includes
