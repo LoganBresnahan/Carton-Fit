@@ -3,6 +3,7 @@ import ImportResult from './components/ImportResult'
 import ModeTierSelectors from './components/ModeTierSelectors'
 import InputsPanel from './components/InputsPanel'
 import ResultsPanel from './components/ResultsPanel'
+import StorageBanner from './components/StorageBanner'
 import UnitPicker from './components/UnitPicker'
 import { ConfigurationsPanel } from './components/ConfigurationsPanel'
 import ViewToggle from './components/ViewToggle'
@@ -18,6 +19,9 @@ export default function App() {
         {/* Inputs scroll; the estimate is pinned below them as a footer, so the
             answer stays on screen while the carton and weight fields are edited. */}
         <div className="panel">
+          {/* Pinned above the scroll, so storage trouble is reported whether or
+              not the configurations panel is on screen. */}
+          <StorageBanner />
           <div className="panel-scroll">
             <DropZone />
             <ImportResult />

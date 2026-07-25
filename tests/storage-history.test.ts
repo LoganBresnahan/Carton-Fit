@@ -129,6 +129,39 @@ describe('startEstimateRecording', () => {
       // The estimate itself is untouched — storage is optional (ADR-0007).
       expect(useAppStore.getState().packResult).toBe(RESULT)
       expect(useAppStore.getState().packStatus).toBe('done')
+
+      // But the user is TOLD. VISION promises every estimate is recorded; a
+      // console line nobody reads is not how a broken promise gets reported.
+      expect(useAppStore.getState().storageError).toMatch(/history is not being recorded/i)
+      expect(useAppStore.getState().storageError).toMatch(/storage is unavailable/)
+    } finally {
+      stop()
+      warn.mockRestore()
+    }
+  })
+
+  it('re-reports a failure that a later success wiped from view', async () => {
+    // setConfigurations clears storageError on any successful list, so a
+    // report-once history warning could be erased while still true. Each failed
+    // estimate re-states it; only the console line is once-per-session.
+    const api = fakeApi()
+    api.recordEstimate = async () => {
+      throw new Error('storage is unavailable')
+    }
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const stop = startEstimateRecording(api)
+    try {
+      useAppStore.getState().packSucceeded(RESULT, REQUEST, 12)
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(useAppStore.getState().storageError).not.toBeNull()
+
+      useAppStore.getState().setStorageError(null) // e.g. a configurations refresh succeeded
+
+      useAppStore.getState().packSucceeded({ ...RESULT }, REQUEST, 12)
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(useAppStore.getState().storageError).toMatch(/history is not being recorded/i)
     } finally {
       stop()
       warn.mockRestore()

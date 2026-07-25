@@ -472,3 +472,29 @@ body {
   color: #b3261e;
   font-size: 0.9em;
 }
+
+/* Storage trouble, pinned above the scrolling inputs so it cannot be missed.
+   Amber rather than red: the estimate on screen is still correct — what failed
+   is remembering it. */
+.storage-banner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  background: rgba(217, 164, 65, 0.1);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+.storage-banner-label {
+  color: var(--warn);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+.storage-banner-message {
+  color: var(--text);
+}

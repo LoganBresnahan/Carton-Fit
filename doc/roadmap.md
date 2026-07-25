@@ -90,8 +90,22 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         mutation-tested to prove it can fail. Last known silent-wrong-answer
         path in the product, now closed.
       - unparseable-file errors and pack failures are ALREADY surfaced
-        (`ImportResult`, `ResultsPanel`) — the item text was stale. What remains
-        is making `storageError` visible outside the configurations panel.
+        (`ImportResult`, `ResultsPanel`) — the item text was stale.
+      - [x] **`storageError` visible outside the configurations panel** —
+        `StorageBanner` is pinned above the scroll region, so it shows whether or
+        not that panel is on screen; the panel's own copy is gone, leaving one
+        canonical place. Two things surfaced while doing it: **history failures
+        only ever reached `console.warn`**, so VISION's "every estimate is
+        recorded" could silently stop being true, and the banner text leaked
+        Electron's IPC wrapper (`Error invoking remote method '…': Error: …`)
+        over the sentence actually written for the user — `storageMessage`
+        strips it. Reported on every failure rather than once, because
+        `setConfigurations` clears `storageError` on any success and a
+        report-once warning could be erased while still true. E2E breaks storage
+        the way a real downgrade does (stamping `user_version` 999 straight into
+        the SQLite header, since better-sqlite3 in the test process has the wrong
+        ABI) and asserts the banner stays in view at both scroll extremes;
+        mutation-tested.
       - [x] app icon — wired in `electron-builder.yml`, verified by extracting
         the icon resources back out of the packaged `.exe` (7 sizes, 16→256).
         The source art needed real work first: it was **not transparent** (the

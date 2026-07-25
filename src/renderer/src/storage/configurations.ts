@@ -1,5 +1,6 @@
 import { useAppStore } from '../store'
 import type { PackingSettings } from '../store'
+import { storageMessage } from './message'
 import type { StorageApi } from '../../../shared/storage'
 
 // Saved-configuration actions (ADR-0007). Async IPC lives here rather than in
@@ -16,7 +17,7 @@ function api(injected?: StorageApi): StorageApi {
 }
 
 function fail(error: unknown): void {
-  useAppStore.getState().setStorageError((error as Error)?.message ?? String(error))
+  useAppStore.getState().setStorageError(storageMessage(error))
 }
 
 /** Load the preset list into the store. Safe to call on mount and after writes. */

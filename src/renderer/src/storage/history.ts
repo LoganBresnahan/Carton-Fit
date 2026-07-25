@@ -1,4 +1,5 @@
 import { useAppStore } from '../store'
+import { storageMessage } from './message'
 import type { StorageApi } from '../../../shared/storage'
 
 // Estimate history recording (ADR-0007; VISION "every estimate is recorded").
@@ -26,16 +27,32 @@ import type { StorageApi } from '../../../shared/storage'
 
 let started = false
 
-/** Recording never blocks or breaks the app, so failures are logged once. */
+/** The console gets one line per session; the UI gets told every time. */
 let warned = false
 
-function warnOnce(error: unknown): void {
-  if (warned) return
-  warned = true
-  // Storage is optional by design (it opens lazily and may be unavailable —
-  // see main/storage.ts), so a failure here must not surface as a broken
-  // estimate. It is logged, once, rather than thrown or silently swallowed.
-  console.warn('[history] estimate not recorded:', (error as Error)?.message ?? error)
+/**
+ * Report a failed recording.
+ *
+ * Storage is optional by design (it opens lazily and may be unavailable — see
+ * main/storage.ts), so this must never surface as a broken estimate: the
+ * estimate itself is correct and stays on screen. But it must not be invisible
+ * either. VISION promises "every estimate is recorded", and until now the only
+ * trace of that promise breaking was a console line no user reads — the app
+ * looked exactly the same whether history worked or not.
+ *
+ * Set on EVERY failure rather than once, because `setConfigurations` clears
+ * `storageError` on any successful list; reporting once would let an unrelated
+ * success erase a condition that is still true. The console line stays
+ * once-only, since that is a developer signal and would otherwise repeat with
+ * every debounced re-pack.
+ */
+function report(error: unknown): void {
+  const reason = storageMessage(error)
+  if (!warned) {
+    warned = true
+    console.warn('[history] estimate not recorded:', reason)
+  }
+  useAppStore.getState().setStorageError(`Estimate history is not being recorded: ${reason}`)
 }
 
 /**
@@ -68,7 +85,7 @@ export function startEstimateRecording(api?: StorageApi): () => void {
         settings: state.settings,
         result: state.packResult
       })
-      .catch(warnOnce)
+      .catch(report)
   })
 
   return () => {

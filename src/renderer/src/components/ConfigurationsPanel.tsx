@@ -13,10 +13,14 @@ import {
 // A declarative island over the store (ADR-0006): it reads the preset list from
 // state and calls the storage service for writes. No IPC, no channel names, and
 // no async state of its own beyond the name being typed.
+//
+// Storage FAILURES are not reported here. They land in `storageError` and are
+// shown by StorageBanner, which is pinned outside the scroll region — this panel
+// sits at the bottom of a scrolling column, so an error shown here is an error
+// the user may never see.
 
 export function ConfigurationsPanel(): React.JSX.Element {
   const configurations = useAppStore((s) => s.configurations)
-  const storageError = useAppStore((s) => s.storageError)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -95,12 +99,6 @@ export function ConfigurationsPanel(): React.JSX.Element {
             </li>
           ))}
         </ul>
-      )}
-
-      {storageError !== null && (
-        <p className="error" data-testid="config-error" role="alert">
-          {storageError}
-        </p>
       )}
     </section>
   )

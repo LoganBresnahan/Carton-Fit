@@ -6,6 +6,7 @@ import {
   refreshConfigurations,
   saveConfiguration
 } from '../src/renderer/src/storage/configurations'
+import { storageMessage } from '../src/renderer/src/storage/message'
 import type { ConfigurationRow, ConfigurationSummary, StorageApi } from '../src/shared/storage'
 
 // Saved-configuration actions (ADR-0007). These own the async IPC so the store
@@ -121,5 +122,37 @@ describe('saved configurations', () => {
     useAppStore.getState().setStorageError('previous failure')
     await refreshConfigurations(fakeApi())
     expect(useAppStore.getState().storageError).toBeNull()
+  })
+})
+
+// ipcRenderer.invoke wraps every main-process rejection, so the raw message
+// arrives with a channel name and a doubled class name in front of the sentence
+// that was actually written for the user (db/migrations.ts). The banner shows
+// this text, so the plumbing has to come off.
+describe('storageMessage', () => {
+  it('strips the IPC wrapper and the rethrown Error prefixes', () => {
+    const raw =
+      "Error invoking remote method 'storage:configurations:list': Error: " +
+      'storage is unavailable: database schema is version 999, but this build ' +
+      'only understands 1.'
+    expect(storageMessage(new Error(raw))).toBe(
+      'storage is unavailable: database schema is version 999, but this build only understands 1.'
+    )
+  })
+
+  it('leaves a plain message alone', () => {
+    expect(storageMessage(new Error('Configuration name cannot be blank.'))).toBe(
+      'Configuration name cannot be blank.'
+    )
+  })
+
+  it('handles a non-Error rejection', () => {
+    expect(storageMessage('just a string')).toBe('just a string')
+  })
+
+  it('never returns empty, even if stripping would consume everything', () => {
+    // An empty banner is worse than an ugly one: it says nothing is wrong.
+    const raw = "Error invoking remote method 'x': Error:"
+    expect(storageMessage(new Error(raw))).toBe(raw)
   })
 })
