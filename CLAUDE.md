@@ -11,9 +11,14 @@ when scope changes.
 
 - Electron + TypeScript + React (electron-vite layout: `src/main`, `src/preload`, `src/renderer`)
 - One Zustand store is the renderer's data spine; components are declarative islands
-  subscribing to slices (ADR-0006). **Adding any runtime dependency requires an ADR** —
-  the complete runtime list is react, react-dom, zustand, three, occt-import-js,
-  better-sqlite3.
+  subscribing to slices (ADR-0006). **Adding any runtime dependency requires an ADR**
+  *and* a line in `THIRD-PARTY-NOTICES.md` (ADR-0011 — that file ships inside the
+  app, so an omission is a licence violation, not a doc gap). The complete runtime
+  list is react, react-dom, zustand, three, occt-import-js, better-sqlite3.
+- The project is **MIT** (`LICENSE`). `occt-import-js` is **LGPL-2.1**, which is why
+  `asarUnpack` in `electron-builder.yml` keeps the OCCT `.wasm` outside `app.asar`:
+  it makes the LGPL's replace-the-library right real. That setting is compliance,
+  not optimization — see ADR-0011 before touching it.
 - three.js for the 3D viewport
 - `occt-import-js` (OpenCascade WASM) for STEP parsing — runs in a web worker, never on the UI thread
 - Packing/geometry math: pure TypeScript in `src/renderer/src/core/`, executed in a worker; unit-tested with vitest

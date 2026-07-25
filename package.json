@@ -6,7 +6,7 @@
     "name": "Logan Bresnahan",
     "email": "loganbbres@gmail.com"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "main": "./out/main/index.js",
   "scripts": {

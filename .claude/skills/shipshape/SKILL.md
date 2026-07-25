@@ -71,6 +71,24 @@ matches reality; deferred sub-tasks are pinned as carry-ins, not dropped.
 **VISION.md**: still describes what the app actually does — inputs, modes,
 tiers, outputs. Scope changes land here, not just in code.
 
+**THIRD-PARTY-NOTICES.md** (ADR-0011) is a *shipped artifact*, not
+documentation: a runtime dependency missing from it makes the release
+non-compliant. Every name in `dependencies` must appear there.
+
+```bash
+node -e 'const d=Object.keys(require("./package.json").dependencies||{});
+const f=require("fs").readFileSync("THIRD-PARTY-NOTICES.md","utf8");
+const m=d.filter(n=>!f.includes(n)); console.log(m.length?"MISSING: "+m:"notices cover all runtime deps")'
+```
+
+Also confirm the LGPL relink seam is intact — `asarUnpack` in
+`electron-builder.yml` is load-bearing for compliance, and nothing about
+removing it fails a test:
+
+```bash
+grep -q 'asarUnpack' electron-builder.yml && echo "relink seam present" || echo "VIOLATION: ADR-0011 asarUnpack removed"
+```
+
 Drift check, per doc that names code artifacts:
 
 ```bash

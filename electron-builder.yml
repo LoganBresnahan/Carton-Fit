@@ -20,7 +20,14 @@
 #
 # The renderer is fully bundled by vite (three, react, zustand and the 7.6 MB
 # occt WASM all land in out/renderer/assets), so the app needs nothing from
-# node_modules at runtime — hence the narrow `files` list. That changes when
+# node_modules at runtime.
+#   MEASURED CAVEAT: the narrow `files` list below does NOT actually keep
+#   node_modules out — electron-builder includes production dependencies
+#   regardless, so app.asar carries a second, unused copy of the occt wasm
+#   (~7.3 MB) under node_modules/occt-import-js/dist/. See the carry-in on
+#   roadmap item 9; note that copy also carries the LGPL text THIRD-PARTY-
+#   NOTICES.md cites, so any exclusion must keep the licence files.
+# The bundling story changes when
 # better-sqlite3 arrives (ADR-0007): a native module cannot be bundled and must
 # be shipped unpacked, which is also the point where cross-building gets harder
 # (see VISION "Target platform vs. development platform").
@@ -41,6 +48,23 @@ files:
 # Deterministic-ish archives; no auto-update wiring yet (roadmap "Later").
 compression: normal
 npmRebuild: false
+
+# LGPL RELINK SEAM (ADR-0011). occt-import-js is LGPL-2.1, and the LGPL's whole
+# point is that a recipient can substitute their own build of the library. The
+# .wasm is already a discrete file rather than base64 inlined into a JS bundle
+# (`?url` in loadOcct.ts), so keeping it OUT of app.asar makes that substitution
+# a plain file copy instead of an archive repack. This is compliance made
+# concrete, not a build optimization — don't "tidy" it away.
+asarUnpack:
+  - out/renderer/assets/*.wasm
+
+# The licence texts ride next to Electron's own LICENSE.electron.txt at the app
+# root, where someone looking for them will actually find them.
+extraFiles:
+  - from: THIRD-PARTY-NOTICES.md
+    to: THIRD-PARTY-NOTICES.md
+  - from: LICENSE
+    to: LICENSE.packaging-estimator.txt
 
 win:
   # zip FIRST: it is what a WSL build can actually produce (ADR-0010). nsis is
