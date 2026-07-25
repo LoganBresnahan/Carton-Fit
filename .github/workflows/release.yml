@@ -10,10 +10,9 @@
 # machine that can. It runs the full packaged e2e suite and the ADR-0011
 # compliance check on the bytes it just produced.
 #
-# BUILD PLAN STATUS (doc/plans/adr-0012-ci-build-plan.md): phases 1–2 landed.
-# Still to come: the LGPL wasm-substitution check and the draft-release upload
-# (phase 3). Until then artifacts are ordinary workflow artifacts — nothing is
-# published anywhere.
+# A `v*` tag additionally attaches the artifacts to a DRAFT GitHub release.
+# Nothing is ever published automatically: publishing is a human act after
+# dogfooding (ADR-0012), and `workflow_dispatch` skips that job entirely.
 #
 # Two jobs rather than one `strategy.matrix`: ADR-0012 says "two-leg matrix", but
 # the legs are not symmetric — Windows builds two targets and runs two
@@ -66,6 +65,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
+          # Keyed on package-lock.json automatically. Worst case on a miss is a
+          # slower run, never a wrong build.
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -151,6 +153,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
+          # Keyed on package-lock.json automatically. Worst case on a miss is a
+          # slower run, never a wrong build.
+          cache: npm
 
       - name: Install dependencies
         run: npm ci

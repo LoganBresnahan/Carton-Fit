@@ -155,14 +155,32 @@
       not by reading the YAML. A dispatch run immediately before it skipped this
       job in 0 s, proving "dispatch never publishes" too.
 
-### 4. Consumption + optimization · **opus batch**
-- [ ] `deploy-fetch-path` · medium — amend `.claude/skills/deploy/SKILL.md` step 1:
+### 4. Consumption + optimization · **opus batch** ✅ *complete*
+- [x] `deploy-fetch-path` · medium — amend `.claude/skills/deploy/SKILL.md` step 1:
       when the current sha has a completed release build, `gh release download`
       into `dist-live/` instead of building; local zip build stays the fallback.
       Staging/rollback/BUILD_SHA/dogfood semantics unchanged. Resolve sha→tag
       explicitly; "CI has run for this sha" must be a check, not an assumption.
-- [ ] `ci-npm-cache` · low — `cache: npm` on setup-node in both workflows, after
+      *Done, resolving sha→**run** rather than sha→tag: `gh run list
+      --workflow=release.yml --commit "$SHA" --status success` works for dispatch
+      runs too, so /deploy is not limited to tagged commits. **Tested end to end**
+      against v0.1.0's sha — resolved run 30166546967 and downloaded the 107 MB
+      Setup.exe. `--status success` is load-bearing: it means that run's Windows
+      leg passed e2e + the fuse check + the LGPL substitution check on the very
+      bytes being handed over.*
+      *Step 2 changed shape rather than being skipped: on the CI path /deploy
+      records what CI verified instead of re-running the LINUX suite, which would
+      test a different artifact than the installer being shipped — thoroughness
+      theatre that reports a green for the wrong bytes. Caveats are now
+      path-dependent (the installer HAS a Start-menu entry and uninstaller; the
+      fallback zip does not), and the report gained a `verified` line naming the
+      run id. Also stated outright: a draft release is not a deploy.*
+- [x] `ci-npm-cache` · low — `cache: npm` on setup-node in both workflows, after
       they're stable green so a cache regression is attributable.
+      *Done: all three setup-node sites (ci.yml verify, release.yml windows +
+      linux). The gate and draft-release jobs have no setup-node — gate uses the
+      runner's preinstalled node for one `node -p`, and draft-release only runs
+      `gh`.*
 
 ### 5. Docs reconciliation · **opus**
 - [ ] `docs-reconcile-ci` · low — check off roadmap item 10; mark the ADR-0011

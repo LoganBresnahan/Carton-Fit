@@ -35,6 +35,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
+          # Keyed on package-lock.json automatically. Worst case on a miss is a
+          # slower run, never a wrong build.
+          cache: npm
 
       # PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: these specs launch OUR Electron binary
       # via _electron.launch() and never open a browser (playwright.config.ts
