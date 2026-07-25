@@ -13,6 +13,26 @@ normal download-and-install experience. The user drags a CAD file onto the app, 
 the carton's dimensions and constraints, and gets an answer plus a 3D visualization of
 the packed carton.
 
+### Target platform vs. development platform
+
+**The shipping target is Windows, running natively** — a downloaded `Setup.exe`, a
+Start-menu entry, a normal desktop app. That is the end goal and the definition of
+done; every other platform is secondary.
+
+Development happens in **WSL/Linux**, which is a *convenience of the workshop, not a
+property of the product*. Consequences that follow, so they are never mistaken for
+product decisions:
+
+- Installers are **cross-built** for Windows from WSL (ADR-0001). If cross-building
+  ever becomes the limiting factor — most likely when native modules arrive with
+  `better-sqlite3` (ADR-0007) — the answer is to move the *build* to Windows, never to
+  soften the Windows-native target.
+- Automated checks run against the Linux package of the same code because that is what
+  WSL can drive; **the Windows install and launch are human-verified** (ADR-0005). A
+  green machine check is evidence about the app, not about the installer.
+- Anything WSL-specific — display servers, GPU fallbacks, build toolchains — belongs to
+  the harness, never to shipped code.
+
 ## Inputs
 
 | Input | Details |

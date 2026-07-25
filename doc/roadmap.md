@@ -33,6 +33,13 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       `e2e/`; `samples/` golden parts with hand-computed expected results shared by
       unit, e2e, and dogfood layers (ADR-0005); DropZone keeps the picker path e2e
       depends on
+      — carry-in: **write the specs CI-ready** (ADR-0005 display consequences).
+      Locally WSLg supplies the display; a GitHub runner will not, and `xvfb` is not
+      installed anywhere yet — so specs must not assume a fixed-size display, and the
+      SwiftShader flags must live in the harness config, never in app code. Goldens
+      already hand-computed and verified against the production build during item 4:
+      cube-10x10 → 30³ = 27,000 @ 95% fill in a 12 in box, 7³ = 343 @ 78% in 3 in;
+      AS1 → 18 parts fit; 5 lb cap with 0.01 lb parts → exactly 500, weight-bound.
 
 ## Next
 
@@ -50,6 +57,14 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 
 ## Later
 
+- **CI + GitHub releases** — run the three ADR-0005 layers on GitHub Actions and publish
+  the Windows `Setup.exe` as a release artifact on tag. Known prerequisites, so the
+  design work is already done: the runner needs **`xvfb`** (no WSLg there) plus the
+  SwiftShader flags for Electron e2e; `vitest` and `typecheck` need nothing special.
+  Pairs with item 8 — once installers build reproducibly, the release step is a tag
+  trigger over the same command. Wire `/deploy`'s staging semantics to it rather than
+  duplicating them. (ADR-0005 revisit trigger: "CI lands → wire the same three layers
+  there; deploy grows a tag/release step.")
 - More import formats (OBJ, IGES — near-free via occt-import-js)
 - Tier-3 true nesting (experimental; see ADR-0003 revisit triggers)
 - Box tare weight; material density library (ADR-0004 revisit triggers)

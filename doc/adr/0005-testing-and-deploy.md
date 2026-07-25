@@ -43,7 +43,24 @@ rollback, and hands the user a Windows-reachable installer path plus a dogfood s
   standard since Spectron's deprecation; risk accepted.
 - Windows install UX is human-verified on Windows; WSL machine-verifies app behavior
   via the Linux package of the same code. This split is stated, not hidden.
-- CI-friendliness comes free: vitest + Playwright both run headless under xvfb later.
+- **Electron e2e needs a display and a software GL stack.** Electron has no true
+  headless mode — `_electron.launch()` must have somewhere to put a window — and WSL2
+  has no usable GPU, so both must be arranged deliberately:
+  - **Locally (WSL):** WSLg provides the display (`DISPLAY=:0`), so nothing extra is
+    installed. Proven during the item-4 build, which drove real Electron windows
+    through WSLg.
+  - **In CI (GitHub Actions, when it lands):** there is no WSLg, so a headless runner
+    needs **`xvfb`** — currently *not installed anywhere*, which is the one concrete
+    gap between "runs on my machine" and "runs in CI". Specs must therefore not assume
+    a display exists at a fixed size, and the runner must wrap them (`xvfb-run`) or
+    start Xvfb itself.
+  - **Always:** software rendering flags (`--use-angle=swiftshader
+    --enable-unsafe-swiftshader --ignore-gpu-blocklist`). Without them WebGL context
+    creation fails outright on WSL2 (observed: llvmpipe `BindToCurrentSequence
+    failed`). These are **harness-only** — the app itself ships zero GL flags, because
+    on the Windows target ANGLE→D3D11 works out of the box.
+- CI-friendliness therefore costs one dependency (`xvfb`) rather than nothing; the three
+  layers are otherwise CI-ready as written.
 
 ## Alternatives considered
 
