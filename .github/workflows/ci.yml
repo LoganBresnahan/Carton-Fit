@@ -1,0 +1,85 @@
+# CI — verify every push to main and every PR (ADR-0012).
+#
+# This is `/shipshape`'s machine half plus the packaged smoke, in the same order
+# and via the same npm scripts, so "green here" means what "green locally" means.
+# Deliberately ONE ubuntu job: release artifacts are a different cadence and live
+# in release.yml.
+#
+# The e2e step is the only part that needs anything the runner does not give us
+# for free — see the two prep steps below.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch makes the older run irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Pinned to an LTS major rather than tracking the maintainer's local Node
+      # (25.x, a "current" line). A drifting Node major is a classic source of
+      # "green locally, red in CI"; bump this deliberately, not incidentally.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      # PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: these specs launch OUR Electron binary
+      # via _electron.launch() and never open a browser (playwright.config.ts
+      # says so explicitly), so the ~400 MB browser download is pure waste.
+      - name: Install dependencies
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      # electron-vite build + electron-builder --linux dir → the binary the e2e
+      # step launches. ADR-0005: dev-mode green does not count.
+      - name: Package (linux dir)
+        run: npm run package
+
+      # WSLg supplies a display locally; a runner supplies none. Present on the
+      # GitHub image today, installed defensively so a future image change fails
+      # loudly at this step rather than mysteriously inside Playwright.
+      - name: Ensure xvfb
+        run: command -v xvfb-run || { sudo apt-get update && sudo apt-get install -y xvfb; }
+
+      # Ubuntu 24.04 restricts unprivileged user namespaces via AppArmor, which
+      # breaks Chromium's sandbox on CI. Fixed in the ENVIRONMENT, not with a
+      # --no-sandbox flag in the harness: per VISION and ADR-0005, launch flags
+      # are harness-only and must not accumulate CI-specific workarounds that
+      # then diverge from how the app really runs.
+      - name: Allow the Chromium sandbox
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
+
+      - name: E2E against the packaged build
+        run: xvfb-run -a npm run e2e:packaged
+
+      # trace: 'retain-on-failure' + screenshot: 'only-on-failure' are already
+      # configured, so these are empty on a green run and worth having on a red one.
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

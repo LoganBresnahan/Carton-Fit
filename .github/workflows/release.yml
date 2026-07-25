@@ -1,0 +1,63 @@
+# Release — build the ship artifacts on their native platform (ADR-0010, ADR-0012).
+#
+# ADR-0010: the Windows NSIS installer CANNOT be cross-built from Linux (NSIS
+# generates its uninstaller by executing the installer, which needs wine), and
+# native modules cannot be cross-compiled for Windows at all. So the installer is
+# built here, on windows-latest, natively — this workflow owns the ship artifact.
+#
+# BUILD PLAN STATUS (doc/plans/adr-0012-ci-build-plan.md): phase 1 lands the
+# Windows leg only. Still to come: the version-match gate and the Linux AppImage
+# leg (phase 2), the packaged e2e + compliance checks on this runner (phases 2–3),
+# and the draft-release upload (phase 3). Until then artifacts are ordinary
+# workflow artifacts — nothing is published anywhere.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  # Iteration trigger. release.yml can only really be exercised on a Windows
+  # runner, and tagging to test it would either burn version numbers or fail the
+  # version-match gate arriving in phase 2. Dispatch builds and checks; it never
+  # publishes.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      - name: Build
+        run: npm run build
+
+      # `--win nsis zip` overrides electron-builder.yml's win.target, which lists
+      # only zip. That is deliberate, not an oversight: zip is what a local WSL
+      # build can produce, and this runner is the only place nsis can be built.
+      # Do not "fix" the yml by adding nsis there — it would break local /deploy.
+      #
+      # Produces: release/*Setup*.exe (the ship artifact) and release/*-win.zip.
+      - name: Package (nsis + zip)
+        run: npx electron-builder --win nsis zip
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            release/*.exe
+            release/*.zip
+          if-no-files-found: error
+          retention-days: 14
