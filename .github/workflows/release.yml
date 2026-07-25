@@ -49,8 +49,15 @@ jobs:
       # Do not "fix" the yml by adding nsis there — it would break local /deploy.
       #
       # Produces: release/*Setup*.exe (the ship artifact) and release/*-win.zip.
+      #
+      # `--publish never` is required, not cosmetic: electron-builder detects CI
+      # and silently switches on its own GitHub publisher, which then dies with
+      # "GitHub Personal Access Token is not set". We do not want its publisher
+      # at all — ADR-0012 puts artifacts on a DRAFT release, created explicitly
+      # in phase 3, precisely so nothing reaches the public without a human.
+      # Handing electron-builder a token would hand it that decision.
       - name: Package (nsis + zip)
-        run: npx electron-builder --win nsis zip
+        run: npx electron-builder --win nsis zip --publish never
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
