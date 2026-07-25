@@ -1,4 +1,9 @@
-import type { BindingConstraint, MaxQuantityResult, PackResult } from '../core/packing/types'
+import type {
+  BindingConstraint,
+  MaxQuantityResult,
+  PackRequest,
+  PackResult
+} from '../core/packing/types'
 
 // Result presentation (roadmap item 4). Lives on the RENDERER side, not in
 // core/packing, because it is presentation rather than engine math — and
@@ -52,6 +57,29 @@ export function bindingLabel(binding: BindingConstraint): string {
 export function utilizationPercent(utilization: number): string {
   const pct = utilization * 100
   return pct > 0 && pct < 1 ? '<1%' : `${Math.round(pct)}%`
+}
+
+/**
+ * Total packed weight in grams — what the user's max-weight cap is actually
+ * being spent on (ADR-0004 makes weight a hard constraint, so a cap with no
+ * running total is a limit you cannot steer by).
+ *
+ * Derived from the request's per-part weights rather than carried on the result:
+ * in max-quantity the count can exceed the materialized placements
+ * (MAX_GRID_PLACEMENTS), so summing placements would under-report the very
+ * number the cap is judged against.
+ */
+export function packedWeightG(result: PackResult, request: PackRequest): number {
+  if (result.mode === 'max-quantity') {
+    const unitWeight = request.parts.reduce((sum, part) => sum + part.weightG, 0)
+    return result.count * unitWeight
+  }
+  const weightByName = new Map<string, number>()
+  for (const part of request.parts) weightByName.set(part.name, part.weightG)
+  return result.placements.reduce(
+    (sum, placement) => sum + (weightByName.get(placement.partName) ?? 0),
+    0
+  )
 }
 
 /**

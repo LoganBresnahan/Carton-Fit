@@ -1,21 +1,27 @@
 import { useAppStore } from '../store'
 import {
   bindingLabel,
+  packedWeightG,
   truncatedLayout,
   utilizationPercent,
   verdictCaption,
   verdictHeadline
 } from '../packing/verdict'
+import { gToWeight, weightUnitLabel } from '../core/units'
 
 // Thin declarative island (ADR-0006): reads the pack slice and renders the
 // estimate. No logic beyond formatting — the engine produced every number, and
 // packing/verdict.ts owns the wording.
 
+const round2 = (x: number): number => Math.round(x * 100) / 100
+
 export default function ResultsPanel() {
   const status = useAppStore((s) => s.packStatus)
   const result = useAppStore((s) => s.packResult)
+  const request = useAppStore((s) => s.packRequest)
   const error = useAppStore((s) => s.packError)
   const elapsedMs = useAppStore((s) => s.packElapsedMs)
+  const unitSystem = useAppStore((s) => s.settings.unitSystem)
 
   if (status === 'idle' && !result) return null
 
@@ -75,6 +81,21 @@ export default function ResultsPanel() {
           <dd data-testid="results-tier">{result.tier}</dd>
         </div>
       </dl>
+
+      {/* Weight is a hard cap (ADR-0004), so show what the packing spends
+          against it — a limit with no running total can't be steered by. */}
+      {request && (
+        <p className="results-weight" data-testid="results-weight">
+          <span className="results-weight-value">
+            {round2(gToWeight(packedWeightG(result, request), unitSystem)).toLocaleString()}
+          </span>
+          {' of '}
+          {Number.isFinite(request.maxWeightG)
+            ? round2(gToWeight(request.maxWeightG, unitSystem)).toLocaleString()
+            : '∞'}{' '}
+          {weightUnitLabel(unitSystem)}
+        </p>
+      )}
 
       {truncatedLayout(result) && (
         <p className="results-note" data-testid="results-truncated">

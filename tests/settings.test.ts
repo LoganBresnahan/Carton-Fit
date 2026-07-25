@@ -1,5 +1,10 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { innerCartonMm, useAppStore, type PackingSettings } from '../src/renderer/src/store'
+import {
+  innerCartonMm,
+  resolvedView,
+  useAppStore,
+  type PackingSettings
+} from '../src/renderer/src/store'
 import type { PackRequest, PackResult } from '../src/renderer/src/core/packing/types'
 
 function settings(patch: Partial<PackingSettings> = {}): PackingSettings {
@@ -39,6 +44,24 @@ describe('settings slice', () => {
     expect(after.tier).toBe('thorough')
     expect(after.mode).toBe(before.mode) // untouched field preserved
     expect(after).not.toBe(before) // new identity → persistence subscription fires
+  })
+})
+
+describe('resolvedView', () => {
+  it('follows the estimate in auto mode', () => {
+    expect(resolvedView('auto', false)).toBe('model')
+    expect(resolvedView('auto', true)).toBe('packed')
+  })
+
+  it('pins the model even once an estimate exists', () => {
+    // Without pinning, inspecting the model would be undone by the next
+    // re-pack — a keystroke away under ADR-0009.
+    expect(resolvedView('model', true)).toBe('model')
+  })
+
+  it('falls back to the model when packed is pinned but nothing is packed yet', () => {
+    expect(resolvedView('packed', false)).toBe('model')
+    expect(resolvedView('packed', true)).toBe('packed')
   })
 })
 

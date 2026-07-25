@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   bindingLabel,
+  packedWeightG,
   truncatedLayout,
   utilizationPercent,
   verdictCaption,
   verdictHeadline
 } from '../src/renderer/src/packing/verdict'
-import type { FitCheckResult, MaxQuantityResult } from '../src/renderer/src/core/packing/types'
+import type {
+  FitCheckResult,
+  MaxQuantityResult,
+  PackRequest
+} from '../src/renderer/src/core/packing/types'
 
 // heuristic-verdict-labeling wording (ADR-0003). These assertions pin the CLAIM
 // each phrasing makes, not its prose: a positive fit may be stated as certain
@@ -99,6 +104,42 @@ describe('utilizationPercent', () => {
     expect(utilizationPercent(0.6423)).toBe('64%')
     expect(utilizationPercent(1)).toBe('100%')
     expect(utilizationPercent(0.0001)).toBe('<1%')
+  })
+})
+
+describe('packedWeightG', () => {
+  const request = (weights: number[]): PackRequest => ({
+    mode: 'fit-check',
+    tier: 'fast',
+    carton: [100, 100, 100],
+    clearances: { betweenParts: 0, wall: 0 },
+    maxWeightG: 10_000,
+    parts: weights.map((weightG, i) => ({
+      name: `p${i}`,
+      positions: new Float32Array([0, 0, 0]),
+      weightG
+    }))
+  })
+
+  it('sums the weights of the parts actually placed (fit-check)', () => {
+    const placed = (name: string): FitCheckResult['placements'][number] => ({
+      ...placement,
+      partName: name
+    })
+    const result = fit({ placements: [placed('p0'), placed('p2')], unplaced: ['p1'] })
+    expect(packedWeightG(result, request([100, 500, 250]))).toBe(350) // p1 excluded
+  })
+
+  it('multiplies count by unit weight (max-quantity), not placements', () => {
+    // The count can exceed the materialized placements, so summing placements
+    // would under-report the very number the weight cap is judged against.
+    const result = qty({ count: 1000, placements: [placement] })
+    expect(packedWeightG(result, request([12]))).toBe(12_000)
+  })
+
+  it('sums a composed multi-part unit', () => {
+    const result = qty({ count: 5, placements: [placement] })
+    expect(packedWeightG(result, request([10, 20, 30]))).toBe(300) // 5 × 60
   })
 })
 

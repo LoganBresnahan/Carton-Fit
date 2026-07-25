@@ -27,7 +27,9 @@ export const MAX_GRID_PLACEMENTS = 50_000
  *  zero, not as near-infinite packability (see bestGrid). */
 function countAlong(usable: number, e: number, gap: number, degenerate: number): number {
   if (usable <= 0 || e <= degenerate) return 0
-  const n = Math.floor((usable + gap) / (e + gap))
+  // Tolerant floor for the same reason as the weight cap: inch-derived
+  // dimensions can make an exact fit land a hair under in binary.
+  const n = floorTolerant((usable + gap) / (e + gap))
   return n > 0 ? n : 0
 }
 
@@ -65,10 +67,24 @@ function bestGrid(unit: PackBox, carton: Vec3, clearances: Clearances): GridFit 
   return best
 }
 
+/**
+ * Floor a ratio that ought to be exact, tolerating binary representation error.
+ *
+ * Unit conversion makes this necessary, not paranoid: a 5 lb cap with 0.01 lb
+ * parts is exactly 500 in decimal, but as canonical grams (2267.96185 /
+ * 4.5359237) it lands a hair BELOW 500 in binary, and a bare floor reports 499.
+ * The nudge is relative (1e-9), so it only rescues values already within a
+ * rounding error of an integer — at carton scale that is sub-nanometre, far
+ * under the EPS the placement engines use.
+ */
+function floorTolerant(ratio: number): number {
+  return Math.floor(ratio * (1 + 1e-9))
+}
+
 /** Weight-limited copy count. A weightless unit is never weight-bound (Infinity). */
 function weightCapacity(unitWeightG: number, maxWeightG: number): number {
   if (unitWeightG <= 0) return Infinity
-  return Math.floor(maxWeightG / unitWeightG)
+  return floorTolerant(maxWeightG / unitWeightG)
 }
 
 function gridPlacements(

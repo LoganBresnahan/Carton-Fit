@@ -4,6 +4,7 @@ import ModeTierSelectors from './components/ModeTierSelectors'
 import InputsPanel from './components/InputsPanel'
 import ResultsPanel from './components/ResultsPanel'
 import UnitPicker from './components/UnitPicker'
+import ViewToggle from './components/ViewToggle'
 import Viewport from './viewport/Viewport'
 
 export default function App() {
@@ -25,7 +26,10 @@ export default function App() {
           </div>
           <ResultsPanel />
         </div>
-        <Viewport />
+        <div className="stage">
+          <Viewport />
+          <ViewToggle />
+        </div>
       </main>
     </div>
   )

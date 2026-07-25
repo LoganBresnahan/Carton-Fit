@@ -13,6 +13,17 @@ import { DEFAULT_MAX_WEIGHT_G, inToMm } from './core/units'
 
 export type { LoadedFile } from './import/types'
 
+/** 3D view selection: follow the estimate, or pin one of the two scenes. */
+export type ViewMode = 'auto' | 'model' | 'packed'
+
+/** Resolve the view actually shown. 'auto' prefers the packed carton once an
+ *  estimate exists; with no estimate there is only the model to show. */
+export function resolvedView(viewMode: ViewMode, hasResult: boolean): 'model' | 'packed' {
+  if (viewMode === 'model') return 'model'
+  if (viewMode === 'packed') return hasResult ? 'packed' : 'model'
+  return hasResult ? 'packed' : 'model'
+}
+
 /** All user-chosen packing inputs, in canonical units (mm, grams — ADR-0004). */
 export interface PackingSettings {
   mode: PackMode
@@ -97,6 +108,13 @@ interface AppState {
   unitPartName: string | null
   setUnitPartName: (name: string | null) => void
 
+  /** Which 3D view is showing (VISION: "toggle between model view and packed
+   *  view"). 'auto' follows the estimate — the packed carton once one exists —
+   *  while an explicit choice pins it, so inspecting the model does not get
+   *  undone by the next re-pack. */
+  viewMode: ViewMode
+  setViewMode: (mode: ViewMode) => void
+
   // --- pack slice ---
   packStatus: PackStatus
   packResult: PackResult | null
@@ -155,6 +173,9 @@ export const useAppStore = create<AppState>((set) => ({
 
   unitPartName: null,
   setUnitPartName: (unitPartName) => set({ unitPartName }),
+
+  viewMode: 'auto',
+  setViewMode: (viewMode) => set({ viewMode }),
 
   ...NO_PACK,
   packBegan: () => set({ packStatus: 'packing', packError: null }),

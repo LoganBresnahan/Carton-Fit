@@ -16,20 +16,19 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       clearances, max weight (default 35 lb), part weight (direct or density × volume),
       mode + quality selectors; values persisted (localStorage)
       (ADR-0003 contract + fast engines + selectors; ADR-0004 input fields)
-- [ ] 4. Fast engine + results — tier-1 packing in a worker; results panel (verdict /
+- [x] 4. Fast engine + results — tier-1 packing in a worker; results panel (verdict /
       count / binding constraint / utilization); packed 3D view; vitest coverage for
       grid math, unit conversions, weight cap
-      — carry-in: engine + `pack.worker.ts` + pipeline + grid/weight tests DONE
-      (ADR-0003 phase 5, d8f01b7). Remaining: store results slice + auto-run on
-      settings/parts change, the results panel component, the packed-3D view
-      (reuse the viewport scene-builders with `Placement` rotation+translation),
-      and part-picker for max-quantity unit selection. `verdictCaption` + the
-      `PackResult` fields (binding, utilization, heuristic) are the panel's data.
-- [ ] 5. Thorough engine — minimal OBB + rotation search; quality selector fully
+      (ADR-0003 phase 5 engine + worker; ADR-0009 auto-run. Estimates follow the
+      inputs — no compute button; results pinned as a panel footer; packed view
+      instanced per part; max-quantity unit picker. Dogfooding through the real UI
+      caught a unit-conversion off-by-one in the weight cap — 5 lb / 0.01 lb
+      reported 499 — now floored tolerantly and pinned by test.)
+- [x] 5. Thorough engine — minimal OBB + rotation search; quality selector fully
       wired; nesting tier visible but disabled
-      — carry-in: OBB search + thorough provider DONE (phase 3/4); nesting stays
-      disabled (phase 2). Remaining here is just wiring the tier selector through
-      to a rendered thorough result, which rides on item 4's results plumbing.
+      (ADR-0003 phases 3–4. The tier selector now runs end-to-end: switching to
+      Thorough re-packs through the OBB provider and renders the composed
+      rotations. Nesting stays visible-but-disabled from phase 2.)
 - [ ] 6. E2E harness + golden samples — Playwright `_electron.launch()` specs in
       `e2e/`; `samples/` golden parts with hand-computed expected results shared by
       unit, e2e, and dogfood layers (ADR-0005); DropZone keeps the picker path e2e
@@ -45,6 +44,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       dist-live staging, dogfood handoff); mac build documented
 - [ ] 9. Polish — error states (unparseable file, open mesh volume warning), app icon,
       window state persistence
+      — carry-in: translucent carton walls (VISION says "wireframe + translucent
+      walls"; item 4 shipped the wireframe only, which reads clearly against a
+      dense pack — revisit when adding depth cues)
 
 ## Later
 

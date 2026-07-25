@@ -136,6 +136,28 @@ body {
   border-bottom: none;
 }
 
+/* Viewport stage: the canvas plus overlays (the model/packed toggle). */
+.stage {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  display: flex;
+}
+
+.view-toggle {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+  width: auto;
+  background: var(--panel);
+}
+.view-toggle .segment {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+}
+
 /* 3D viewport (ADR-0008). Fills its flex cell; the canvas fills the container,
    with sizing driven by the ResizeObserver, not CSS-to-buffer coupling. */
 .viewport {
@@ -327,6 +349,15 @@ body {
 .results-facts dd {
   font-size: 0.95rem;
   margin: 0;
+}
+
+.results-weight {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.results-weight-value {
+  color: var(--text);
+  font-weight: 600;
 }
 
 .results-subhead {

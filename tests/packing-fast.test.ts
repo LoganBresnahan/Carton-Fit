@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { MAX_GRID_PLACEMENTS } from '../src/renderer/src/core/packing/quantityGrid'
 import { aabbOrientations, det3 } from '../src/renderer/src/core/packing/orientations'
 import { gridFillQuantity } from '../src/renderer/src/core/packing/quantityGrid'
+import { inToMm, lbToG } from '../src/renderer/src/core/units'
 import type { Clearances, PackBox, PackPart, Vec3 } from '../src/renderer/src/core/packing/types'
 
 const NO_CLEARANCE: Clearances = { betweenParts: 0, wall: 0 }
@@ -86,6 +87,35 @@ describe('gridFillQuantity — counts', () => {
     const r = gridFillQuantity(unit('rod', [90, 5, 5]), [100, 100, 100], NO_CLEARANCE, Infinity)
     // best orientation: 90 along one axis (1), 5×5 across the 100×100 face (20×20) = 400
     expect(r.count).toBe(400)
+  })
+})
+
+describe('gridFillQuantity — float-exact limits', () => {
+  it('counts 500, not 499, for a 5 lb cap and 0.01 lb parts (unit-conversion floor)', () => {
+    // Exactly 500 in decimal; in canonical grams the ratio lands a hair under
+    // 500 in binary, and a bare Math.floor silently reported 499. Found by
+    // dogfooding the real UI, which is why it is pinned here.
+    const cap = lbToG(5)
+    const each = lbToG(0.01)
+    const r = gridFillQuantity(unit('u', [1, 1, 1], each), [1000, 1000, 1000], NO_CLEARANCE, cap)
+    expect(r.count).toBe(500)
+    expect(r.binding).toBe('weight')
+  })
+
+  it('still floors a genuine fraction', () => {
+    const r = gridFillQuantity(unit('u', [1, 1, 1], 3), [1000, 1000, 1000], NO_CLEARANCE, 10)
+    expect(r.count).toBe(3) // 10/3 = 3.33 → 3, not rescued to 4
+  })
+
+  it('counts an inch-derived exact fit without losing a row', () => {
+    // 12 in carton, 1 in part: exactly 12 per axis once converted to mm.
+    const r = gridFillQuantity(
+      unit('u', [inToMm(1), inToMm(1), inToMm(1)]),
+      [inToMm(12), inToMm(12), inToMm(12)],
+      NO_CLEARANCE,
+      Infinity
+    )
+    expect(r.count).toBe(12 * 12 * 12)
   })
 })
 

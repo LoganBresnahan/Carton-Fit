@@ -110,8 +110,17 @@ pack worker and tests:
 ```bash
 grep -rn "occt-import-js" src
 # expect: workers/import.worker.ts only
-grep -rln "core/packing" src/renderer/src --include='*.ts' --include='*.tsx'
-# expect: workers/pack.worker.ts (+ core/packing internals); no components/
+grep -rn "^import \{" src/renderer/src --include='*.ts' --include='*.tsx' | grep "core/packing"
+# expect: workers/pack.worker.ts (the engines) and components/ModeTierSelectors
+# (MODES/TIERS — domain constants from the contract, not engine code).
+#
+# Match on VALUE imports: `import type` is erased at build, so type-only
+# references to the contract from the store, the pack pipeline, the viewport and
+# the results UI are correct and expected — that is the contract doing its job.
+# What must never happen is engine CODE reaching the main thread. Confirm
+# structurally after `npm run build`:
+#   grep -c 'unconverged\|aabb-fallback' out/renderer/assets/index-*.js      # 0
+#   grep -c 'unconverged\|aabb-fallback' out/renderer/assets/pack.worker-*.js # >0
 ```
 
 ## 4. Report

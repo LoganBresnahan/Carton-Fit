@@ -14,7 +14,7 @@ import { buildPartsScene } from './sceneFromParts'
 import { boundsOfCarton, buildPackedScene } from './sceneFromPlacements'
 import { boundsOfParts, frameBox } from './cameraFraming'
 import { swapContent } from './sceneContent'
-import { useAppStore } from '../store'
+import { resolvedView, useAppStore } from '../store'
 
 // The viewport island (ADR-0008). Owns the imperative three lifecycle and syncs
 // scene content from the store's parts slice — but no scene *logic*: content is
@@ -94,8 +94,10 @@ export default function Viewport() {
     let content: Object3D | null = null
     let framedKey = ''
     const applyScene = (state: ReturnType<typeof useAppStore.getState>): void => {
-      const { parts, packResult, packRequest } = state
-      const packed = packResult !== null && packRequest !== null ? packRequest.carton : null
+      const { parts, packResult, packRequest, viewMode } = state
+      const showPacked =
+        resolvedView(viewMode, packResult !== null && packRequest !== null) === 'packed'
+      const packed = showPacked && packResult && packRequest ? packRequest.carton : null
 
       if (packed && packResult) {
         content = swapContent(
@@ -135,7 +137,13 @@ export default function Viewport() {
     // React to imports and to new estimates; both slices are replaced by
     // reference, never mutated.
     const unsubscribe = useAppStore.subscribe((state, prev) => {
-      if (state.parts !== prev.parts || state.packResult !== prev.packResult) applyScene(state)
+      if (
+        state.parts !== prev.parts ||
+        state.packResult !== prev.packResult ||
+        state.viewMode !== prev.viewMode
+      ) {
+        applyScene(state)
+      }
     })
 
     resize()
