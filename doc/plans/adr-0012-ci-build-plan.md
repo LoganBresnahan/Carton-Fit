@@ -181,6 +181,14 @@
       linux). The gate and draft-release jobs have no setup-node — gate uses the
       runner's preinstalled node for one `node -p`, and draft-release only runs
       `gh`.*
+      **Measured, and it buys almost nothing: `npm ci` went 8 s → 7 s.** The ADR
+      called this an optimization and it is a ~1 s one, because this project's
+      dependency install was never the cost. CI wall-clock lives in
+      `npm run package` (electron-builder fetching Electron) and the e2e run.
+      Kept because the downside is nil and it will matter more when
+      better-sqlite3 lands, but do not expect it to show up. If CI time ever
+      needs attacking for real, cache `~/.cache/electron` instead — that is
+      where the megabytes are.
 
 ### 5. Docs reconciliation · **opus**
 - [ ] `docs-reconcile-ci` · low — check off roadmap item 10; mark the ADR-0011
