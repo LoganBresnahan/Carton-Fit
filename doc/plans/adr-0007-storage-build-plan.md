@@ -101,11 +101,19 @@
 > fresh DB usable), then was deleted — `db-layer-tests` in phase 4 owns the real
 > ones. It is what surfaced the WAL-sidecar finding above.
 
-### 3. Schema + packaging proof · **opus batch**
-- [ ] `v1-schema` · low — migration 1: `configurations` (named presets, UNIQUE
+### 3. Schema + packaging proof · **opus batch** ✅ *complete*
+- [x] `v1-schema` · low — migration 1: `configurations` (named presets, UNIQUE
       name) + `estimates` (file name, content hash, settings snapshot TEXT/JSON,
       result JSON, timestamp; index for recency queries).
-- [ ] `packaging-prebuilt-verification` · medium — **renamed in spirit by
+      *Done, both tables `STRICT`. Settings and results stay JSON text rather
+      than columns: `PackingSettings` has twelve fields and ADR-0004's revisit
+      triggers already name more, the main process never queries inside the
+      blobs, so columns would buy schema churn and nothing else. Timestamps are
+      epoch-ms integers. `estimates` is deliberately not unique on
+      (content_hash, settings) — re-running the same part is a real event, and
+      VISION says every estimate is recorded. Scratch-verified: migrates to 1,
+      idempotent on reopen, STRICT rejects a wrong-typed write.*
+- [x] `packaging-prebuilt-verification` · medium — **renamed in spirit by
       ADR-0013: this is now a compile-from-source proof, not a prebuild fetch.**
       Prove the packaged app carries a *working* module: the `.node` is built for
       **Electron ABI 148** (not Node's 141) and lives **outside** app.asar, and
@@ -127,6 +135,49 @@
          load-bearing for licence compliance.
       Neither breaks anything *yet*, because no code imports the module — which
       is exactly why this slice runs before phases 4–6 stack on it.
+      *Done — and there turned out to be a **third** silent failure behind those
+      two. All three shipped a module that cannot load, and none turned the
+      build red:*
+      1. *`asarUnpack` (declared for the LGPL wasm) **replaces**
+         electron-builder's native-module default rather than adding to it, so
+         the `.node` was packed inside app.asar where the OS loader cannot
+         dlopen it. Both globs now declared and commented as load-bearing.*
+      2. *`npmRebuild: true` alone runs @electron/rebuild with
+         `buildFromSource=false`; it looks for an ABI-148 prebuild that no npm
+         version publishes — the very premise of ADR-0013 — then logs
+         "finished" having changed nothing. Fixed with
+         `buildDependenciesFromSource: true`.*
+      3. *A stale `.forge-meta` stamp (contents `x64--148-`) made it skip the
+         rebuild outright: `npm rebuild`/`npm ci` replace the `.node` but leave
+         the stamp, so it claimed an Electron build that had been overwritten.
+         The shipped binary was **byte-identical by md5** to the Node one.
+         `scripts/clear-native-rebuild-stamp.mjs` clears it before every
+         package.*
+      *Proven by running the shipped bytes: the packaged app executes a real
+      INSERT/SELECT under ABI 148. `e2e/native-module.spec.ts` makes it
+      permanent — it uses `process.mainModule.require` (an injected evaluate
+      function has no module-scope `require`) and asserts a query **round-trip**,
+      because better-sqlite3 loads its addon lazily so a bare `require` proves
+      nothing.*
+      *`pretest` now restores the Node ABI so `npm test` works after packaging —
+      ADR-0013's dual-ABI trap, which duly bit during this slice.*
+      **Exit criterion met:** release.yml dispatch green — `windows-latest`
+      compiled better-sqlite3 with MSVC, **17/17 packaged e2e on Windows**
+      (including the new guard), plus 3/3 LGPL compliance. Linux AppImage green.
+
+---
+
+## Phases 1–3 complete
+
+Ship bar: 210/210 unit, typecheck clean, 17/17 packaged e2e locally and on
+Windows, both ADR-0011 compliance checks green. Remaining: store classes + DB
+tests (4), IPC (5), renderer wiring (6).
+
+The theme so far is that **this ADR's stated premise was wrong in two different
+ways**, both caught by checking rather than trusting: the prebuild pin named a
+version that is not on npm (→ ADR-0013), and "electron-builder fetches the
+prebuilt" hid three independent silent failures. Every one of them would have
+shipped an installer that dies the first time a user saves a preset.
 
 ### 4. Store classes + DB tests · **opus batch**
 - [ ] `configurations-store-class` · low — CRUD over `configurations`; prepared
