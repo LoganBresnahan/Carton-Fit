@@ -11,6 +11,7 @@ import {
 } from 'three'
 import { OrbitControls } from './adapters/orbitControls'
 import { buildPartsScene } from './sceneFromParts'
+import { boundsOfCarton, buildPackedScene } from './sceneFromPlacements'
 import { boundsOfParts, frameBox } from './cameraFraming'
 import { swapContent } from './sceneContent'
 import { useAppStore } from '../store'
@@ -85,11 +86,34 @@ export default function Viewport() {
 
     // The one place scene content changes: swap through the choke point (which
     // disposes the outgoing geometry), then reframe the camera to the new model.
+    //
+    // Two scenes, one slot: the loose imported parts until an estimate exists,
+    // then the PACKED scene — the carton with the parts placed in it. The carton
+    // comes from the request that produced the result, not from live settings,
+    // so the box on screen always agrees with the placements inside it.
     let content: Object3D | null = null
-    const applyParts = (parts: ReturnType<typeof useAppStore.getState>['parts']): void => {
-      content = swapContent(scene, content, parts.length ? buildPartsScene(parts) : null)
-      if (parts.length) {
-        const framing = frameBox(boundsOfParts(parts), { fov: FOV, aspect: aspect() })
+    let framedKey = ''
+    const applyScene = (state: ReturnType<typeof useAppStore.getState>): void => {
+      const { parts, packResult, packRequest } = state
+      const packed = packResult !== null && packRequest !== null ? packRequest.carton : null
+
+      if (packed && packResult) {
+        content = swapContent(
+          scene,
+          content,
+          buildPackedScene(parts, packResult.placements, packed)
+        )
+      } else {
+        content = swapContent(scene, content, parts.length ? buildPartsScene(parts) : null)
+      }
+
+      const bounds = packed ? boundsOfCarton(packed) : parts.length ? boundsOfParts(parts) : null
+      // Reframe only when the subject actually changes size/identity — otherwise
+      // every re-pack (a keystroke away) would yank a camera the user has orbited.
+      const key = packed ? `carton:${packed.join(',')}` : `parts:${parts.length}`
+      if (bounds && key !== framedKey) {
+        framedKey = key
+        const framing = frameBox(bounds, { fov: FOV, aspect: aspect() })
         camera.position.copy(framing.position)
         camera.near = framing.near
         camera.far = framing.far
@@ -97,6 +121,7 @@ export default function Viewport() {
         controls.target.copy(framing.target)
         controls.update()
       }
+      if (!bounds) framedKey = ''
       invalidate()
     }
 
@@ -107,13 +132,14 @@ export default function Viewport() {
     })
     observer.observe(container)
 
-    // React to imports; parts is replaced by reference on success/reset.
+    // React to imports and to new estimates; both slices are replaced by
+    // reference, never mutated.
     const unsubscribe = useAppStore.subscribe((state, prev) => {
-      if (state.parts !== prev.parts) applyParts(state.parts)
+      if (state.parts !== prev.parts || state.packResult !== prev.packResult) applyScene(state)
     })
 
     resize()
-    applyParts(useAppStore.getState().parts) // render whatever is already loaded
+    applyScene(useAppStore.getState()) // render whatever is already loaded
 
     return () => {
       unsubscribe()

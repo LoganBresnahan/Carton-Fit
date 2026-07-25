@@ -33,15 +33,18 @@ export function createPackPipeline(
   now: Clock = () => performance.now()
 ): PackPipeline {
   let latestId = 0
-  const startedAt = new Map<number, number>()
+  // Per in-flight pack: when it started, and what was asked. The request is kept
+  // so the result can be handed back paired with the inputs that produced it.
+  const inFlight = new Map<number, { startedAt: number; request: PackRequest }>()
 
   worker.onmessage = (event) => {
     const response = event.data
-    const t0 = startedAt.get(response.id)
-    startedAt.delete(response.id)
+    const job = inFlight.get(response.id)
+    inFlight.delete(response.id)
     if (response.id !== latestId) return // superseded by newer inputs
     if (response.ok) {
-      sink.succeed(response.result, t0 === undefined ? 0 : now() - t0)
+      if (!job) return // no record of dispatching this id — ignore rather than guess
+      sink.succeed(response.result, job.request, now() - job.startedAt)
     } else {
       sink.fail(response.error)
     }
@@ -50,7 +53,7 @@ export function createPackPipeline(
   function requestPack(request: PackRequest): void {
     const id = ++latestId
     sink.begin()
-    startedAt.set(id, now())
+    inFlight.set(id, { startedAt: now(), request })
     // No transfer list: the renderer keeps `positions` for the viewport, so the
     // worker receives a structured-clone copy (see pack-protocol).
     worker.postMessage({ id, request })

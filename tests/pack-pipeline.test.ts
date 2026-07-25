@@ -29,7 +29,9 @@ function spySink(): PackSink & { calls: string[] } {
   return {
     calls,
     begin: vi.fn(() => calls.push('begin')),
-    succeed: vi.fn((result: PackResult) => calls.push(`succeed:${result.mode}`)),
+    succeed: vi.fn((result: PackResult, _request: PackRequest) =>
+      calls.push(`succeed:${result.mode}`)
+    ),
     fail: vi.fn((err: string) => calls.push(`fail:${err}`))
   }
 }
@@ -77,7 +79,13 @@ describe('createPackPipeline', () => {
     clock = 235 // 35 ms elapse
     worker.respond({ id: worker.lastId, ok: true, result: fitResult() })
 
-    expect(sink.succeed).toHaveBeenCalledWith(expect.objectContaining({ mode: 'fit-check' }), 35)
+    // The request comes back paired with the result: the packed 3D view needs
+    // the carton those placements sit in, and live settings may have moved on.
+    expect(sink.succeed).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'fit-check' }),
+      REQUEST,
+      35
+    )
   })
 
   it('maps an error response to fail', () => {

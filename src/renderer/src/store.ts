@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ImportedPart } from './workers/import-protocol'
 import type { ImportSink, ImportStats, ImportStatus, LoadedFile } from './import/types'
-import type { PackMode, PackResult, QualityTier, Vec3 } from './core/packing/types'
+import type { PackMode, PackRequest, PackResult, QualityTier, Vec3 } from './core/packing/types'
 import type { PackSink, PackStatus } from './packing/types'
 import type { UnitSystem } from './core/units'
 import { DEFAULT_MAX_WEIGHT_G, inToMm } from './core/units'
@@ -93,10 +93,12 @@ interface AppState {
   // --- pack slice ---
   packStatus: PackStatus
   packResult: PackResult | null
+  /** The request that produced packResult — the packed 3D view draws its carton. */
+  packRequest: PackRequest | null
   packError: string | null
   packElapsedMs: number | null
   packBegan: () => void
-  packSucceeded: (result: PackResult, elapsedMs: number) => void
+  packSucceeded: (result: PackResult, request: PackRequest, elapsedMs: number) => void
   packFailed: (error: string) => void
 }
 
@@ -105,6 +107,7 @@ interface AppState {
 const NO_PACK = {
   packStatus: 'idle' as PackStatus,
   packResult: null,
+  packRequest: null,
   packError: null,
   packElapsedMs: null
 }
@@ -128,10 +131,10 @@ export const useAppStore = create<AppState>((set) => ({
 
   ...NO_PACK,
   packBegan: () => set({ packStatus: 'packing', packError: null }),
-  packSucceeded: (packResult, packElapsedMs) =>
-    set({ packStatus: 'done', packResult, packElapsedMs, packError: null }),
+  packSucceeded: (packResult, packRequest, packElapsedMs) =>
+    set({ packStatus: 'done', packResult, packRequest, packElapsedMs, packError: null }),
   packFailed: (packError) =>
-    set({ packStatus: 'failed', packError, packResult: null, packElapsedMs: null })
+    set({ ...NO_PACK, packStatus: 'failed', packError })
 }))
 
 // Persist settings whenever they change (the object identity changes on updateSettings).
@@ -152,7 +155,8 @@ export function storeImportSink(): ImportSink {
 export function storePackSink(): PackSink {
   return {
     begin: () => useAppStore.getState().packBegan(),
-    succeed: (result, elapsedMs) => useAppStore.getState().packSucceeded(result, elapsedMs),
+    succeed: (result, request, elapsedMs) =>
+      useAppStore.getState().packSucceeded(result, request, elapsedMs),
     fail: (error) => useAppStore.getState().packFailed(error)
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { innerCartonMm, useAppStore, type PackingSettings } from '../src/renderer/src/store'
-import type { PackResult } from '../src/renderer/src/core/packing/types'
+import type { PackRequest, PackResult } from '../src/renderer/src/core/packing/types'
 
 function settings(patch: Partial<PackingSettings> = {}): PackingSettings {
   return { ...useAppStore.getState().settings, ...patch }
@@ -54,6 +54,15 @@ describe('pack slice', () => {
     utilization: 0.25
   }
 
+  const request: PackRequest = {
+    mode: 'fit-check',
+    tier: 'fast',
+    carton: [100, 100, 100],
+    clearances: { betweenParts: 0, wall: 0 },
+    maxWeightG: Infinity,
+    parts: []
+  }
+
   beforeEach(() => {
     useAppStore.getState().resetImport()
   })
@@ -68,7 +77,7 @@ describe('pack slice', () => {
     useAppStore.getState().packBegan()
     expect(useAppStore.getState().packStatus).toBe('packing')
 
-    useAppStore.getState().packSucceeded(result, 42)
+    useAppStore.getState().packSucceeded(result, request, 42)
     const s = useAppStore.getState()
     expect(s.packStatus).toBe('done')
     expect(s.packResult).toBe(result)
@@ -78,13 +87,13 @@ describe('pack slice', () => {
 
   it('keeps the previous result while a new pack is in flight', () => {
     // The panel shows the prior estimate (dimmed) rather than flashing empty.
-    useAppStore.getState().packSucceeded(result, 10)
+    useAppStore.getState().packSucceeded(result, request, 10)
     useAppStore.getState().packBegan()
     expect(useAppStore.getState().packResult).toBe(result)
   })
 
   it('drops the result on failure', () => {
-    useAppStore.getState().packSucceeded(result, 10)
+    useAppStore.getState().packSucceeded(result, request, 10)
     useAppStore.getState().packFailed('worker died')
     const s = useAppStore.getState()
     expect(s.packStatus).toBe('failed')
@@ -93,7 +102,7 @@ describe('pack slice', () => {
   })
 
   it('clears a stale estimate when a new import begins', () => {
-    useAppStore.getState().packSucceeded(result, 10)
+    useAppStore.getState().packSucceeded(result, request, 10)
     useAppStore.getState().beginImport({ name: 'next.stp', sizeBytes: 1 })
     const s = useAppStore.getState()
     expect(s.packStatus).toBe('idle')
