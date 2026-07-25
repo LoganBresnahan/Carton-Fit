@@ -52,12 +52,13 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       (`/deploy` runs end-to-end and shipped its first build at 1ccc1fc: 143 MB
       Windows zip + linux-unpacked smoke target from one build, 16/16 e2e green
       against the PACKAGED binary, staged to `dist-live/` with rollback.)
-      — carry-in: **the NSIS `Setup.exe` is not built yet.** ADR-0010: NSIS needs
-      wine on Linux (its uninstaller runs the installer), and wine was rejected
-      because it does nothing for item 7's native modules. The installer is CI's
-      job — see the CI item below, which now owns the ship artifact. Until then
-      the zip is unsigned (SmartScreen warns) with no Start-menu entry or
-      uninstaller. mac dmg also still undocumented.
+      — carry-in **resolved by item 10**: the NSIS `Setup.exe` now exists, built
+      natively on `windows-latest` (102 MB, first produced 2026-07-25 for
+      `v0.1.0`). It is still unsigned, so SmartScreen warns on first run; code
+      signing is the open piece, deferred until a certificate exists.
+      — carry-in: **mac dmg still undocumented and unbuilt.** ADR-0012 declines a
+      macOS runner on purpose — a dmg nobody can dogfood is an untested artifact
+      wearing a ship label. Revisit when a Mac is available.
 - [ ] 9. Polish — error states (unparseable file, open mesh volume warning), app icon,
       window state persistence
       — carry-in: translucent carton walls (VISION says "wireframe + translucent
@@ -71,7 +72,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       would cut ~7 MB — but that copy also carries the LGPL text ADR-0011's
       notices cite, so the exclusion must keep `LICENSE.md`/`license.occt.txt`.
       Not urgent; the comment is wrong today either way.
-- [ ] 10. CI + GitHub releases — **owns the Windows `Setup.exe`** (ADR-0010). A GitHub
+- [x] 10. CI + GitHub releases — **owns the Windows `Setup.exe`** (ADR-0010). A GitHub
       Actions matrix builds each platform on its own runner: `windows-latest` produces
       the NSIS installer natively (no wine) and compiles native modules with MSVC when
       no prebuild matches, which also de-risks item 7. Publish installers as release
@@ -80,14 +81,25 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       there) plus the SwiftShader flags already in `e2e/harness.ts`; vitest and
       typecheck need nothing special. Reuse `/deploy`'s staging semantics rather than
       duplicating them.
-      — carry-in: **the repo goes public here, so ADR-0011 lands with it.** `LICENSE`
-      (MIT) and `THIRD-PARTY-NOTICES.md` already ship via `extraFiles`. Two things
-      must be re-verified against the CI-built Windows installer, because both were
-      only proven on Linux: (a) the LGPL substitution test — overwrite
-      `resources/app.asar.unpacked/out/renderer/assets/occt-import-js-*.wasm` with
-      junk and confirm STEP import *fails*, proving the shipped app reads that path;
-      (b) that ASAR integrity enforcement is off, since enabling it would silently
-      void the guarantee with every test still green.
+      (Shipped 2026-07-25 as ADR-0012, five plan phases. `ci.yml` verifies every
+      push — typecheck, vitest, packaged e2e under `xvfb` — and `release.yml`
+      builds the `Setup.exe` natively on `windows-latest`, self-verifies there,
+      builds the Linux AppImage, and attaches both to a **draft** release; a
+      human publishes. The version gate and the draft-only rule were each proved
+      by exercising their negative path, not by reading the YAML. Windows found
+      a real harness bug on its first run — `ELECTRON_RUN_AS_NODE: ''` selects
+      node mode there, because Electron tests presence, not truthiness. `/deploy`
+      now fetches the CI artifact for a sha instead of building.)
+      — carry-in **discharged**: both ADR-0011 checks now run on the Windows
+      build every release, and both were verified capable of failing.
+      `scripts/check-asar-integrity-fuse.mjs --self-test` mutates the fuse and
+      requires the checker to notice; `e2e-compliance/` mutation-tests the LGPL
+      substitution spec. Result: electron-builder *embeds* integrity hashes on
+      Windows but Electron does not *enforce* them, so the relink guarantee
+      holds on the ship platform.
+      — carry-in: **code signing.** The `Setup.exe` is unsigned, so SmartScreen
+      warns. ADR-0010 says certificates belong on this same runner; revisit how
+      they are held before adding it.
 
 ## Later
 

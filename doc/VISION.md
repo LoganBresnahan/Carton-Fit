@@ -23,13 +23,17 @@ Development happens in **WSL/Linux**, which is a *convenience of the workshop, n
 property of the product*. Consequences that follow, so they are never mistaken for
 product decisions:
 
-- Installers are **cross-built** for Windows from WSL (ADR-0001). If cross-building
-  ever becomes the limiting factor — most likely when native modules arrive with
-  `better-sqlite3` (ADR-0007) — the answer is to move the *build* to Windows, never to
-  soften the Windows-native target.
-- Automated checks run against the Linux package of the same code because that is what
-  WSL can drive; **the Windows install and launch are human-verified** (ADR-0005). A
-  green machine check is evidence about the app, not about the installer.
+- The Windows installer is **built on Windows**, by CI (ADR-0010, ADR-0012). This
+  paragraph used to say installers were cross-built from WSL; measuring that killed
+  it — NSIS needs wine on Linux, and native modules cannot be cross-compiled for
+  Windows at all. The prediction that `better-sqlite3` would force the move was
+  right; it simply arrived early. wine was rejected rather than adopted, because it
+  would have bought one build step with a known expiry date.
+- The Windows app **is machine-verified**: the release workflow runs the full
+  packaged e2e suite on `windows-latest` against the bytes it just built. What stays
+  human-verified is the *install experience* — SmartScreen on an unsigned exe, the
+  Start-menu entry, uninstall (ADR-0005). A green machine check is now evidence about
+  the app on Windows, but still not about the installer's UX.
 - Anything WSL-specific — display servers, GPU fallbacks, build toolchains — belongs to
   the harness, never to shipped code.
 

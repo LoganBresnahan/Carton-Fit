@@ -24,7 +24,9 @@ when scope changes.
 - Packing/geometry math: pure TypeScript in `src/renderer/src/core/`, executed in a worker; unit-tested with vitest
 - `better-sqlite3` (main process only, behind IPC) for configurations + estimate history
   (ADR-0007): `PRAGMA user_version` migrations in one `migrations.ts`, WAL, open-with-recovery
-- `electron-builder` for installers — Windows NSIS is the primary target (cross-built from WSL), plus dmg and AppImage
+- `electron-builder` for installers — Windows NSIS is the primary target, **built on
+  `windows-latest` in CI, not cross-built** (ADR-0010/0012), plus a Linux AppImage.
+  A dmg waits for a Mac to verify it on.
 
 ## Conventions
 
@@ -69,15 +71,32 @@ when scope changes.
 - `npm run e2e:packaged` — the same specs against the packaged binary. **This is the
   deploy gate**: dev-mode green does not count (ADR-0005), because packaged builds
   fail in packaged-only ways — `file://` asset paths, WASM loading, workers.
+- `PACKAGED_APP=<binary> npm run e2e:compliance` — the ADR-0011 licence checks in
+  `e2e-compliance/`. Separate config on purpose: these specs **corrupt the packaged
+  build** to prove the LGPL relink guarantee, so they must never join an ordinary
+  e2e run. They restore it afterwards.
 
 E2E needs a display and software GL (ADR-0005): WSLg supplies the display locally,
-CI will need `xvfb` (installed nowhere yet), and the SwiftShader flags live in
-`e2e/harness.ts` — harness-only, never in shipped code.
+CI uses `xvfb-run`, and the SwiftShader flags live in `e2e/harness.ts` —
+harness-only, never in shipped code.
 
-**Windows installers need `wine`** (measured, correcting ADR-0001): `makensis` runs
-natively on Linux, but NSIS builds its uninstaller by *executing* the installer, so
-the `nsis` target dies with `spawn wine ENOENT` without it. `--win zip` has no
-uninstaller and cross-builds fine. See ADR-0010.
+## CI (ADR-0012)
+
+- `.github/workflows/ci.yml` — every push to main and every PR: typecheck, vitest,
+  package, then the packaged e2e under `xvfb`. `/shipshape`'s machine half, run on
+  a clean machine.
+- `.github/workflows/release.yml` — on `v*` tags (and `workflow_dispatch` for
+  iteration): builds the Windows `Setup.exe` **natively on `windows-latest`**, runs
+  the packaged e2e plus both ADR-0011 compliance checks there, builds the Linux
+  AppImage, and attaches everything to a **draft** GitHub release. Publishing is a
+  human act after dogfooding — dispatch runs never publish.
+
+**Local builds stay wine-free** (ADR-0010): NSIS builds its uninstaller by
+*executing* the installer, so the `nsis` target dies with `spawn wine ENOENT` on
+Linux. wine was rejected rather than installed — it fixes one step today and does
+nothing for the native modules arriving with ADR-0007. The installer is CI's
+output; locally, `--win zip` cross-builds fine and `/deploy` fetches the CI
+artifact when one exists for the sha.
 
 Version pins: vite 7 + `@vitejs/plugin-react` 5 — electron-vite 5 doesn't support
 vite 8 yet; revisit the pins when it does.

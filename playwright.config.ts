@@ -9,9 +9,10 @@ import { defineConfig } from '@playwright/test'
 // Written CI-ready from day one (ADR-0005 display consequences), because
 // retrofitting that later is a rewrite:
 //   - No fixed-size display is assumed. Locally WSLg supplies one; a GitHub
-//     runner will not, and `xvfb` is installed nowhere yet — so the runner must
-//     wrap this (`xvfb-run -a npx playwright test`) and nothing here may depend
-//     on a particular screen geometry. Window size is set per-launch instead.
+//     Linux runner does not, so ci.yml wraps this in `xvfb-run -a` and nothing
+//     here may depend on a particular screen geometry. Window size is set
+//     per-launch instead. (Windows runners have a real desktop session and need
+//     no wrapper — release.yml runs this suite there directly.)
 //   - Workers are pinned to 1. Each spec drives a real Electron process holding
 //     a GL context, and Chromium caps contexts (~16); parallel workers on a
 //     software rasterizer contend for CPU and produce timing flakes, which is

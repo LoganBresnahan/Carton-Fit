@@ -29,11 +29,20 @@ npx vitest run
 ```
 
 Also: `npm run typecheck` must be clean (tsc is half the test suite in a
-geometry codebase), and once `e2e/` exists, `npx playwright test` must be green
-— the Playwright-Electron specs and the unit tests share the golden fixtures in
-`samples/` (committed parts with hand-computed expected results, ADR-0005).
-E2E against the *packaged* build is `/deploy`'s job, not this gate's; here the
-dev build suffices.
+geometry codebase), and `npm run e2e` must be green — the Playwright-Electron
+specs and the unit tests share the golden fixtures in `samples/` (committed
+parts with hand-computed expected results, ADR-0005). E2E against the
+*packaged* build is `/deploy`'s and CI's job, not this gate's; here the dev
+build suffices.
+
+Not part of this gate: `e2e-compliance/` (ADR-0011). Those specs corrupt a
+packaged build to prove the LGPL relink guarantee and only run in the release
+workflow — do not fold them in to be thorough. Their absence from a local run
+is by design, not a gap.
+
+CI (ADR-0012) runs this same machine half on every push, so a red `ci.yml` and
+a red `/shipshape` should mean the same thing. If they ever disagree, that
+divergence is itself the finding.
 
 Coverage is judged by **behavior mapping**, not a percentage. Enumerate the
 public surface in scope and name the test that pins each behavior:

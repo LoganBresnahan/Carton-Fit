@@ -190,11 +190,50 @@
       needs attacking for real, cache `~/.cache/electron` instead — that is
       where the megabytes are.
 
-### 5. Docs reconciliation · **opus**
-- [ ] `docs-reconcile-ci` · low — check off roadmap item 10; mark the ADR-0011
+### 5. Docs reconciliation · **opus** ✅ *complete*
+- [x] `docs-reconcile-ci` · low — check off roadmap item 10; mark the ADR-0011
       Windows carry-in discharged; delete CLAUDE.md's "xvfb installed nowhere
       yet" and update the zip-until-CI phrasing in `/deploy`'s description;
       VISION's target-platform section likely already reads true — confirm.
+      *Done. **VISION did NOT already read true** — its target-platform section
+      still said "Installers are cross-built for Windows from WSL (ADR-0001)"
+      and that Windows behaviour was human-verified. Both are now false: the
+      installer is built on Windows, and the app is machine-verified there.
+      Rewritten to say so, keeping the correction visible rather than quietly
+      swapping the sentence — and noting VISION's own prediction (that
+      better-sqlite3 would force the build to move) was right, just early. What
+      remains human-verified is narrowed to the install EXPERIENCE: SmartScreen,
+      Start-menu entry, uninstall.*
+      *Also cleared: CLAUDE.md's xvfb claim and its "Windows installers need
+      wine" note (replaced with a CI section + the wine-free local rule), the
+      Stack line still saying "cross-built from WSL" — **caught by a grep sweep
+      for stale phrases, not by reading**, which is the only reason it was found
+      — and `playwright.config.ts`'s "xvfb is installed nowhere yet".
+      `/shipshape` gained the compliance-suite exclusion (those specs corrupt a
+      build and must not be folded in "to be thorough") and a note that CI runs
+      the same machine half, so the two disagreeing is itself a finding.
+      `npm run e2e:compliance` added so the suite has a nameable command.*
+      *Item 8's "Setup.exe is not built yet" carry-in resolved; two honest
+      carry-ins remain and were NOT quietly dropped — code signing (unsigned
+      exe → SmartScreen) and the mac dmg.*
+
+---
+
+## ADR-0012 complete — all 11 slices, 5 phases
+
+Ship bar at close: vitest 210/210 ×2, typecheck clean, `ci.yml` green, both
+ADR-0011 compliance checks green on Windows.
+
+What the plan got right: batching by tag-push cost, and reserving adversarial
+verify for exactly the two compliance negatives — both of which were then proved
+capable of failing by mutation rather than by argument. What it got wrong: the
+npm cache it called an optimization is worth ~1 s, and `deploy-fetch-path` was
+better served resolving sha→run than sha→tag.
+
+Frontier returns to **item 7 (Persistence)**, now materially de-risked: a
+`windows-latest` runner exists to compile better-sqlite3 natively when no
+prebuild matches (ADR-0010), and `ci.yml` will catch a native-module break on
+every push instead of at package time.
 
 ## Critical path
 
