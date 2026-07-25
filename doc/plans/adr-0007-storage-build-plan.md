@@ -95,10 +95,12 @@
 ### 6. Renderer wiring · **opus**
 - [ ] `renderer-save-load-and-history-wiring` · medium — Zustand actions over
       the bridge, save/load configurations UI, auto-record on pack completion.
-      The three real edges (the synthesizer's, all confirmed against store.ts):
-      async IPC results must not race a new import (store already documents
-      stale-estimate invalidation); migrate existing localStorage settings
-      without data loss; **exactly-once** estimate recording per completed pack.
+      Two real edges (confirmed against store.ts): async IPC results must not
+      race a new import (store already documents stale-estimate invalidation);
+      **exactly-once** estimate recording per completed pack.
+      **No localStorage migration** — maintainer decision 2026-07-25: the app is
+      unused in the field, a blank slate is fine. Settings may simply start
+      empty; delete the old key or ignore it, don't port it.
       One careful pass + e2e per `/shipshape`; no verify pass.
 
 ## Critical path
@@ -112,6 +114,7 @@
 - Do **not** attempt packaging verification before vite externalization lands —
   the smoke fails for an unrelated reason and proves nothing.
 - Build the injectable-path seam in phase 2, not as a phase-4 retrofit.
-- Renderer wiring is the one slice deserving a *careful* single pass: localStorage
-  migration and exactly-once recording are user-data edges, though loud ones.
+- Renderer wiring is the one slice deserving a *careful* single pass: exactly-once
+  recording is the remaining user-data edge (localStorage migration was waived —
+  blank slate, see the slice note).
 - All work is Opus-class throughput; no Fable sitting exists in this ADR.
