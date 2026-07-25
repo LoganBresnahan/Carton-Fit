@@ -6,6 +6,7 @@ import ResultsPanel from './components/ResultsPanel'
 import StorageBanner from './components/StorageBanner'
 import UnitPicker from './components/UnitPicker'
 import { ConfigurationsPanel } from './components/ConfigurationsPanel'
+import SavedEstimatesPanel from './components/SavedEstimatesPanel'
 import ViewToggle from './components/ViewToggle'
 import Viewport from './viewport/Viewport'
 
@@ -29,6 +30,7 @@ export default function App() {
             <UnitPicker />
             <InputsPanel />
             <ConfigurationsPanel />
+            <SavedEstimatesPanel />
           </div>
           <ResultsPanel />
         </div>

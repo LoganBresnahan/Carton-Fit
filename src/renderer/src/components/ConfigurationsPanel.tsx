@@ -44,12 +44,13 @@ export function ConfigurationsPanel(): React.JSX.Element {
 
   return (
     <section className="panel" data-testid="configurations-panel">
-      <h2>Saved configurations</h2>
+      <h2>Presets</h2>
+      <p className="panel-hint">Reusable carton setups — no part attached.</p>
 
       <div className="config-save">
         <input
           type="text"
-          placeholder="Name this setup"
+          placeholder="Name this carton setup"
           aria-label="Configuration name"
           data-testid="config-name"
           value={name}
@@ -73,7 +74,7 @@ export function ConfigurationsPanel(): React.JSX.Element {
 
       {configurations.length === 0 ? (
         <p className="muted" data-testid="config-empty">
-          No saved configurations yet.
+          No presets yet.
         </p>
       ) : (
         <ul className="config-list" data-testid="config-list">

@@ -1,5 +1,6 @@
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 // Shared e2e harness (ADR-0005 layer 2). Everything WSL- or GPU-specific lives
@@ -59,12 +60,28 @@ export interface AppHandle {
 /**
  * Launch the app and wait for the first window to be interactive.
  *
- * @param extraArgs appended to the launch args — used by the storage specs to
- * pass `--user-data-dir`, so they write to a temp directory instead of the real
- * profile and start from an empty database every run.
+ * EVERY launch gets its own throwaway profile unless the caller supplied one.
+ *
+ * This is not tidiness — it is a measured bug. Once window geometry began
+ * persisting (ADR-0014), specs sharing the real profile inherited whatever
+ * window the last run (or the developer's own dogfooding) left behind. A
+ * dogfooding session that maximized the window onto a second monitor wrote
+ * `{width: 1908, height: 987, x: 2566, maximized: true}`, and every subsequent
+ * e2e launch restored it: the window opened off-screen on a display the
+ * developer could not see, and SwiftShader software-rendered a screen-sized
+ * canvas instead of the default 1280x800. The suite went from 53 seconds to
+ * 12.2 minutes with nothing failing — the worst shape a problem can take.
+ *
+ * @param extraArgs appended to the launch args. Pass your own
+ * `--user-data-dir=` to control the profile (the storage specs do, so they can
+ * keep one across two launches); otherwise a fresh temp directory is used.
  */
 export async function launchApp(extraArgs: string[] = []): Promise<AppHandle> {
   const target = launchTarget()
+  const hasProfile = extraArgs.some((arg) => arg.startsWith('--user-data-dir='))
+  if (!hasProfile) {
+    extraArgs = [...extraArgs, `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-'))}`]
+  }
   target.args.push(...extraArgs)
   // VSCode terminals export ELECTRON_RUN_AS_NODE=1, which makes the Electron
   // binary behave as plain Node and the launch hang with no window. Strip it for

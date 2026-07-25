@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { startAutoPack } from './packing/service'
-import { startEstimateRecording } from './storage/history'
+import { installUndoKeyboard, startUndoHistory } from './history/undo'
 import './styles.css'
 
 // The estimate follows the inputs: this subscription re-packs whenever the
@@ -10,10 +10,14 @@ import './styles.css'
 // the entry, not in a component, so it is independent of the React tree.
 startAutoPack()
 
-// Every completed estimate lands in history (VISION; ADR-0007). Also a
-// subscription rather than a component effect, for the same reason — and
-// idempotent, because StrictMode double-invokes.
-startEstimateRecording()
+// Ctrl+Z / Ctrl+Shift+Z over the inputs (ADR-0016). In memory and session
+// scoped — under auto-run, undoing an input is undoing the estimate.
+startUndoHistory()
+installUndoKeyboard(window)
+
+// Estimates are NOT recorded automatically. ADR-0009 removed the compute
+// button, so "every estimate" would mean every debounced keystroke; ADR-0016
+// made saving explicit instead. See storage/estimates.ts.
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

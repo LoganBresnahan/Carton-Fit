@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { importSample, launchApp, waitForEstimate } from './harness'
+import { importSample, launchApp, readEstimate, setCarton, waitForEstimate } from './harness'
 
 /**
  * The storage contract, exercised across all three processes (ADR-0007).
@@ -206,7 +206,7 @@ test.describe('saved configurations UI', () => {
     }
   })
 
-  test('estimates are recorded to history as they complete', async () => {
+  test('estimates reach history only when the user saves one (ADR-0016)', async () => {
     const { app, page } = await launchApp([
       `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
     ])
@@ -214,14 +214,97 @@ test.describe('saved configurations UI', () => {
       await importSample(page, 'cube-10x10.stp')
       await waitForEstimate(page)
 
+      // THE POINT OF ADR-0016. Producing an estimate is not deciding to keep
+      // one: under auto-run this state has already been reached dozens of times
+      // while the user typed, and none of it belongs in history.
+      expect(await page.evaluate(() => window.api.storage.recentEstimates())).toEqual([])
+
+      await page.click('[data-testid="save-estimate"]')
+      await expect(page.locator('[data-testid="estimate-item"]')).toHaveCount(1)
+
       const history = await page.evaluate(() => window.api.storage.recentEstimates())
-      expect(history.length).toBeGreaterThan(0)
+      expect(history).toHaveLength(1)
       expect(history[0].fileName).toBe('cube-10x10.stp')
       // The hash is real, not a placeholder — history threads across renames.
       expect(history[0].contentHash).toMatch(/^[0-9a-f]{64}$/)
       expect(history[0].result).toBeTruthy()
     } finally {
       await app.close()
+    }
+  })
+
+  test('editing the carton after an estimate adds nothing to history', async () => {
+    // The regression guard for reintroducing auto-recording by accident: this
+    // is exactly the keystroke flood the old implementation filed.
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    try {
+      await importSample(page, 'cube-10x10.stp')
+      await setCarton(page, [12, 12, 12])
+      await waitForEstimate(page)
+      await setCarton(page, [10, 9, 8])
+      await waitForEstimate(page)
+      await setCarton(page, [6, 6, 6])
+      await waitForEstimate(page)
+
+      expect(await page.evaluate(() => window.api.storage.recentEstimates())).toEqual([])
+    } finally {
+      await app.close()
+    }
+  })
+
+  test('a saved estimate restores its inputs, and the result is recomputed', async () => {
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    try {
+      await importSample(page, 'cube-10x10.stl')
+      await page.click('[data-testid="mode-max-quantity"]')
+      await setCarton(page, [12, 12, 12])
+      await waitForEstimate(page)
+      const original = (await readEstimate(page)).headline
+      expect(original).toContain('27,000') // the hand-computed golden
+
+      await page.click('[data-testid="save-estimate"]')
+      await expect(page.locator('[data-testid="estimate-item"]')).toHaveCount(1)
+
+      // Move away, then restore.
+      await setCarton(page, [3, 3, 3])
+      await waitForEstimate(page)
+      expect((await readEstimate(page)).headline).toContain('343')
+
+      await page.click('[data-testid^="estimate-restore-"]')
+      await waitForEstimate(page)
+      await expect(page.locator('[data-testid="dim-0"]')).toHaveValue('12')
+      // Recomputed from the restored inputs, not replayed from the row.
+      expect((await readEstimate(page)).headline).toContain('27,000')
+    } finally {
+      await app.close()
+    }
+  })
+
+  test('a saved estimate survives a restart', async () => {
+    const profile = [`--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`]
+
+    const first = await launchApp(profile)
+    try {
+      await importSample(first.page, 'cube-10x10.stl')
+      await waitForEstimate(first.page)
+      await first.page.click('[data-testid="save-estimate"]')
+      await expect(first.page.locator('[data-testid="estimate-item"]')).toHaveCount(1)
+    } finally {
+      await first.app.close()
+    }
+
+    const second = await launchApp(profile)
+    try {
+      await expect(second.page.locator('[data-testid="estimate-item"]')).toHaveCount(1)
+      await expect(second.page.locator('[data-testid="estimate-summary"]').first()).toContainText(
+        /in|mm/
+      )
+    } finally {
+      await second.app.close()
     }
   })
 })

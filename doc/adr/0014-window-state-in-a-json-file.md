@@ -55,6 +55,17 @@ written by the main process.
 - No schema migration, so item 9 does not touch the database at all.
 - The file is trivially inspectable and deletable, which is a real support
   affordance for "the window opens somewhere strange".
+- **Persisting geometry made the e2e suite stateful, and that had to be undone
+  in the harness.** Most specs launched against the real profile, so once
+  window state persisted they inherited whatever the previous run — or the
+  developer's own dogfooding — left behind. A session that maximized the window
+  onto a second monitor wrote `x: 2566, maximized: true`, and every later launch
+  restored it: the window opened on a display nobody was looking at, and
+  SwiftShader software-rendered a screen-sized canvas. The suite went from 53 s
+  to 12.2 minutes **with nothing failing**. `launchApp` now gives every launch
+  its own temp profile unless the caller supplies one. General lesson for this
+  codebase: anything newly persisted to `userData` is a new input to every e2e
+  spec, and has to be isolated the same way localStorage settings already were.
 - **Measured while implementing: a saved position cannot be the reported
   position.** On WSLg, `BrowserWindow` interprets x/y as *excluding* the window
   frame while `getNormalBounds()` reports a position *including* it, so writing

@@ -9,6 +9,7 @@ import {
   verdictHeadline
 } from '../packing/verdict'
 import { openMeshParts } from '../packing/request'
+import SaveEstimateButton from './SaveEstimateButton'
 import { gToWeight, weightUnitLabel } from '../core/units'
 
 // Thin declarative island (ADR-0006): reads the pack slice and renders the
@@ -65,7 +66,10 @@ export default function ResultsPanel() {
       data-status={status}
       data-mode={result.mode}
     >
-      <h2>Estimate</h2>
+      <div className="results-head">
+        <h2>Estimate</h2>
+        <SaveEstimateButton />
+      </div>
 
       <p className="results-headline" data-testid="results-headline">
         {verdictHeadline(result)}

@@ -498,3 +498,90 @@ body {
 .storage-banner-message {
   color: var(--text);
 }
+
+/* Estimate header: the heading and the keep-this-one action on one line. */
+.results-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.save-estimate {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.save-estimate:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.save-estimate:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* Saved estimates: the receipts list (ADR-0016). Denser than the preset list —
+   each row carries a file, a one-line answer and a restore action. */
+.panel-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+.estimate-list {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.estimate-list li {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.55rem;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.estimate-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.estimate-file {
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.estimate-when {
+  font-size: 0.7rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.estimate-summary {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.estimate-list button {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.7rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.estimate-list button:hover {
+  border-color: var(--accent);
+}
+.estimate-more {
+  font-size: 0.7rem;
+}

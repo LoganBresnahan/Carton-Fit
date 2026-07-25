@@ -177,27 +177,36 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       warns. ADR-0010 says certificates belong on this same runner; revisit how
       they are held before adding it.
 
-- [ ] 11. Saved estimates + input undo — **decided by ADR-0016** (2026-07-25;
-      VISION amended). History records on EXPLICIT save, not auto-run: the
-      placeholder "collapse consecutive rows" answered the wrong question —
-      dedup removes repetition, not noise, and nothing marked which row the
-      user meant. Scope:
-      - Save-estimate action (same row shape, same `recordEstimate` IPC — no
-        schema change, no migration); delete `renderer/storage/history.ts` and
-        its exactly-once machinery; rewrite the auto-record specs to assert
-        explicit save.
-      - History browser: browsable list (file, settings, result, when);
-        restoring a row loads its SETTINGS only — the on-screen result is
-        always freshly computed (load-bearing invariant, ADR-0016 §3).
-        `estimatesForContent(hash)` already exists for the per-part view.
-      - Undo/redo (Ctrl+Z / Ctrl+Shift+Z): in-memory bounded stack of settings
-        snapshots; same-field edits coalesce; preset/history restores are one
-        step each; file loads excluded; nothing persists.
-      - UI copy keeps "presets" (reusable carton setups) and "saved estimates"
-        (receipts about a part) visibly distinct.
-      — export stays OUT (ADR-0016 §4): copy-summary + packed-view PNG are
-      cheap schema-free conveniences for Later; CSV/PDF wait for a real request
-      from dogfooding.
+- [x] 11. Saved estimates + input undo — **ADR-0016**, shipped 2026-07-25.
+      History records on EXPLICIT save, not auto-run: the placeholder "collapse
+      consecutive rows" answered the wrong question — dedup removes repetition,
+      not noise, and nothing marked which row the user meant.
+      - Save-estimate action in the results header (`storage/estimates.ts`),
+        disabled while a re-pack is in flight so a superseded answer cannot be
+        filed. `renderer/storage/history.ts` and its exactly-once machinery
+        deleted; the auto-record e2e rewritten to assert the opposite, plus a
+        regression spec proving three carton edits add NOTHING to history.
+        Same row shape, same IPC, no schema change, no migration.
+      - `SavedEstimatesPanel`: browsable list with one-line summaries
+        ("500 fit · 12×12×12 in · weight-limited"). `packing/summary.ts` is
+        defensive by design — rows are JSON written by older builds, so a
+        missing or wrong-typed field degrades the sentence instead of throwing.
+        Restore loads SETTINGS only; the e2e proves the result is recomputed
+        (27,000 → 343 → restore → 27,000), never replayed.
+      - Undo/redo (`history/undo.ts`): bounded in-memory stack, coalescing keyed
+        on a change signature that names the changed ARRAY INDEX, so typing
+        "125" into one dimension is one step but length-then-width is two. The
+        keyboard binding is split from the tracking so the subtle half unit-tests
+        without a DOM. Ctrl+Z inside a text field is left to the browser.
+      - Vocabulary split: **Presets** ("reusable carton setups — no part
+        attached") vs **Saved estimates**.
+      — carry-in: export stays OUT (ADR-0016 §4). Copy-summary + packed-view PNG
+      are cheap schema-free conveniences; CSV/PDF wait for a real dogfooding
+      request.
+      — **e2e isolation bug found and fixed here**: window persistence (ADR-0014)
+      had made the suite stateful, and a dogfooded maximized-on-second-monitor
+      window made the packaged run take 12.2 minutes instead of 53 s WITH
+      NOTHING FAILING. `launchApp` now gives every launch its own temp profile.
 
 ## Later
 

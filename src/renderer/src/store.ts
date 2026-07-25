@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ImportedPart } from './workers/import-protocol'
 import type { ImportSink, ImportStats, ImportStatus, LoadedFile } from './import/types'
-import type { ConfigurationSummary } from '../../shared/storage'
+import type { ConfigurationSummary, EstimateRow } from '../../shared/storage'
 import type { PackMode, PackRequest, PackResult, QualityTier, Vec3 } from './core/packing/types'
 import type { PackSink, PackStatus } from './packing/types'
 import type { UnitSystem } from './core/units'
@@ -132,9 +132,12 @@ interface AppState {
   // --- saved configurations slice (ADR-0007) ---
   /** Named presets, as listed by the main process. */
   configurations: ConfigurationSummary[]
+  /** Estimates the user chose to keep, newest first (ADR-0016). */
+  savedEstimates: EstimateRow[]
   /** Last storage failure, for surfacing rather than swallowing. */
   storageError: string | null
   setConfigurations: (configurations: ConfigurationSummary[]) => void
+  setSavedEstimates: (savedEstimates: EstimateRow[]) => void
   setStorageError: (storageError: string | null) => void
 
   packBegan: () => void
@@ -206,8 +209,10 @@ export const useAppStore = create<AppState>((set) => ({
 
   ...NO_PACK,
   configurations: [],
+  savedEstimates: [],
   storageError: null,
   setConfigurations: (configurations) => set({ configurations, storageError: null }),
+  setSavedEstimates: (savedEstimates) => set({ savedEstimates, storageError: null }),
   setStorageError: (storageError) => set({ storageError }),
 
   packBegan: () => set({ packStatus: 'packing', packError: null }),
