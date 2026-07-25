@@ -92,7 +92,12 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       - unparseable-file errors and pack failures are ALREADY surfaced
         (`ImportResult`, `ResultsPanel`) — the item text was stale. What remains
         is making `storageError` visible outside the configurations panel.
-      - app icon: `build/icon.png` (1024², transparent) + electron-builder wiring
+      - [x] app icon — wired in `electron-builder.yml`, verified by extracting
+        the icon resources back out of the packaged `.exe` (7 sizes, 16→256).
+        The source art needed real work first: it was **not transparent** (the
+        checkerboard was painted into the image), carried a generator watermark,
+        and filled only 63% of its canvas. See `build/ICON.md`; the unprocessed
+        art is kept as `build/icon-source.png`.
       - window state persistence per ADR-0014 (JSON in userData, NOT SQLite —
         bounds are needed before the lazily-opened database exists)
       — carry-in: translucent carton walls (VISION says "wireframe + translucent

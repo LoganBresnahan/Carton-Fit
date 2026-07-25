@@ -40,6 +40,15 @@ directories:
   buildResources: build
   output: release
 
+# The app icon. electron-builder would find `build/icon.png` by convention, but
+# naming it means a rename fails the build instead of silently reverting to the
+# stock Electron atom — which looks enough like "an icon" to survive review.
+# One 512² PNG is the source for every platform: electron-builder generates the
+# Windows .ico (all sizes up to 256) and the Linux icon set from it.
+# `build/icon-source.png` is the unprocessed art; see build/ICON.md for what was
+# done to it and why.
+icon: build/icon.png
+
 # Only the electron-vite output plus the manifest electron needs to find `main`.
 files:
   - out/**
