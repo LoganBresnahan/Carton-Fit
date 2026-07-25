@@ -2,6 +2,7 @@ import DropZone from './components/DropZone'
 import ImportResult from './components/ImportResult'
 import ModeTierSelectors from './components/ModeTierSelectors'
 import InputsPanel from './components/InputsPanel'
+import ResultsPanel from './components/ResultsPanel'
 import Viewport from './viewport/Viewport'
 
 export default function App() {
@@ -11,11 +12,16 @@ export default function App() {
         <h1>Packaging Estimator</h1>
       </header>
       <main className="app-main">
+        {/* Inputs scroll; the estimate is pinned below them as a footer, so the
+            answer stays on screen while the carton and weight fields are edited. */}
         <div className="panel">
-          <DropZone />
-          <ImportResult />
-          <ModeTierSelectors />
-          <InputsPanel />
+          <div className="panel-scroll">
+            <DropZone />
+            <ImportResult />
+            <ModeTierSelectors />
+            <InputsPanel />
+          </div>
+          <ResultsPanel />
         </div>
         <Viewport />
       </main>

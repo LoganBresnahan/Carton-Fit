@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pack, verdictCaption } from '../src/renderer/src/core/packing/pack'
+import { pack } from '../src/renderer/src/core/packing/pack'
 import { applyMat3 } from '../src/renderer/src/core/packing/orientations'
 import { MAX_GRID_PLACEMENTS } from '../src/renderer/src/core/packing/quantityGrid'
 import type {
@@ -8,7 +8,6 @@ import type {
   PackMode,
   PackPart,
   PackRequest,
-  QualityTier,
   Vec3
 } from '../src/renderer/src/core/packing/types'
 
@@ -189,35 +188,5 @@ describe('pack — thorough ≥ fast (superset guarantee at the orchestrator)', 
     if (fast.mode !== 'fit-check' || thorough.mode !== 'fit-check') return
     expect(fast.fits).toBe(false)
     expect(thorough.fits).toBe(true)
-  })
-})
-
-describe('verdictCaption', () => {
-  const tier: QualityTier = 'fast'
-  it('labels a positive fit as a found arrangement', () => {
-    const r = pack(request('fit-check', [boxPart('a', [10, 10, 10])], [100, 100, 100], { tier }))
-    expect(verdictCaption(r)).toMatch(/All 1 part fit/)
-  })
-
-  it('labels a non-fit as heuristic, not a proof', () => {
-    const r = pack(request('fit-check', [boxPart('long', [200, 10, 10])], [100, 100, 100], { tier }))
-    expect(verdictCaption(r)).toMatch(/not a proof the rest cannot fit/)
-  })
-
-  it('labels a quantity as a lower bound with the binding reason', () => {
-    const r = pack(
-      request('max-quantity', [boxPart('u', [10, 10, 10], 1000)], [100, 100, 100], {
-        tier,
-        maxWeightG: 5000
-      })
-    )
-    expect(verdictCaption(r)).toMatch(/At least 5 fit \(weight-limited\)\. Heuristic/)
-  })
-
-  it('handles the empty and none cases', () => {
-    const empty = pack(request('fit-check', [], [100, 100, 100], { tier }))
-    expect(verdictCaption(empty)).toBe('Nothing to pack.')
-    const none = pack(request('max-quantity', [boxPart('big', [200, 200, 200])], [100, 100, 100], { tier }))
-    expect(verdictCaption(none)).toBe('None fit in this carton.')
   })
 })

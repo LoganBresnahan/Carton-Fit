@@ -101,28 +101,9 @@ export function pack(request: PackRequest): PackResult {
     : maxQuantity(request, provider)
 }
 
-// heuristic-verdict-labeling (ADR-0003): the placement is heuristic and must be
-// labeled as such — never sold as a proof of non-fit. The epistemic direction
-// differs by outcome, and this caption carries it precisely:
-//  - a POSITIVE result (parts fit / N copies placed) is a constructive proof —
-//    we hold a concrete, overlap-free arrangement;
-//  - a NEGATIVE or count result understates: a cleverer arrangement might place
-//    the unplaced parts, or fit more copies. That is the claim the ADR forbids
-//    presenting as certain.
-export function verdictCaption(result: PackResult): string {
-  if (result.mode === 'fit-check') {
-    const total = result.placements.length + result.unplaced.length
-    if (result.fits) {
-      return total === 0
-        ? 'Nothing to pack.'
-        : `All ${total} part${total === 1 ? '' : 's'} fit — a concrete arrangement was found.`
-    }
-    return (
-      `${result.placements.length} of ${total} parts placed; ${result.unplaced.length} ` +
-      `did not fit. Heuristic placement — not a proof the rest cannot fit.`
-    )
-  }
-  if (result.count === 0) return 'None fit in this carton.'
-  const limit = result.binding === 'weight' ? 'weight-limited' : 'space-limited'
-  return `At least ${result.count} fit (${limit}). Heuristic — a mixed arrangement may fit more.`
-}
+// heuristic-verdict-labeling (ADR-0003) has two halves. The CONTRACT half is
+// here: every result carries `heuristic: true`, so no consumer can present a
+// greedy placement as a proof. The WORDING half — the captions that spell the
+// claim out for the user — lives in `packing/verdict.ts` on the renderer side,
+// so components can import it without pulling the engine graph across the
+// worker boundary.
