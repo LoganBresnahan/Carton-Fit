@@ -59,13 +59,25 @@ export interface AppHandle {
 /** Launch the app and wait for the first window to be interactive. */
 export async function launchApp(): Promise<AppHandle> {
   const target = launchTarget()
+  // VSCode terminals export ELECTRON_RUN_AS_NODE=1, which makes the Electron
+  // binary behave as plain Node and the launch hang with no window. Strip it for
+  // the child regardless of how the suite was started.
+  //
+  // DELETE the key — do not set it to ''. Electron tests for the variable's
+  // PRESENCE, not its truthiness, so an empty string still triggers node mode on
+  // Windows (it happens to be tolerated on Linux). The symptom is the Electron
+  // binary rejecting Chromium's own switches: `bad option:
+  // --remote-debugging-port=0`. Found by running this suite on windows-latest,
+  // which is the reason ADR-0012 puts e2e on the Windows runner at all.
+  const childEnv: Record<string, string> = {}
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined && key !== 'ELECTRON_RUN_AS_NODE') childEnv[key] = value
+  }
+
   const app = await electron.launch({
     executablePath: target.executablePath,
     args: target.args,
-    // VSCode terminals export ELECTRON_RUN_AS_NODE=1, which makes the Electron
-    // binary behave as plain Node and the launch hang with no window. Strip it
-    // for the child regardless of how the suite was started.
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '' }
+    env: childEnv
   })
   const page = await app.firstWindow()
   await page.waitForSelector('[data-testid="dropzone"]')
