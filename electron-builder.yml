@@ -47,7 +47,24 @@ files:
 
 # Deterministic-ish archives; no auto-update wiring yet (roadmap "Later").
 compression: normal
+
+# NATIVE MODULE REBUILD (ADR-0013). Both settings are required; neither alone
+# is sufficient, and the failure mode is silent.
+#
+#   npmRebuild: true              → run @electron/rebuild at package time.
+#   buildDependenciesFromSource   → make it COMPILE rather than look for a
+#                                   prebuilt binary.
+#
+# MEASURED: with `npmRebuild: true` alone, @electron/rebuild runs with
+# buildFromSource=false, tries to fetch a prebuild for Electron's ABI 148,
+# finds none (no npm better-sqlite3 publishes one — that is the whole reason
+# for ADR-0013), and then reports "finished" having left the Node-ABI binary
+# in place. The packaged app shipped a .node its own runtime could not load —
+# byte-identical to the Node build, confirmed by md5 — and nothing failed until
+# the app tried to open a database. Compiling takes ~60 s; a silently broken
+# installer costs more.
 npmRebuild: true
+buildDependenciesFromSource: true
 
 # LGPL RELINK SEAM (ADR-0011). occt-import-js is LGPL-2.1, and the LGPL's whole
 # point is that a recipient can substitute their own build of the library. The
@@ -57,6 +74,14 @@ npmRebuild: true
 # concrete, not a build optimization — don't "tidy" it away.
 asarUnpack:
   - out/renderer/assets/*.wasm
+  # NATIVE MODULES MUST BE UNPACKED (ADR-0013). A .node is dlopen'd by the OS
+  # loader, which cannot read inside an asar archive. electron-builder unpacks
+  # them by default — but declaring `asarUnpack` at all REPLACES that default,
+  # so adding the wasm glob above silently packed better-sqlite3 back into
+  # app.asar. Measured: `asar list` showed
+  # /node_modules/better-sqlite3/build/Release/better_sqlite3.node inside the
+  # archive. Both entries are load-bearing; neither is redundant.
+  - '**/*.node'
 
 # The licence texts ride next to Electron's own LICENSE.electron.txt at the app
 # root, where someone looking for them will actually find them.

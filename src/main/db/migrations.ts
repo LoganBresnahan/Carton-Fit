@@ -23,9 +23,61 @@ export interface Migration {
 }
 
 /**
- * Every migration, in order. v1 arrives with the `v1-schema` slice.
+ * Every migration, in order.
+ *
+ * Design note that applies to both tables: **settings and results are stored as
+ * JSON text, not exploded into columns.** `PackingSettings` has twelve fields
+ * today and will grow (ADR-0004's revisit triggers already name box tare weight
+ * and a density library); a column per field would mean a migration per product
+ * tweak. The main process never queries *inside* these blobs — it reads a row
+ * and hands it to the renderer — so there is nothing to gain from columns and a
+ * schema churn to lose. Anything genuinely queryable gets its own column
+ * (`name`, `file_name`, `content_hash`, `created_at`).
+ *
+ * Timestamps are INTEGER epoch milliseconds: unambiguous about timezone, sorts
+ * numerically, and matches `Date.now()` at both call sites. Canonical units are
+ * mm/g inside the settings blob per ADR-0004 — this layer stores, it does not
+ * convert.
  */
-export const MIGRATIONS: readonly Migration[] = []
+export const MIGRATIONS: readonly Migration[] = [
+  {
+    version: 1,
+    name: 'configurations + estimates',
+    up: (db) => {
+      // Named presets. UNIQUE(name) is what makes "save" an upsert and gives
+      // rename a real constraint rather than a check-then-write race.
+      db.exec(`
+        CREATE TABLE configurations (
+          id         INTEGER PRIMARY KEY,
+          name       TEXT    NOT NULL UNIQUE,
+          settings   TEXT    NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        ) STRICT
+      `)
+
+      // Estimate history. Deliberately append-only and NOT unique on
+      // (content_hash, settings): re-running the same part against the same
+      // carton is a real event worth seeing twice in history, and VISION says
+      // every estimate is recorded.
+      db.exec(`
+        CREATE TABLE estimates (
+          id           INTEGER PRIMARY KEY,
+          file_name    TEXT    NOT NULL,
+          content_hash TEXT    NOT NULL,
+          settings     TEXT    NOT NULL,
+          result       TEXT    NOT NULL,
+          created_at   INTEGER NOT NULL
+        ) STRICT
+      `)
+
+      // History is read newest-first, and "have I estimated this part before?"
+      // is the other question the UI will ask.
+      db.exec('CREATE INDEX estimates_created_at ON estimates(created_at DESC)')
+      db.exec('CREATE INDEX estimates_content_hash ON estimates(content_hash)')
+    }
+  }
+]
 
 /** The schema version this build expects once fully migrated. */
 export function targetVersion(): number {

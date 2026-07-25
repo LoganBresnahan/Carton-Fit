@@ -18,7 +18,8 @@
     "e2e": "playwright test",
     "e2e:packaged": "PACKAGED_APP=release/linux-unpacked/packaging-estimator playwright test",
     "e2e:compliance": "playwright test --config playwright.compliance.config.ts",
-    "package": "electron-vite build && electron-builder --linux dir"
+    "package": "node scripts/clear-native-rebuild-stamp.mjs && electron-vite build && electron-builder --linux dir",
+    "pretest": "node scripts/restore-node-abi.mjs"
   },
   "dependencies": {
     "better-sqlite3": "12.11.1",

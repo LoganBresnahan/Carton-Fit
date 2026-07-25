@@ -88,8 +88,15 @@ jobs:
       # created explicitly in phase 3, so a human decides what goes public.
       #
       # Produces: release/*Setup*.exe (ship), release/*-win.zip, release/win-unpacked/.
+      # better-sqlite3 must be COMPILED for Electron's ABI here (ADR-0013) —
+      # windows-latest is the only machine with MSVC, which is why ADR-0010 put
+      # release builds on native runners. A fresh `npm ci` has no stale rebuild
+      # stamp, but clearing it anyway keeps this identical to `npm run package`
+      # rather than relying on CI happening to be safe.
       - name: Package (nsis + zip)
-        run: npx electron-builder --win nsis zip --publish never
+        run: |
+          node scripts/clear-native-rebuild-stamp.mjs
+          npx electron-builder --win nsis zip --publish never
 
       # Instant, so it runs before the slow e2e. `--self-test` first mutates a
       # copy of the binary and requires the checker to notice — a compliance
