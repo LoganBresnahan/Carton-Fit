@@ -24,9 +24,15 @@ The suite must be green **twice in a row** (the flaky bar — worker- and
 timing-sensitive tests must survive a loaded machine):
 
 ```bash
-npx vitest run
-npx vitest run
+npm test
+npm test
 ```
+
+**`npm test`, not `npx vitest run`.** The `pretest` hook restores better-sqlite3's
+Node-ABI build (ADR-0013); packaging compiles it for Electron, and one `.node`
+serves one ABI. Bypassing the hook after a package run fails with
+`Module did not self-register` — which reads like a broken suite rather than a
+build artifact left in the wrong shape.
 
 Also: `npm run typecheck` must be clean (tsc is half the test suite in a
 geometry codebase), and `npm run e2e` must be green — the Playwright-Electron

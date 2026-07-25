@@ -179,16 +179,51 @@ version that is not on npm (→ ADR-0013), and "electron-builder fetches the
 prebuilt" hid three independent silent failures. Every one of them would have
 shipped an installer that dies the first time a user saves a preset.
 
-### 4. Store classes + DB tests · **opus batch**
-- [ ] `configurations-store-class` · low — CRUD over `configurations`; prepared
+### 4. Store classes + DB tests · **opus batch** ✅ *complete*
+- [x] `configurations-store-class` · low — CRUD over `configurations`; prepared
       statements owned by the class; upsert-on-save; direct better-sqlite3 API,
       no wrapper (ADR-0007: no legacy call sites to preserve).
-- [ ] `estimates-store-class` · low — insert + list-by-recency (+ filter);
+      *Done. Upsert keyed on UNIQUE(name) in one statement — "save preset X"
+      means the same thing whether or not X exists, with no check-then-write
+      race — and `created_at` deliberately survives an overwrite. `list()` omits
+      the settings blob (a picker does not need it) and sorts by name, since a
+      preset list is scanned by eye. Clock injected for assertable timestamps.*
+- [x] `estimates-store-class` · low — insert + list-by-recency (+ filter);
       JSON (de)serialization at the store boundary.
-- [ ] `db-layer-tests` · medium — vitest against temp-dir DBs via the
+      *Done. Append-only, no dedupe: VISION says every estimate is recorded, and
+      re-running the same part is a real event. `ORDER BY created_at DESC, id
+      DESC` — the id tiebreak is load-bearing, not decoration, because epoch-ms
+      timestamps collide in a burst and "most recent" would otherwise flicker
+      between reads. `forContent(hash)` finds history across a file rename.*
+- [x] `db-layer-tests` · medium — vitest against temp-dir DBs via the
       injectable path: open → assert `user_version` → reopen idempotent;
       corrupt the header with garbage → assert quarantine + recreate; WAL
       sidecar cleanup. Loud-failure tests; no verify pass.
+      *Done: 20 tests across `tests/db-open.test.ts` + `tests/db-stores.test.ts`
+      (suite now 230). The injectable path/clock seam from phase 2 paid off
+      exactly as intended. Per phase 2's finding, there is **no** WAL-sidecar
+      assertion — with a comment saying why, so it does not get "fixed" in.*
+
+> **The tests found a real data-loss bug, which is the whole reason they exist.**
+> `openDatabase` wrapped open AND migrate in one try/catch, so a database
+> written by a *newer* build — valid, readable, full of the user's presets — hit
+> the recovery path: quarantined and replaced with an empty one. The version
+> check added in phase 2 was meant to prevent precisely that, and the recovery
+> wrapper silently defeated it. Open and migrate are now separate steps:
+> migration failures never quarantine. Pinned by a named regression test.
+
+> **A second self-inflicted bug, also fixed:** the first `npm test` after a
+> package run died with `Segmentation fault (core dumped)` — npm read that as
+> the `pretest` hook failing and skipped vitest entirely, while the *second*
+> invocation passed. Cause was `restore-node-abi.mjs` requiring the wrong-ABI
+> module in its own process to test loadability: the throw is catchable, but the
+> `.so` is already mapped and the process dies at teardown. It now probes in a
+> child process. A crash that clears itself on retry is exactly what gets
+> misfiled as test flake for weeks.
+
+> **`/shipshape` and `/deploy` both said `npx vitest run`**, which bypasses the
+> `pretest` ABI restore and fails with `Module did not self-register` after any
+> package run. Both now say `npm test`.
 
 ### 5. IPC surface · **opus**
 - [ ] `storage-ipc-surface` · medium — `ipcMain.handle` wrappers over both

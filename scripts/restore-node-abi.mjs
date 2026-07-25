@@ -16,21 +16,26 @@
 // database, and failing the whole run over storage tooling would be worse than
 // the real error the DB tests are about to give.
 
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 
 if (!existsSync('node_modules/better-sqlite3')) process.exit(0)
 
-// Already loadable under this Node? Then there is nothing to do.
-try {
-  const { createRequire } = await import('node:module')
-  const require = createRequire(import.meta.url)
-  const Database = require('better-sqlite3')
-  new Database(':memory:').close()
-  process.exit(0)
-} catch {
-  // Wrong ABI (or genuinely broken) — fall through and rebuild.
-}
+// Probe in a CHILD process, never in this one.
+//
+// Requiring a wrong-ABI native module throws a catchable JS error, but the .so
+// has already been dlopen'd into the process by then, and this one exits with
+// SIGSEGV during teardown. Measured 2026-07-25: the first `npm test` after a
+// package run died with "Segmentation fault (core dumped)" — npm read that as
+// the pretest hook failing and never ran vitest at all, while the second
+// invocation passed. A crash that clears itself on retry is exactly the kind of
+// flake that gets blamed on the test suite for weeks.
+const probe = spawnSync(
+  process.execPath,
+  ['-e', 'new (require("better-sqlite3"))(":memory:").close()'],
+  { stdio: 'ignore' }
+)
+if (probe.status === 0) process.exit(0)
 
 console.log('better-sqlite3 is not loadable under Node — restoring its Node-ABI build…')
 try {

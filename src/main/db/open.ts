@@ -32,23 +32,46 @@ export interface OpenedDatabase {
  * deterministic, and `core/` conventions forbid hidden non-determinism.
  */
 export function openDatabase(dbPath: string, now: () => Date = () => new Date()): OpenedDatabase {
+  let db: Database
+  let quarantined: string | null = null
+
   try {
-    return { ...prepare(dbPath), quarantined: null }
+    db = openReadable(dbPath)
   } catch (firstError) {
     // A file that does not exist is not a corruption case — better-sqlite3
     // would have created it. If we failed anyway, the problem is the directory
     // or permissions, and quarantining nothing would just hide that.
     if (!existsSync(dbPath)) throw firstError
 
-    const quarantined = quarantine(dbPath, now())
+    quarantined = quarantine(dbPath, now())
     // Second failure is not recoverable by the same trick: the file we just
     // created is fresh, so the fault is environmental. Let it out.
-    return { ...prepare(dbPath), quarantined }
+    db = openReadable(dbPath)
+  }
+
+  // MIGRATION FAILURES MUST NOT QUARANTINE. This is a separate step on purpose.
+  //
+  // A file that opened and read cleanly is a valid SQLite database; if applying
+  // migrations then fails — most importantly when the schema is NEWER than this
+  // build understands — the data is intact and the problem is which version of
+  // the app is looking at it. Folding this into the recovery path would move a
+  // perfectly good database aside and hand the user an empty one, which is the
+  // exact data loss the version check exists to prevent. Fail loudly instead.
+  try {
+    return { db, quarantined, version: migrate(db) }
+  } catch (error) {
+    db.close()
+    throw error
   }
 }
 
-/** Open, configure, and migrate — the whole happy path, so both attempts share it. */
-function prepare(dbPath: string): { db: Database; version: number } {
+/**
+ * Open a database and prove it is readable. Throws if the file is not SQLite.
+ *
+ * Everything here is quarantine-able: a failure means we could not get a usable
+ * handle at all.
+ */
+function openReadable(dbPath: string): Database {
   const db = new BetterSqlite3(dbPath)
   try {
     // WAL survives a crash mid-write and lets reads proceed during writes.
@@ -63,12 +86,10 @@ function prepare(dbPath: string): { db: Database; version: number } {
     // first real access. Without this read, corruption would surface later —
     // somewhere with no recovery path — instead of here.
     db.pragma('user_version', { simple: true })
-
-    const version = migrate(db)
-    return { db, version }
+    return db
   } catch (error) {
-    // Do not leak the handle on the failure path; the quarantine rename below
-    // needs the file closed on Windows, where an open handle blocks it.
+    // Do not leak the handle on the failure path; the quarantine rename needs
+    // the file closed on Windows, where an open handle blocks it.
     try {
       db.close()
     } catch {

@@ -13,8 +13,12 @@ This skill is the one place that overwrites `dist-live/`.
 **Preconditions (refuse to proceed if unmet):**
 1. Working tree clean, or the user explicitly okayed deploying dirty state.
    Either way, record the exact sha (and dirty files) in the report.
-2. Ship bar: `npx vitest run` green **twice** and `npm run typecheck` clean
+2. Ship bar: `npm test` green **twice** and `npm run typecheck` clean
    (run them; don't trust memory — this is `/shipshape`'s tests gate).
+   Use `npm test`, not `npx vitest run`: the `pretest` hook restores
+   better-sqlite3's Node-ABI build, and packaging leaves it compiled for
+   Electron (ADR-0013). This matters here more than anywhere, because `/deploy`
+   packages and tests in the same session.
 
 ## 1. Obtain the artifacts — CI first, local build as fallback
 
