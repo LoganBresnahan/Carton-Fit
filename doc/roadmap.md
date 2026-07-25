@@ -75,7 +75,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       — carry-in: **mac dmg still undocumented and unbuilt.** ADR-0012 declines a
       macOS runner on purpose — a dmg nobody can dogfood is an untested artifact
       wearing a ship label. Revisit when a Mac is available.
-- [ ] 9. Polish — error states, app icon, window state persistence (ADR-0014)
+- [x] 9. Polish — error states, app icon, window state persistence (ADR-0014)
+      (All six slices shipped 2026-07-25; README.md written at close, with the
+      recovered icon as its hero.)
       Scoped 2026-07-25 against what actually exists:
       - [x] **open-mesh volume warning** — shipped as **ADR-0015** (flag an
         unmeasurable input, do not refuse the estimate). `isClosedMesh` had been
