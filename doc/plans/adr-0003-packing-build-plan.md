@@ -67,11 +67,15 @@
       cases; two corners fixed (0 ≥ 0 headroom tie, ulp-sensitive volume sort).
       Also landed `EPS` in `core/geometry.ts` (the numeric convention artifact).
 
-### 4. Tier-2 rotation composition — **fable** · **verify**
-- [ ] `thorough-placement-and-rotations` · high · verify — tier-1 placement on OBB
-      dims; compose OBB rotation × placement orientation into one matrix
-      (composition order, handedness, OBB-local→carton translation — renders
-      plausibly while silently wrong; the exact class the verify exists for)
+### 4. Tier-2 rotation composition — **fable** · **verify**  ✓
+- [x] `thorough-placement-and-rotations` · high · verify — `thoroughOrientations.ts`
+      (47e29f9). Composed R·M_obb candidates (bit-exact — signed permutations) +
+      the 6 AABB candidates so thorough ≥ fast holds by construction. Verify
+      refuted the whole silently-wrong composition class; two findings fixed:
+      residual-thickness OOM (degenerate-extent bar + MAX_GRID_PLACEMENTS cap in
+      quantityGrid) and a transpose-masking roster gap (generic-rotation fixture).
+      **Carry-in for phase 5:** results layer must present truncated layouts
+      (count > MAX_GRID_PLACEMENTS) honestly.
 
 ### 5. Wiring, labeling, worker, tests — **opus batch**
 - [ ] `max-quantity-unit-selection` · medium — part-picker / whole-file-as-unit
