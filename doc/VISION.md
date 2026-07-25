@@ -74,9 +74,16 @@ product decisions:
   against the dark theme a wall can only tint toward slightly-lighter grey —
   visible enough to help means opaque enough to haze the results it sits in
   front of. Twelve crisp lines mark the boundary better.)
-- **Saved configurations & history**: box/constraint setups can be saved as named
-  configurations and reloaded; every estimate is recorded (file, settings, result) as
-  a queryable history.
+- **Presets & saved estimates**: box/constraint setups can be saved as named
+  presets and reloaded; estimates the user **chooses to keep** are saved
+  (file, settings, result) as a browsable history, and restoring one loads its
+  settings — the result on screen is always freshly computed, never replayed.
+  (Originally "every estimate is recorded" — written when estimating meant
+  pressing a button. ADR-0009 removed the button, which made that literal rule
+  record every debounced keystroke; ADR-0016 replaced it with explicit save.)
+- **Undo/redo over the inputs** (Ctrl+Z / Ctrl+Shift+Z): session-scoped and
+  in-memory; under auto-run, undoing an input is undoing the estimate
+  (ADR-0016).
 
 ## Non-goals for v1
 

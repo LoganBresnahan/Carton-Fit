@@ -56,12 +56,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       by a newer build was quarantined instead of refused. Save/load UI plus
       auto-recorded history, keyed on a SHA-256 content hash so history survives
       a rename.)
-      — carry-in: **history volume under auto-run.** VISION's "every estimate is
-      recorded" predates ADR-0009 removing the compute button, so an estimate is
-      now every debounced re-pack — dozens of rows per session, mostly
-      intermediate. Implemented literally on purpose; collapsing consecutive
-      rows with the same content hash + settings is the likely fix when history
-      grows a UI. See item 9.
+      — carry-in **resolved by ADR-0016** (see item 11): history volume under
+      auto-run. Implemented literally on purpose at ship time; the answer turned
+      out to be explicit save, not the collapse-consecutive-rows guess this
+      carry-in originally recorded.
 - [x] 8. Installers + /deploy live — electron-builder: Windows NSIS (primary) +
       linux-unpacked smoke target; `/deploy` skill runs end-to-end (packaged smoke,
       dist-live staging, dogfood handoff); mac build documented
@@ -179,16 +177,27 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       warns. ADR-0010 says certificates belong on this same runner; revisit how
       they are held before adding it.
 
-- [ ] 11. Estimate history UI — read back what item 7 records: a browsable list
-      (file, settings, result, when), and the thinning decision that comes with
-      it. Split out of item 9 on 2026-07-25 because it is a feature with its own
-      UI surface, not polish, and because displaying history forces a product
-      call VISION has not made: "every estimate is recorded" predates ADR-0009
-      removing the compute button, so an estimate is now every debounced
-      re-pack — dozens of near-identical rows per session. Collapsing
-      consecutive rows sharing content hash + settings is the likely answer;
-      either way it needs an ADR and a VISION amendment, not a silent narrowing.
-      `estimatesForContent(hash)` already exists for the per-part view.
+- [ ] 11. Saved estimates + input undo — **decided by ADR-0016** (2026-07-25;
+      VISION amended). History records on EXPLICIT save, not auto-run: the
+      placeholder "collapse consecutive rows" answered the wrong question —
+      dedup removes repetition, not noise, and nothing marked which row the
+      user meant. Scope:
+      - Save-estimate action (same row shape, same `recordEstimate` IPC — no
+        schema change, no migration); delete `renderer/storage/history.ts` and
+        its exactly-once machinery; rewrite the auto-record specs to assert
+        explicit save.
+      - History browser: browsable list (file, settings, result, when);
+        restoring a row loads its SETTINGS only — the on-screen result is
+        always freshly computed (load-bearing invariant, ADR-0016 §3).
+        `estimatesForContent(hash)` already exists for the per-part view.
+      - Undo/redo (Ctrl+Z / Ctrl+Shift+Z): in-memory bounded stack of settings
+        snapshots; same-field edits coalesce; preset/history restores are one
+        step each; file loads excluded; nothing persists.
+      - UI copy keeps "presets" (reusable carton setups) and "saved estimates"
+        (receipts about a part) visibly distinct.
+      — export stays OUT (ADR-0016 §4): copy-summary + packed-view PNG are
+      cheap schema-free conveniences for Later; CSV/PDF wait for a real request
+      from dogfooding.
 
 ## Later
 
