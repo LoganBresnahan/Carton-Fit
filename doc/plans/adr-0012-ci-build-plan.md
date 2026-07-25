@@ -66,22 +66,56 @@
 > slice must measure. Do not read "integrity resource updated" as "enforcement on"
 > — nor as "off". Measure the fuse, and make the check fail when it's flipped.
 
-### 2. release.yml fan-out — gates, second leg, Windows smoke · **opus batch, one tag/dispatch**
-- [ ] `version-match-gate` · low — early step: strip `v` from the tag, compare to
+### 2. release.yml fan-out — gates, second leg, Windows smoke · **opus batch** ✅ *complete*
+- [x] `version-match-gate` · low — early step: strip `v` from the tag, compare to
       package.json version, die on mismatch; build legs depend on it. Skipped
       under `workflow_dispatch`.
-- [ ] `release-linux-appimage-leg` · low — ubuntu leg, `--linux AppImage` via CLI
+      *Done as an always-run `gate` JOB with a tag-conditional step — an `if:` on
+      the job itself would have skipped the build legs too, since a skipped
+      dependency skips its dependents. **Negative path tested for real:** pushed
+      `v9.9.9` against package.json 0.1.0, gate failed in 6 s with the intended
+      message and neither build leg started; tag deleted. A gate that has never
+      rejected anything is indistinguishable from one that can't.*
+- [x] `release-linux-appimage-leg` · low — ubuntu leg, `--linux AppImage` via CLI
       override (the yml's `linux.target` is only `dir` — the ADR's "config exists"
       phrasing overstates; one-line override or yml addition).
-- [ ] `windows-e2e-packaged` · medium — run the full e2e suite against
+      *Done: CLI override as predicted, `--publish never` too. 53 s, 131 MB
+      AppImage. No e2e on this leg — ci.yml already smokes packaged Linux on
+      every push, so repeating it on tag re-proves a green for minutes.*
+- [x] `windows-e2e-packaged` · medium — run the full e2e suite against
       `win-unpacked` on the Windows leg. Harness already takes `PACKAGED_APP` and
       uses `path.join` + `setInputFiles`; the real work is the npm script's POSIX
       env prefix (adjudication 3) and whatever windows-latest actually breaks.
-- [ ] `asar-integrity-off-check-windows` · medium · **verify** — assert enforcement
+      ***16/16 green against the packaged Windows build — the app is now
+      machine-verified on its actual target platform for the first time.***
+      *Adjudication 3 resolved better than planned: `PACKAGED_APP` as a step
+      `env:` block calling `npx playwright test` directly sidesteps the npm
+      script entirely — no `shell: bash`, no `cross-env`, no second script.*
+      **It immediately earned its keep** — see the harness bug below.
+- [x] `asar-integrity-off-check-windows` · medium · **verify** — assert enforcement
       is OFF on the built Windows app so the LGPL substitution right stays real
       (ADR-0011). Verify shape: the check must FAIL against a build with
       integrity enforced (or a tampered-asar launch must demonstrably not be
       rejected) — a config grep or an untampered launch is the vacuous version.
+      *Done: `scripts/check-asar-integrity-fuse.mjs` decodes Electron's fuse wire
+      directly (sentinel + version + length + one ASCII byte per fuse) — no new
+      dependency for ~30 lines. **Verify satisfied by `--self-test`**, which
+      flips the fuse in a copy and fails unless the checker notices; it runs in
+      CI on every release build, so the negative test can't be dropped by a YAML
+      edit. The wire version and fuse count are pinned, so an Electron upgrade
+      that reorders the list fails loudly rather than silently reading the wrong
+      bit.*
+      **Answers phase 1's finding:** electron-builder embeds integrity hashes on
+      Windows but Electron does **not** enforce them — index 4 reads `0` on both
+      platforms. Embedding ≠ enforcing; ADR-0011's guarantee holds on Windows.
+
+> **Windows found a real bug on its first run — the payoff ADR-0012 predicted.**
+> All 16 specs failed to launch with `bad option: --remote-debugging-port=0`.
+> Cause: `e2e/harness.ts` set `ELECTRON_RUN_AS_NODE: ''` to neutralize VSCode's
+> export, but Electron tests the variable's PRESENCE, not its truthiness — an
+> empty string still selects node mode on Windows (Linux happened to tolerate
+> it). Now deleted from the child env instead. A Linux-only e2e would never have
+> surfaced this, which is the argument for the Windows leg in one example.
 
 ### 3. Compliance + draft release · **opus batch, one tag/dispatch**
 - [ ] `wasm-substitution-check-windows` · medium · **verify** — automate ADR-0011's
