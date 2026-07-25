@@ -90,6 +90,13 @@ interface AppState {
   settings: PackingSettings
   updateSettings: (patch: Partial<PackingSettings>) => void
 
+  /** Which part max-quantity replicates, or null for the whole file as one
+   *  rigid unit (ADR-0003). Deliberately NOT in the persisted settings: a part
+   *  name belongs to the loaded file, so it is cleared on every import rather
+   *  than carried across sessions. */
+  unitPartName: string | null
+  setUnitPartName: (name: string | null) => void
+
   // --- pack slice ---
   packStatus: PackStatus
   packResult: PackResult | null
@@ -120,14 +127,34 @@ export const useAppStore = create<AppState>((set) => ({
   stats: null,
 
   beginImport: (file) =>
-    set({ status: 'parsing', file, parts: [], error: null, stats: null, ...NO_PACK }),
+    set({
+      status: 'parsing',
+      file,
+      parts: [],
+      error: null,
+      stats: null,
+      unitPartName: null,
+      ...NO_PACK
+    }),
   importSucceeded: (parts, stats) => set({ status: 'done', parts, stats, error: null }),
-  importFailed: (error) => set({ status: 'failed', error, parts: [], stats: null, ...NO_PACK }),
+  importFailed: (error) =>
+    set({ status: 'failed', error, parts: [], stats: null, unitPartName: null, ...NO_PACK }),
   resetImport: () =>
-    set({ status: 'idle', file: null, parts: [], error: null, stats: null, ...NO_PACK }),
+    set({
+      status: 'idle',
+      file: null,
+      parts: [],
+      error: null,
+      stats: null,
+      unitPartName: null,
+      ...NO_PACK
+    }),
 
   settings: loadSettings(),
   updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+
+  unitPartName: null,
+  setUnitPartName: (unitPartName) => set({ unitPartName }),
 
   ...NO_PACK,
   packBegan: () => set({ packStatus: 'packing', packError: null }),

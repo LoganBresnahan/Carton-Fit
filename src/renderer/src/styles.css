@@ -348,6 +348,22 @@ body {
   padding: 0.15rem 0;
 }
 
+/* Max-quantity unit picker (ADR-0003): which part gets replicated. */
+.unit-picker {
+  width: 100%;
+}
+.unit-select {
+  flex: 1;
+  min-width: 0;
+  max-width: 15rem;
+  padding: 0.3rem 0.4rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
 .inputs-header {
   display: flex;
   align-items: center;

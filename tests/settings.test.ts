@@ -101,6 +101,15 @@ describe('pack slice', () => {
     expect(s.packResult).toBeNull()
   })
 
+  it('clears the max-quantity unit selection on a new import', () => {
+    // Part names belong to the loaded file; carrying one across imports would
+    // silently pack the wrong thing (or nothing).
+    useAppStore.getState().setUnitPartName('bracket')
+    expect(useAppStore.getState().unitPartName).toBe('bracket')
+    useAppStore.getState().beginImport({ name: 'other.stp', sizeBytes: 1 })
+    expect(useAppStore.getState().unitPartName).toBeNull()
+  })
+
   it('clears a stale estimate when a new import begins', () => {
     useAppStore.getState().packSucceeded(result, request, 10)
     useAppStore.getState().beginImport({ name: 'next.stp', sizeBytes: 1 })

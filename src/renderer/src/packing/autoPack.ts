@@ -35,8 +35,12 @@ export interface AutoPackOptions {
 }
 
 export interface AutoPack {
-  /** Call when parts or settings change; coalesces into one dispatch. */
-  changed(parts: readonly ImportedPart[], settings: PackingSettings): void
+  /** Call when any pack input changes; coalesces into one dispatch. */
+  changed(
+    parts: readonly ImportedPart[],
+    settings: PackingSettings,
+    unitPartName?: string | null
+  ): void
   dispose(): void
 }
 
@@ -50,14 +54,14 @@ export function createAutoPack(
   let pending: unknown = null
 
   return {
-    changed(parts, settings) {
+    changed(parts, settings, unitPartName = null) {
       if (pending !== null) timer.cancel(pending)
       // The request is built when the timer FIRES, from the arguments of the
       // last call — so the dispatched request always reflects the newest inputs,
       // and superseded intermediates cost nothing (not even a mesh-volume pass).
       pending = timer.schedule(() => {
         pending = null
-        const request = buildPackRequest(parts, settings)
+        const request = buildPackRequest(parts, settings, unitPartName)
         if (request) dispatch(request)
       }, delayMs)
     },

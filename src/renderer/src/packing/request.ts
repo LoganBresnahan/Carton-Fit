@@ -31,6 +31,24 @@ export function partWeightG(part: ImportedPart, settings: PackingSettings): numb
 }
 
 /**
+ * The parts this request packs. Fit-check always takes the whole file — the
+ * question is whether everything fits. Max-quantity replicates ONE unit, which
+ * is either a chosen part or the whole file fused into one rigid unit
+ * (ADR-0003), so a selection narrows it. A selection naming a part the current
+ * file does not have falls back to the whole file rather than packing nothing:
+ * the picker is a convenience, never a way to get a misleading empty answer.
+ */
+function partsForRequest(
+  parts: readonly ImportedPart[],
+  settings: PackingSettings,
+  unitPartName: string | null
+): readonly ImportedPart[] {
+  if (settings.mode !== 'max-quantity' || !unitPartName) return parts
+  const chosen = parts.filter((part) => part.name === unitPartName)
+  return chosen.length > 0 ? chosen : parts
+}
+
+/**
  * Build the request for the current inputs, or null when there is nothing to
  * pack. A degenerate carton (wall thicker than the box) is NOT filtered out —
  * the engine answers it honestly with "nothing fits, geometry binding", which
@@ -38,10 +56,12 @@ export function partWeightG(part: ImportedPart, settings: PackingSettings): numb
  */
 export function buildPackRequest(
   parts: readonly ImportedPart[],
-  settings: PackingSettings
+  settings: PackingSettings,
+  unitPartName: string | null = null
 ): PackRequest | null {
   if (parts.length === 0) return null
-  const packParts: PackPart[] = parts.map((part) => ({
+  const selected = partsForRequest(parts, settings, unitPartName)
+  const packParts: PackPart[] = selected.map((part) => ({
     name: part.name,
     positions: part.positions,
     weightG: partWeightG(part, settings)

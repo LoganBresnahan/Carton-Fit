@@ -31,10 +31,14 @@ export function startAutoPack(): () => void {
   const autoPack = createAutoPack((request) => pipeline.requestPack(request))
 
   const unsubscribe = useAppStore.subscribe((state, prev) => {
-    // Only the two inputs that define an estimate. Pack-state writes must NOT
+    // Only the inputs that define an estimate. Pack-state writes must NOT
     // re-trigger — that would be an infinite loop.
-    if (state.parts !== prev.parts || state.settings !== prev.settings) {
-      autoPack.changed(state.parts, state.settings)
+    if (
+      state.parts !== prev.parts ||
+      state.settings !== prev.settings ||
+      state.unitPartName !== prev.unitPartName
+    ) {
+      autoPack.changed(state.parts, state.settings, state.unitPartName)
     }
   })
 

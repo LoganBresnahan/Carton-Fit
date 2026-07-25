@@ -100,6 +100,43 @@ describe('buildPackRequest', () => {
     expect(request?.carton).toEqual([-20, -20, -20])
   })
 
+  it('narrows max-quantity to the selected part (ADR-0003 unit selection)', () => {
+    const request = buildPackRequest(
+      [cubePart('a'), cubePart('b'), cubePart('c')],
+      settings({ mode: 'max-quantity' }),
+      'b'
+    )
+    expect(request?.parts.map((p) => p.name)).toEqual(['b'])
+  })
+
+  it('packs the whole file as one unit when nothing is selected', () => {
+    const request = buildPackRequest(
+      [cubePart('a'), cubePart('b')],
+      settings({ mode: 'max-quantity' }),
+      null
+    )
+    expect(request?.parts.map((p) => p.name)).toEqual(['a', 'b'])
+  })
+
+  it('ignores the selection in fit-check — the question is about every part', () => {
+    const request = buildPackRequest(
+      [cubePart('a'), cubePart('b')],
+      settings({ mode: 'fit-check' }),
+      'b'
+    )
+    expect(request?.parts.map((p) => p.name)).toEqual(['a', 'b'])
+  })
+
+  it('falls back to the whole file when the selection names a missing part', () => {
+    // A stale selection must not produce a misleadingly empty answer.
+    const request = buildPackRequest(
+      [cubePart('a'), cubePart('b')],
+      settings({ mode: 'max-quantity' }),
+      'gone'
+    )
+    expect(request?.parts.map((p) => p.name)).toEqual(['a', 'b'])
+  })
+
   it('shares the imported positions rather than copying them', () => {
     // The worker gets a structured-clone copy at postMessage; building the
     // request must not copy on the main thread too (see pack-protocol).
