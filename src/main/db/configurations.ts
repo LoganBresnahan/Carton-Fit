@@ -1,24 +1,9 @@
 import type { Database, Statement } from 'better-sqlite3'
+import type { ConfigurationRow, ConfigurationSummary } from '../../shared/storage'
 
 // Named presets (ADR-0007). Direct better-sqlite3 API, no wrapper layer — the
 // ADR is explicit that there are no legacy call sites to preserve, so an
 // abstraction here would be one we invented for ourselves to maintain.
-
-export interface ConfigurationRow {
-  readonly id: number
-  readonly name: string
-  /** The settings snapshot, already parsed. Shape is the renderer's `PackingSettings`. */
-  readonly settings: unknown
-  readonly createdAt: number
-  readonly updatedAt: number
-}
-
-/** A preset as the picker lists it — no settings blob, because the list does not need it. */
-export interface ConfigurationSummary {
-  readonly id: number
-  readonly name: string
-  readonly updatedAt: number
-}
 
 interface StoredRow {
   id: number

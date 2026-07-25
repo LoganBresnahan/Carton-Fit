@@ -225,11 +225,44 @@ shipped an installer that dies the first time a user saves a preset.
 > `pretest` ABI restore and fails with `Module did not self-register` after any
 > package run. Both now say `npm test`.
 
-### 5. IPC surface · **opus**
-- [ ] `storage-ipc-surface` · medium — `ipcMain.handle` wrappers over both
+### 5. IPC surface · **opus** ✅ *complete*
+- [x] `storage-ipc-surface` · medium — `ipcMain.handle` wrappers over both
       stores + a typed `contextBridge` API. The discipline point: one shared
       type contract across main/preload/renderer, serialization-safe throughout;
       `core/` stays DB-free.
+      *Done. `src/shared/storage.ts` holds the contract — channel constants and
+      types only, with no runtime dependency on Electron or better-sqlite3,
+      which is what lets the renderer import the same file main implements
+      against. The store classes now take their row types from it, so the shapes
+      are defined once rather than restated at each hop. **Channel names appear
+      only in main and preload**: the renderer calls methods, so a mistyped
+      channel cannot reach UI code and the wire protocol can change without
+      touching components.*
+      *Two decisions beyond the slice text:*
+      - ***The database opens lazily and non-fatally.*** `registerStorageIpc()`
+        installs handlers; the first call opens the DB. A storage failure
+        therefore degrades save/history instead of delaying or preventing the
+        window — VISION's core promise (drop a file, get an answer) does not
+        depend on storage. It also keeps the dev loop alive, since in dev the
+        module is often on the Node ABI and genuinely unloadable (ADR-0013).
+        A packaged build cannot hide behind that: `native-module.spec.ts` fails
+        loudly if the shipped app cannot load it.
+      - ***`health()` is part of the contract, not a debug afterthought.***
+        Because opening can fail, the renderer needs to ask rather than discover
+        it when a save quietly does nothing — and `quarantined` is how a user
+        finds out their saved data was moved aside.
+      *Boundaries verified in the built output, not assumed: zero
+      `better_sqlite3` references in any renderer chunk, exactly one `require`
+      site in the main bundle (externalized, not bundled), and no renderer
+      imports of the contract yet.*
+      **Proven end to end: `e2e/storage.spec.ts`, 5 specs, 22/22 packaged suite.**
+      Unit tests drive the stores in Node; only a renderer calling
+      `window.api.storage` can prove main registered the handlers, preload
+      exposed them, and the payloads survive structured cloning — three hops
+      that can each fail with every unit test green. Each spec launches with its
+      own `--user-data-dir`, so they never touch the real profile and start
+      empty. Coverage includes a restart (presets survive), and that a rejected
+      call surfaces as an error rather than a silent no-op.
 
 ### 6. Renderer wiring · **opus**
 - [ ] `renderer-save-load-and-history-wiring` · medium — Zustand actions over

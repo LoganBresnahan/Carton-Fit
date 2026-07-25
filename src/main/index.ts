@@ -1,5 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { registerStorageIpc, closeStorage } from './storage'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -23,6 +24,9 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Registers handlers only — the database itself opens on first use, so a
+  // storage problem cannot delay or prevent the window appearing (ADR-0007).
+  registerStorageIpc()
   createWindow()
 
   app.on('activate', () => {
@@ -33,3 +37,7 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
+
+// Checkpoint the WAL and release the file rather than leaving it to process
+// teardown.
+app.on('will-quit', closeStorage)

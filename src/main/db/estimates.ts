@@ -1,24 +1,10 @@
 import type { Database, Statement } from 'better-sqlite3'
+import type { EstimateInput, EstimateRow } from '../../shared/storage'
 
 // Estimate history (ADR-0007). Append-only by design: VISION says every
 // estimate is recorded, and re-running the same part against the same carton is
 // a real event worth seeing twice — so there is no upsert here and no unique
 // constraint to collide with.
-
-export interface EstimateInput {
-  readonly fileName: string
-  /** Content hash of the imported model, so history survives a rename. */
-  readonly contentHash: string
-  /** Settings snapshot at the time of the estimate. */
-  readonly settings: unknown
-  /** The pack result, as returned by the worker. */
-  readonly result: unknown
-}
-
-export interface EstimateRow extends EstimateInput {
-  readonly id: number
-  readonly createdAt: number
-}
 
 interface StoredRow {
   id: number

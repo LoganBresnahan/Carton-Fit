@@ -56,9 +56,16 @@ export interface AppHandle {
   page: Page
 }
 
-/** Launch the app and wait for the first window to be interactive. */
-export async function launchApp(): Promise<AppHandle> {
+/**
+ * Launch the app and wait for the first window to be interactive.
+ *
+ * @param extraArgs appended to the launch args — used by the storage specs to
+ * pass `--user-data-dir`, so they write to a temp directory instead of the real
+ * profile and start from an empty database every run.
+ */
+export async function launchApp(extraArgs: string[] = []): Promise<AppHandle> {
   const target = launchTarget()
+  target.args.push(...extraArgs)
   // VSCode terminals export ELECTRON_RUN_AS_NODE=1, which makes the Electron
   // binary behave as plain Node and the launch hang with no window. Strip it for
   // the child regardless of how the suite was started.
