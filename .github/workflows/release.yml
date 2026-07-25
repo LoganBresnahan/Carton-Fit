@@ -110,6 +110,18 @@ jobs:
         env:
           PACKAGED_APP: release/win-unpacked/Packaging Estimator.exe
 
+      # ADR-0011: prove the LGPL relink guarantee on the platform that ships.
+      # This spec deliberately corrupts the unpacked OCCT wasm and requires STEP
+      # import to BREAK — a negative result is the only thing that shows the file
+      # is load-bearing. It runs from its own config because it must never be
+      # part of an ordinary e2e run. It restores the build in afterAll; the
+      # installer and zip were produced by the Package step above, before any
+      # tampering, so artifacts are unaffected either way.
+      - name: LGPL wasm substitution must break the app (ADR-0011)
+        run: npx playwright test --config playwright.compliance.config.ts
+        env:
+          PACKAGED_APP: release/win-unpacked/Packaging Estimator.exe
+
       - name: Upload Playwright artifacts
         if: failure()
         uses: actions/upload-artifact@v7
@@ -164,3 +176,57 @@ jobs:
           path: release/*.AppImage
           if-no-files-found: error
           retention-days: 14
+
+  # ADR-0012: releases are DRAFTS. Publishing is a human act, after dogfooding
+  # the built installer — the same judgment /deploy step 4 already encodes.
+  # Nothing reaches the public because a tag was pushed by mistake.
+  #
+  # A third job rather than an upload step in each leg: two legs racing to
+  # create-or-append the same release is a genuine race, and the whole point of
+  # this job is that it happens exactly once, deliberately.
+  draft-release:
+    needs: [windows, linux]
+    # Tags only. workflow_dispatch builds and verifies but never publishes —
+    # this `if:` is what makes that true.
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    # The only job in either workflow that may write to the repo, and it gets
+    # that permission here rather than at workflow scope.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Create or update the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -t FILES < <(find artifacts -type f | sort)
+          if [ ${#FILES[@]} -eq 0 ]; then
+            echo "::error::No artifacts were downloaded — nothing to attach."
+            exit 1
+          fi
+          printf 'attaching:\n'; printf '  %s\n' "${FILES[@]}"
+
+          # Notes live in .github/release-notes.md rather than inline: a heredoc
+          # inside a YAML block scalar depends on two independent indentation
+          # rules agreeing, and gets silently mangled when they don't.
+          #
+          # Re-running a tag's workflow must not fail on an existing draft.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "release exists — replacing its assets"
+            gh release upload "$GITHUB_REF_NAME" "${FILES[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" \
+              --draft \
+              --title "Packaging Estimator $GITHUB_REF_NAME" \
+              --notes-file .github/release-notes.md \
+              "${FILES[@]}"
+          fi
+
+          echo "::notice::Draft release $GITHUB_REF_NAME created. It is NOT public — dogfood the installer, then publish it by hand."
