@@ -19,8 +19,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 - [ ] 4. Fast engine + results — tier-1 packing in a worker; results panel (verdict /
       count / binding constraint / utilization); packed 3D view; vitest coverage for
       grid math, unit conversions, weight cap
+      — carry-in: engine + `pack.worker.ts` + pipeline + grid/weight tests DONE
+      (ADR-0003 phase 5, d8f01b7). Remaining: store results slice + auto-run on
+      settings/parts change, the results panel component, the packed-3D view
+      (reuse the viewport scene-builders with `Placement` rotation+translation),
+      and part-picker for max-quantity unit selection. `verdictCaption` + the
+      `PackResult` fields (binding, utilization, heuristic) are the panel's data.
 - [ ] 5. Thorough engine — minimal OBB + rotation search; quality selector fully
       wired; nesting tier visible but disabled
+      — carry-in: OBB search + thorough provider DONE (phase 3/4); nesting stays
+      disabled (phase 2). Remaining here is just wiring the tier selector through
+      to a rendered thorough result, which rides on item 4's results plumbing.
 - [ ] 6. E2E harness + golden samples — Playwright `_electron.launch()` specs in
       `e2e/`; `samples/` golden parts with hand-computed expected results shared by
       unit, e2e, and dogfood layers (ADR-0005); DropZone keeps the picker path e2e

@@ -77,18 +77,30 @@
       **Carry-in for phase 5:** results layer must present truncated layouts
       (count > MAX_GRID_PLACEMENTS) honestly.
 
-### 5. Wiring, labeling, worker, tests — **opus batch**
-- [ ] `max-quantity-unit-selection` · medium — part-picker / whole-file-as-unit
-      composite AABB (min/max fold)
-- [ ] `heuristic-verdict-labeling` · low — "heuristic, not a proof of non-fit"
-      labeling the ADR mandates
-- [ ] `packing-worker-execution` · medium — pack worker cloned from the proven
-      import.worker.ts template. The transfer-list/buffer-dedupe DataCloneError trap
-      applies verbatim — reuse import-protocol's pattern, don't reinvent.
-- [ ] `packing-unit-tests` · medium — the verification layer itself. MANDATORY
-      rosters from adjudications 2 & 3 (grid edge cases; binding-constraint
-      both-ways fixtures), plus: orientation tie-breaks, part-larger-than-carton,
-      thorough ≥ fast counts on identical input, OBB volume ≤ AABB volume.
+### 5. Wiring, labeling, worker, tests — **opus batch**  ✓
+- [x] `max-quantity-unit-selection` · medium — `unit.ts` (1fb6214): composeUnit
+      fuses selected parts into one rigid unit by concatenating position buffers
+      (the general form of the composite-AABB min/max fold; thorough gets the
+      union hull for free). The renderer picks WHICH parts; the worker composes.
+- [x] `heuristic-verdict-labeling` · low — `pack.ts` verdictCaption (1fb6214).
+      heuristic flag on every result + captions carrying the epistemic direction:
+      positive fit = constructive proof, non-fit = "not a proof the rest cannot
+      fit", count = lower bound "may fit more".
+- [x] `packing-worker-execution` · medium — `pack.worker.ts` + `pack-protocol.ts`
+      + `packing/pipeline.ts` (d8f01b7). Cloned from import; id-staleness guard.
+      Transfer divergence: pack COPIES the request (renderer keeps positions for
+      the viewport), so the DataCloneError trap never applies — noted, not
+      reinvented (plan risk 4 resolved by not transferring).
+- [x] `packing-unit-tests` · medium — `packing-unit`, `packing-orchestrator`,
+      `pack-pipeline` tests (1fb6214, d8f01b7). Binding both-ways for BOTH modes,
+      thorough ≥ fast (tie + strict win), part-larger-than-carton, truncation
+      honesty, composite unit, verdict wording. Grid edge roster + OBB ≤ AABB
+      remain pinned in `packing-fast` / `packing-obb` from earlier phases.
+
+**ADR-0003 build plan COMPLETE.** All 12 slices landed (kept in place alongside
+the finished adr-0002 / adr-0008 plans). Remaining ADR-0003 surface not in this
+plan (results panel, packed-3D view, part-picker UI, store results slice +
+auto-run) is roadmap item 4/5 UI work — the engine + worker it consumes are done.
 
 ## Critical path
 
