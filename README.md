@@ -78,6 +78,8 @@ Grab the latest installer from
   test is an untested artifact wearing a ship label; it waits for a Mac to
   verify it on.
 
+What changed between versions is in [CHANGELOG.md](CHANGELOG.md).
+
 ## Development
 
 Prerequisites: Node 24+, and a C++ toolchain (`gcc`/`g++`/`make`/`python3` on
