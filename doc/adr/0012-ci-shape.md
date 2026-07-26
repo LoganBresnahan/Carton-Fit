@@ -11,7 +11,7 @@ ADR-0010 decided *that* release artifacts come from a per-platform GitHub
 Actions matrix. It left the workflow's shape open: what triggers what, which
 runners run which checks, how releases are published, and how `/deploy`
 consumes CI output instead of building locally. The repo is now public
-(github.com/LoganBresnahan/packaging-estimator), so Actions minutes are free
+(github.com/LoganBresnahan/Carton-Fit), so Actions minutes are free
 and macOS/Windows runners are available.
 
 Constraints already established elsewhere, restated so this ADR reads alone:

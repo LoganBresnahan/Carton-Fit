@@ -1,6 +1,6 @@
 ---
 name: shipshape
-description: Verify packaging-estimator is shipshape — tests cover the public surface (suite green twice), docs (VISION/roadmap/ADRs/CLAUDE.md) match the code, and core-purity/units/worker conventions hold. Use after substantive changes, before commits, or when asked whether the project is in order.
+description: Verify Carton-Fit is shipshape — tests cover the public surface (suite green twice), docs (VISION/roadmap/ADRs/CLAUDE.md) match the code, and core-purity/units/worker conventions hold. Use after substantive changes, before commits, or when asked whether the project is in order.
 ---
 
 # /shipshape — repo verification pass

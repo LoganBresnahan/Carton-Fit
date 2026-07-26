@@ -1,6 +1,6 @@
 ---
 name: orient
-description: Take a bearing at the start of a new packaging-estimator context window. Read the recent commits and the roadmap to reconstruct what shipped and what's next, follow the commit trail into whichever docs it points at (VISION.md, ADRs), then reconcile that ground truth against remembered state (MEMORY.md, cavemem) and flag any drift. Read-only — it briefs, it does not write memory or change code. Run when opening a fresh session or whenever you've lost the thread of where the project stands.
+description: Take a bearing at the start of a new Carton-Fit context window. Read the recent commits and the roadmap to reconstruct what shipped and what's next, follow the commit trail into whichever docs it points at (VISION.md, ADRs), then reconcile that ground truth against remembered state (MEMORY.md, cavemem) and flag any drift. Read-only — it briefs, it does not write memory or change code. Run when opening a fresh session or whenever you've lost the thread of where the project stands.
 ---
 
 # /orient — take a bearing at session start
@@ -11,7 +11,7 @@ point at — then checks that what you already remember still matches reality.
 
 **Read-only.** The deliverable is a briefing, not actions. It does **not** edit
 code and does **not** write memory — memory files and cavemem own writing;
-orient only reads and reconciles them. Assumes cwd = the packaging-estimator
+orient only reads and reconciles them. Assumes cwd = the Carton-Fit
 repo root (same as `/shipshape`).
 
 ## The context sources — and which lane is orient's
@@ -86,7 +86,7 @@ on-demand rule as cavemem: pulled by a question, not read by default.
 ## 5. The bearing (report)
 
 ```
-ORIENT — packaging-estimator @ <branch> <sha>
+ORIENT — Carton-Fit @ <branch> <sha>
   shipped     <recent arc in one line>  · last good: <commit>
   wip         <uncommitted files, or "clean">
   roadmap     frontier → item <N> "<title>"  (done: <range>)

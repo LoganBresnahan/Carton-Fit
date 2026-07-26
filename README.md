@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="build/icon.png" alt="Packaging Estimator" width="200" />
+  <img src="build/icon.png" alt="Carton Fit" width="200" />
 </p>
 
-<h1 align="center">Packaging Estimator</h1>
+<h1 align="center">Carton Fit</h1>
 
 <p align="center">
   Drag in a CAD model, enter a carton, get the best packing orientation,
@@ -60,12 +60,12 @@ or the packed carton with every part in its computed position.
 ## Install
 
 Grab the latest installer from
-[Releases](https://github.com/LoganBresnahan/packaging-estimator/releases):
+[Releases](https://github.com/LoganBresnahan/Carton-Fit/releases):
 
-- **Windows** — `Packaging Estimator Setup.exe` (NSIS installer). The build is
+- **Windows** — `Carton Fit Setup.exe` (NSIS installer). The build is
   currently unsigned, so SmartScreen will warn on first run; choose "More info"
   → "Run anyway".
-- **Linux** — `Packaging Estimator.AppImage`; make it executable and run it.
+- **Linux** — `Carton Fit.AppImage`; make it executable and run it.
 - **macOS** — not yet built. The configuration exists, but a dmg nobody can
   test is an untested artifact wearing a ship label; it waits for a Mac to
   verify it on.

@@ -91,7 +91,7 @@ export function buildSummary(input: EstimateExport): string {
   const units = settings.unitSystem
 
   const lines: string[] = [
-    'Packaging Estimator — estimate',
+    'Carton Fit — estimate',
     `File: ${fileName ?? '(no file)'}`,
     `Mode: ${modeLabel(request.mode)} · ${tierLabel(request.tier)} quality`,
     '',

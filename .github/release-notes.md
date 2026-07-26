@@ -1,6 +1,6 @@
 Built by CI on each platform natively (ADR-0010).
 
-**Windows** — `Packaging Estimator Setup <version>.exe` is the installer; the
+**Windows** — `Carton-Fit-Setup-<version>.exe` is the installer; the
 `-win.zip` is the same app, unzip-and-run.
 **Linux** — `.AppImage`, `chmod +x` and run.
 

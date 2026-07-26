@@ -9,6 +9,12 @@ import {
   windowStateFile
 } from './windowState'
 
+// The display name has a space; the userData directory must not (ADR-0019).
+// Electron derives that path from the app name, and `createWindow` reads
+// userData on its first line (ADR-0014) — so this runs at module load, ahead of
+// whenReady, rather than anywhere it could be beaten to the path.
+app.setName('Carton-Fit')
+
 function createWindow(): void {
   // Read BEFORE constructing the window — bounds are a constructor argument, and
   // applying them afterwards would show the window at the wrong size first

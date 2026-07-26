@@ -42,7 +42,7 @@ function get(): Storage | null {
   if (openError !== null) return null
 
   try {
-    const path = join(app.getPath('userData'), 'packaging-estimator.db')
+    const path = join(app.getPath('userData'), 'carton-fit.db')
     const opened = openDatabase(path)
     storage = {
       db: opened.db,

@@ -109,7 +109,7 @@ export function migrate(db: Database): number {
   if (from > target) {
     throw new Error(
       `database schema is version ${from}, but this build only understands ` +
-        `${target}. It was written by a newer version of Packaging Estimator; ` +
+        `${target}. It was written by a newer version of Carton Fit; ` +
         `upgrade the app rather than downgrading the data.`
     )
   }

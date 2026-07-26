@@ -29,7 +29,7 @@ Use **better-sqlite3** — the plain-SQLite package whose API the reference app'
 wrapper was explicitly designed to mimic — and port the reference patterns:
 
 - DB lives in the **main process** (`src/main/db/`), at `app.getPath('userData')/
-  packaging-estimator.db`; the renderer talks to it over IPC. `core/` stays pure.
+  carton-fit.db`; the renderer talks to it over IPC. `core/` stays pure.
 - Open sequence: `journal_mode = WAL`, `busy_timeout = 5000`, `foreign_keys = ON`,
   with open-with-recovery (quarantine a corrupt file and recreate rather than crash).
 - Schema versioned via `PRAGMA user_version`; one `migrations.ts` is the single source

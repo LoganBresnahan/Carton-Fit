@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: Put a verified packaging-estimator build in the user's hands. Ship bar first (vitest green twice + typecheck), then obtain artifacts — preferring the CI-built Windows installer for the current sha (ADR-0012), falling back to a local wine-free build — verify against the PACKAGED bytes using the golden samples, stage to dist-live/ with the previous build kept for rollback, and hand off a dogfood script so the user tests the new iteration on a real part. Run after substantive changes when the user wants to try the new build.
+description: Put a verified Carton-Fit build in the user's hands. Ship bar first (vitest green twice + typecheck), then obtain artifacts — preferring the CI-built Windows installer for the current sha (ADR-0012), falling back to a local wine-free build — verify against the PACKAGED bytes using the golden samples, stage to dist-live/ with the previous build kept for rollback, and hand off a dogfood script so the user tests the new iteration on a real part. Run after substantive changes when the user wants to try the new build.
 ---
 
 # /deploy — put a verified build in the user's hands
@@ -111,7 +111,7 @@ git rev-parse --short HEAD > dist-live/BUILD_SHA
 
 Stage **one** runnable artifact, not everything available — `dist-live/` is what
 the user runs, not an archive. Then print the Windows-reachable path:
-`\\wsl.localhost\<distro>\home\oof\packaging-estimator\dist-live\<file>`
+`\\wsl.localhost\<distro>\home\oof\Carton-Fit\dist-live\<file>`
 (get `<distro>` from `$WSL_DISTRO_NAME`). Copy it out of WSL before running —
 launching from the `\\wsl.localhost` share works but is slow.
 
@@ -136,7 +136,7 @@ dogfood findings evaporate if they only live in chat.
 ## 5. Report
 
 ```
-DEPLOYED — packaging-estimator @ <sha> → dist-live/
+DEPLOYED — Carton-Fit @ <sha> → dist-live/
   ship bar     vitest <n>/<n> ×2 · typecheck clean
   artifacts    <file, MB> — <CI run <id>, windows-latest | local build, wine-free>
   verified     <n>/<n> e2e + ASAR fuse + LGPL substitution on Windows (CI run <id>)

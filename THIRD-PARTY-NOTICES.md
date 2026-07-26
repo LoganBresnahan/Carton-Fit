@@ -1,6 +1,6 @@
 # Third-party notices
 
-Packaging Estimator is distributed under the MIT License (see `LICENSE`). The
+Carton Fit is distributed under the MIT License (see `LICENSE`). The
 binary you run also contains the third-party components listed here, each under
 its own licence. Nothing below is modified from its published form.
 

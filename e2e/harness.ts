@@ -107,7 +107,7 @@ export async function launchApp(extraArgs: string[] = []): Promise<AppHandle> {
   await page.waitForSelector('[data-testid="dropzone"]')
   // Settings persist to localStorage; start every spec from documented defaults
   // so one spec's carton cannot leak into the next.
-  await page.evaluate(() => localStorage.removeItem('packaging-estimator:settings'))
+  await page.evaluate(() => localStorage.removeItem('carton-fit:settings'))
   await page.reload()
   await page.waitForSelector('[data-testid="dropzone"]')
   return { app, page }

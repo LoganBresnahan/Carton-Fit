@@ -1,4 +1,4 @@
-# Packaging Estimator
+# Carton Fit
 
 Desktop app: drag-and-drop a STEP file, enter carton dimensions and constraints, get the
 best packing orientation, part count, and a 3D visualization of the packed box.

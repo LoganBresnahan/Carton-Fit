@@ -103,7 +103,7 @@ jobs:
       # check that cannot fail is worse than no check, and this is the one class
       # of check that stays green while the thing it guards silently rots.
       - name: ASAR integrity must not be enforced (ADR-0011)
-        run: node scripts/check-asar-integrity-fuse.mjs --self-test "release/win-unpacked/Packaging Estimator.exe"
+        run: node scripts/check-asar-integrity-fuse.mjs --self-test "release/win-unpacked/Carton-Fit.exe"
 
       # The whole point of building here (ADR-0012): verify the shipped bytes on
       # the platform that ships them. Windows runners have a real desktop
@@ -117,7 +117,7 @@ jobs:
       - name: E2E against the packaged Windows build
         run: npx playwright test
         env:
-          PACKAGED_APP: release/win-unpacked/Packaging Estimator.exe
+          PACKAGED_APP: release/win-unpacked/Carton-Fit.exe
 
       # ADR-0011: prove the LGPL relink guarantee on the platform that ships.
       # This spec deliberately corrupts the unpacked OCCT wasm and requires STEP
@@ -129,7 +129,7 @@ jobs:
       - name: LGPL wasm substitution must break the app (ADR-0011)
         run: npx playwright test --config playwright.compliance.config.ts
         env:
-          PACKAGED_APP: release/win-unpacked/Packaging Estimator.exe
+          PACKAGED_APP: release/win-unpacked/Carton-Fit.exe
 
       - name: Upload Playwright artifacts
         if: failure()
@@ -236,7 +236,7 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" \
               --draft \
-              --title "Packaging Estimator $GITHUB_REF_NAME" \
+              --title "Carton Fit $GITHUB_REF_NAME" \
               --notes-file .github/release-notes.md \
               "${FILES[@]}"
           fi

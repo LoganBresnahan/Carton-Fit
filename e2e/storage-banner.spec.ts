@@ -20,7 +20,7 @@ import { importSample, launchApp, waitForEstimate } from './harness'
 test.describe('storage failures are visible', () => {
   test.skip(!process.env.PACKAGED_APP, 'needs the Electron-ABI build of better-sqlite3')
 
-  const DB = 'packaging-estimator.db'
+  const DB = 'carton-fit.db'
 
   /**
    * Break storage the way a real downgrade does: stamp a schema version from the

@@ -28,8 +28,13 @@
 # includes production dependencies regardless — which is why the exclusions
 # below exist and why they are stated as removals rather than as an allow-list.
 
-appId: com.loganbresnahan.packagingestimator
-productName: Packaging Estimator
+appId: com.loganbresnahan.cartonfit
+productName: Carton Fit
+
+# Display name has a space; nothing on disk does (ADR-0019). Both of these
+# default to productName, so without them every shipped filename would carry it.
+executableName: Carton-Fit
+artifactName: Carton-Fit-${version}-${os}.${ext}
 copyright: Copyright © 2026 Logan Bresnahan
 
 directories:
@@ -130,7 +135,7 @@ extraFiles:
   - from: THIRD-PARTY-NOTICES.md
     to: THIRD-PARTY-NOTICES.md
   - from: LICENSE
-    to: LICENSE.packaging-estimator.txt
+    to: LICENSE.carton-fit.txt
 
 win:
   # zip FIRST: it is what a WSL build can actually produce (ADR-0010). nsis is
@@ -154,7 +159,8 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Packaging Estimator
+  shortcutName: Carton Fit
+  artifactName: Carton-Fit-Setup-${version}.${ext}
 
 linux:
   target:

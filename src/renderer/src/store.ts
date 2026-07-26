@@ -60,7 +60,7 @@ const DEFAULT_SETTINGS: PackingSettings = {
   densityGPerCm3: 1.0
 }
 
-const SETTINGS_KEY = 'packaging-estimator:settings'
+const SETTINGS_KEY = 'carton-fit:settings'
 
 function loadSettings(): PackingSettings {
   try {

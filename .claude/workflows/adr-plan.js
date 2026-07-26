@@ -46,7 +46,7 @@ const ASSESSMENT_SCHEMA = {
     hardness: { type: 'string', enum: ['mechanical', 'moderate', 'hard-reasoning'] },
     model: { type: 'string', enum: ['fable', 'opus'], description: 'which model should implement this slice — tracks hardness, not size' },
     needs_verification: { type: 'boolean', description: 'an adversarial verify pass is warranted' },
-    skills: { type: 'array', items: { type: 'string' }, description: 'packaging-estimator skills that apply: shipshape, orient' },
+    skills: { type: 'array', items: { type: 'string' }, description: 'Carton-Fit skills that apply: shipshape, orient' },
     risk: { type: 'string', enum: ['low', 'medium', 'high'] },
     depends_on: { type: 'array', items: { type: 'string' }, description: 'slice ids that must land first' },
     rationale: { type: 'string', description: 'WHY this effort/hardness/verification — tied to reasoning difficulty' },
@@ -76,7 +76,7 @@ const PLAN_SCHEMA = {
 phase('Decompose')
 log(`Decomposing ${adrPath} into implementation slices`)
 const decomposed = await agent(
-  `Read ${adrPath} (a Nygard-style ADR in the packaging-estimator repo) fully, and skim the code/docs it references (doc/VISION.md, doc/roadmap.md, src/renderer/src/core if it exists yet). Extract the concrete IMPLEMENTATION slices it implies — the discrete units a developer would actually build, not the prose sections. For each: a short kebab-case id, a title, what building it entails, and which ADR Decision / Consequence / Mitigation it comes from. Aim for 6-14 buildable-sized slices grounded in the ADR's decisions, its Consequences, and its Revisit triggers where they imply v1 guard rails. Do not invent work the ADR does not imply.`,
+  `Read ${adrPath} (a Nygard-style ADR in the Carton-Fit repo) fully, and skim the code/docs it references (doc/VISION.md, doc/roadmap.md, src/renderer/src/core if it exists yet). Extract the concrete IMPLEMENTATION slices it implies — the discrete units a developer would actually build, not the prose sections. For each: a short kebab-case id, a title, what building it entails, and which ADR Decision / Consequence / Mitigation it comes from. Aim for 6-14 buildable-sized slices grounded in the ADR's decisions, its Consequences, and its Revisit triggers where they imply v1 guard rails. Do not invent work the ADR does not imply.`,
   { label: 'decompose', phase: 'Decompose', schema: SLICE_SCHEMA }
 )
 const slices = (decomposed && decomposed.slices) || []
@@ -90,7 +90,7 @@ const roster = slices.map(s => `${s.id} — ${s.title}`).join('\n')
 // Parallel (barrier): the Plan phase needs ALL assessments at once to order by dependency.
 const assessed = (await parallel(slices.map(slice => () =>
   agent(
-    `You are ranking ONE implementation slice from packaging-estimator's ${adrPath} for HOW to build it. Read the ADR section it comes from and the relevant code to judge real difficulty — do not guess.
+    `You are ranking ONE implementation slice from Carton-Fit's ${adrPath} for HOW to build it. Read the ADR section it comes from and the relevant code to judge real difficulty — do not guess.
 
 SLICE: ${JSON.stringify(slice)}
 
@@ -102,7 +102,7 @@ Assess it using THIS project's effort philosophy — be calibrated, do NOT mark 
 - hardness: mechanical | moderate | hard-reasoning.
 - model: which model should IMPLEMENT this slice. 'fable' ONLY for hard-reasoning slices where a plausible-but-wrong implementation is the failure mode (subtle geometry math, placement heuristics, worker/IPC protocol edges); 'opus' for mechanical and moderate slices (wiring, UI forms, boilerplate, straightforward tests) where throughput matters. Track hardness, not size — a big mechanical slice is still 'opus'.
 - needs_verification (an adversarial verify pass) = true ONLY when a subtle bug would be costly and a single pass could plausibly ship it wrong (e.g. off-by-one in the clearance grid formula, a wrong-handed rotation matrix that renders fine but reports the wrong count, binding-constraint misattribution).
-- skills: which packaging-estimator skills apply — shipshape (pre-commit gate: tests green twice, docs, conventions), orient (rarely).
+- skills: which Carton-Fit skills apply — shipshape (pre-commit gate: tests green twice, docs, conventions), orient (rarely).
 - status: todo | partial | done — check the code under src/renderer/src/ rather than assuming.
 - depends_on: the exact ids FROM THE ROSTER ABOVE of slices that must land first — [] if none. Do not use any id not in the roster.
 Return the structured assessment with an honest rationale.`,
@@ -113,7 +113,7 @@ Return the structured assessment with an honest rationale.`,
 phase('Plan')
 log(`Ordering ${assessed.length} assessed slices into build phases`)
 const plan = await agent(
-  `Ranked implementation slices for packaging-estimator's ${adrPath} (assessments JSON):
+  `Ranked implementation slices for Carton-Fit's ${adrPath} (assessments JSON):
 ${JSON.stringify(assessed, null, 2)}
 
 Their titles / what-they-entail:

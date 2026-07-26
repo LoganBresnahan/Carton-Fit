@@ -15,7 +15,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Packaging Estimator</h1>
+        <h1>Carton Fit</h1>
       </header>
       <main className="app-main">
         {/* Inputs scroll; the estimate is pinned below them as a footer, so the
