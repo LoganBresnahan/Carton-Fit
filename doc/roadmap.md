@@ -264,6 +264,32 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       to `Number()`. The count is the one figure in that file someone computes
       with. Now plain, pinned at both layers.
 
+- [ ] 13. Per-kind weight overrides — **ADR-0018**: effective weight = override
+      for the part's kind (base name before our ordinal suffix), else the
+      current mode's answer; no third weight mode. File-scoped slice cleared on
+      import (the `unitPartName` precedent), never in persisted settings.
+      Renderer-only; no schema, IPC or migration. Scoped 2026-07-26,
+      effort-ordered:
+      - [ ] **kind grouping + effective weight** — pure helpers: group parts by
+        base name with instance counts; resolve override ?? mode weight in
+        `packing/request.ts` (overrides as an argument, builder stays pure).
+        Unit-tested, including suffix-parsing edge cases (`bolt (2)` groups
+        with `bolt`; a part literally named with parentheses doesn't break).
+      - [ ] **store slice + warning skip** — `partWeightsG` map cleared on
+        import; auto-run watches it; `openMeshParts` skips overridden kinds
+        (entering the override retires the warning that suggested it).
+      - [ ] **Part weights panel** — one row per kind with count
+        (`bolt ×6`), computed default shown until overridden, clear-to-computed
+        affordance; must not crowd the 360px column.
+      - [ ] **saved estimates round-trip** — overrides ride the settings blob;
+        restore re-applies by kind, ignoring names the loaded file lacks.
+      - [ ] **undo coverage** — ADR-0016 §2 extended past `settings`: per-kind
+        change signature, so bolt-then-nut is two steps and one typed value is
+        one.
+      - [ ] **e2e + export ripple** — override changes the count end-to-end;
+        the open-mesh warning disappears when the open part's kind is
+        overridden; summary's "Part weight:" line says overrides are in play.
+
 ## Later
 
 - More import formats (OBJ, IGES — near-free via occt-import-js)
