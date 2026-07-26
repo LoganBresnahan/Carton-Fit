@@ -3,7 +3,7 @@ import {
   bindingLabel,
   openMeshWarning,
   packedWeightG,
-  truncatedLayout,
+  truncatedLayoutNote,
   utilizationPercent,
   verdictCaption,
   verdictHeadline
@@ -58,6 +58,7 @@ export default function ResultsPanel() {
   // While a new pack is in flight the previous result stays on screen, dimmed —
   // steadier than blanking the panel on every keystroke.
   const stale = status === 'packing'
+  const truncated = truncatedLayoutNote(result)
 
   return (
     <section
@@ -120,11 +121,9 @@ export default function ResultsPanel() {
         </p>
       )}
 
-      {truncatedLayout(result) && (
+      {truncated && (
         <p className="results-note" data-testid="results-truncated">
-          Showing {result.placements.length.toLocaleString()} of{' '}
-          {result.count.toLocaleString()} in the 3D view — the count is exact, the
-          drawing is partial.
+          {truncated}
         </p>
       )}
 

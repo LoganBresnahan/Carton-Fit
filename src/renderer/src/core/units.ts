@@ -37,5 +37,14 @@ export const gToWeight = (g: number, units: UnitSystem): number =>
 export const lengthUnitLabel = (units: UnitSystem): string => (units === 'imperial' ? 'in' : 'mm')
 export const weightUnitLabel = (units: UnitSystem): string => (units === 'imperial' ? 'lb' : 'kg')
 
+/** Volume for display (ADR-0017's CSV column). Cubing the length factor here
+ *  rather than at the call site keeps ADR-0004's rule intact: every conversion
+ *  constant in the app lives in this file, so `MM_PER_IN ** 3` cannot appear
+ *  loose in an export module. */
+export const mm3ToVolume = (mm3: number, units: UnitSystem): number =>
+  units === 'imperial' ? mm3 / MM_PER_IN ** 3 : mm3
+export const volumeUnitLabel = (units: UnitSystem): string =>
+  units === 'imperial' ? 'in³' : 'mm³'
+
 /** Default max package weight: 35 lb, stored canonically in grams (ADR-0004). */
 export const DEFAULT_MAX_WEIGHT_G = lbToG(35)

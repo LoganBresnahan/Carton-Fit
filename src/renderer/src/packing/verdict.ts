@@ -113,3 +113,20 @@ export function openMeshWarning(openParts: readonly string[]): string | null {
 export function truncatedLayout(result: PackResult): result is MaxQuantityResult {
   return result.mode === 'max-quantity' && result.count > result.placements.length
 }
+
+/**
+ * The sentence for a truncated layout, or null when the drawing is complete.
+ *
+ * Lives here rather than inline in the panel because ADR-0017 sends this
+ * qualifier out with every export: a count whose picture shows a fraction of it
+ * needs the same caveat in a quote as it has on screen, and two copies of the
+ * wording would drift.
+ */
+export function truncatedLayoutNote(result: PackResult): string | null {
+  if (!truncatedLayout(result)) return null
+  return (
+    `Showing ${result.placements.length.toLocaleString()} of ` +
+    `${result.count.toLocaleString()} in the 3D view — the count is exact, the ` +
+    `drawing is partial.`
+  )
+}
