@@ -80,11 +80,20 @@ function isClosed(part: ImportedPart): boolean {
  * replicates one chosen part does not warn about parts whose weight it never
  * spends. Empty in direct-weight mode: no volume, no exposure.
  */
+// `overrides` is REQUIRED, unlike buildPackRequest's, and the asymmetry is
+// deliberate. Forgetting it here was a real bug: `export/collect.ts` omitted it
+// and every export carried an open-mesh warning for kinds the user had already
+// priced by hand — worse than the same slip on screen, because ADR-0017 §2's
+// whole point is that an exported warning is the one that cannot defend itself.
+// A default made that omission compile. The equivalent slip in buildPackRequest
+// produces a WRONG COUNT, which every count spec catches within seconds; this
+// one produced a stale sentence nothing was watching. Require the argument
+// where the failure is silent.
 export function openMeshParts(
   parts: readonly ImportedPart[],
   settings: PackingSettings,
-  unitPartName: string | null = null,
-  overrides: PartWeightOverrides = {}
+  unitPartName: string | null,
+  overrides: PartWeightOverrides
 ): string[] {
   if (settings.weightMode !== 'density') return []
   const names = new Set(parts.map((part) => part.name))

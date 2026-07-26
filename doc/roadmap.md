@@ -297,11 +297,26 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       a restore silently cost two Ctrl+Z presses, against ADR-0016 §2's "one
       step". Fixed with a `restoreInputs` action that writes both in one `set`;
       undo's own apply uses it too, which also collapses two re-packs into one.
+      — **asking whether the coverage gap mattered found a live bug.**
+      `export/collect.ts` called `openMeshParts` WITHOUT the overrides, so every
+      export carried "not a closed mesh, the weight is unreliable" for kinds the
+      user had already priced by hand — in a document that outlives the window
+      and cannot be argued with (ADR-0017 §2). The panel's call site was
+      correct, which is exactly why nobody noticed: the two were only compared
+      by eye. Root cause was the DEFAULT parameter, which made forgetting it
+      compile; `overrides` is now required on `openMeshParts` — a type error
+      beats a test — while `buildPackRequest` keeps its default because the
+      same slip there is a wrong COUNT, which every count spec catches in
+      seconds. `tests/export-collect.test.ts` covers the layer that had none.
       — coverage note: the warning-retires-on-override path is pinned at the
-      UNIT layer (`tests/part-kinds.test.ts`). The e2e proves the alternative
-      documented fix (switch to direct entry) because the only open-mesh golden
-      is a single-kind file, and a single kind hides the panel. A multi-kind
-      open-mesh sample would close that gap if one is ever added.
+      UNIT layer (`part-kinds` and now `export-collect`). The e2e proves the
+      alternative documented fix (switch to direct entry) because the only
+      open-mesh golden is a single-kind file, and a single kind hides the panel.
+      A multi-kind open-mesh STEP sample would let the e2e drive the real path;
+      not built, because hand-authoring one risks OCCT sewing the open shell
+      closed and the failure it would catch is a stale sentence, not a wrong
+      number. Worth revisiting when a second reason for a mixed-material
+      fixture appears.
 
 ## Later
 

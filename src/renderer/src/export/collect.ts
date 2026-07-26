@@ -29,7 +29,7 @@ export function collectExport(): EstimateExport | null {
   // same sentence (ADR-0017 §2) — and adding a third warning to the panel
   // means adding it here, in one obvious place.
   const warnings = [
-    openMeshWarning(openMeshParts(parts, settings, unitPartName)),
+    openMeshWarning(openMeshParts(parts, settings, unitPartName, state.partWeightsG)),
     truncatedLayoutNote(packResult)
   ].filter((warning): warning is string => warning !== null)
 

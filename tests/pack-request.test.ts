@@ -168,22 +168,22 @@ describe('buildPackRequest', () => {
 // became a wrong part count. These pin the gate that closes that path.
 describe('openMeshParts', () => {
   it('names an open part whose weight is being derived from its volume', () => {
-    const open = openMeshParts([openCubePart('shell')], settings({ weightMode: 'density' }))
+    const open = openMeshParts([openCubePart('shell')], settings({ weightMode: 'density' }), null, {})
     expect(open).toEqual(['shell'])
   })
 
   it('says nothing about closed parts', () => {
-    expect(openMeshParts([cubePart('solid')], settings({ weightMode: 'density' }))).toEqual([])
+    expect(openMeshParts([cubePart('solid')], settings({ weightMode: 'density' }), null, {})).toEqual([])
   })
 
   it('reports exactly the open parts in a mixed file', () => {
     const parts = [cubePart('a'), openCubePart('b'), cubePart('c'), openCubePart('d')]
-    expect(openMeshParts(parts, settings({ weightMode: 'density' }))).toEqual(['b', 'd'])
+    expect(openMeshParts(parts, settings({ weightMode: 'density' }), null, {})).toEqual(['b', 'd'])
   })
 
   it('stays silent in direct-weight mode — no volume, no exposure', () => {
     // The mesh is just as open; the number the user gets no longer depends on it.
-    const open = openMeshParts([openCubePart()], settings({ weightMode: 'direct' }))
+    const open = openMeshParts([openCubePart()], settings({ weightMode: 'direct' }), null, {})
     expect(open).toEqual([])
   })
 
@@ -191,14 +191,14 @@ describe('openMeshParts', () => {
     // Only the chosen part's weight is spent, so only its mesh matters.
     const parts = [cubePart('chosen'), openCubePart('ignored')]
     const s = settings({ weightMode: 'density', mode: 'max-quantity' })
-    expect(openMeshParts(parts, s, 'chosen')).toEqual([])
-    expect(openMeshParts(parts, s, 'ignored')).toEqual(['ignored'])
+    expect(openMeshParts(parts, s, 'chosen', {})).toEqual([])
+    expect(openMeshParts(parts, s, 'ignored', {})).toEqual(['ignored'])
   })
 
   it('warns about every part in fit-check, where all of them are packed', () => {
     const parts = [cubePart('a'), openCubePart('b')]
     const s = settings({ weightMode: 'density', mode: 'fit-check' })
-    expect(openMeshParts(parts, s, 'a')).toEqual(['b'])
+    expect(openMeshParts(parts, s, 'a', {})).toEqual(['b'])
   })
 
   it('quantifies the error it is warning about', () => {
