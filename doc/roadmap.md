@@ -320,6 +320,30 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 
 ## Later
 
+- [ ] 14. Slim the packaged app, second pass — **~40 MB of the 59 MB
+      `resources/` is dead weight on the platform that ships.** Item 9 did this
+      pass and measured it on LINUX; what survives is Windows-specific, so it
+      slipped through on the only build anyone installs. Measured 2026-07-25 by
+      unpacking the CI artifact for `698a968`:
+      - MSVC build intermediates left in `better-sqlite3/build/`, none of which
+        any runtime path opens: `better_sqlite3.iobj` (14 MB),
+        `sqlite3.lib` (6.9 MB — a build *input*), `better_sqlite3.ipdb`
+        (3.4 MB), plus `.exp`/`.lib`/`test_extension.*`/`.vcxproj`. Only
+        `better_sqlite3.node` (1.9 MB) is loaded. The existing exclusions name
+        the gcc artifacts (`obj`, `obj.target`, `.deps`, `*.mk`) and simply do
+        not match MSVC's names.
+      - `three` (17 MB) and `react-dom` (7.1 MB) ship as node_modules copies
+        although vite bundles both into `out/renderer`. **Proof they are
+        unreachable: the only bare `require()` anywhere in the shipped `out/`
+        tree is `better-sqlite3`** (plus `electron` and node builtins).
+      Carry the item 9 rule forward unchanged: exclusions are written as
+      REMOVALS, never an allow-list, because the pruned copies carry the LGPL
+      texts ADR-0011's notices cite by name — an over-broad exclude here is a
+      licence violation, not a size win. Verify by re-running the packaged e2e
+      AND both compliance checks on Windows, then re-measure the artifact
+      rather than trusting the config. Report the download delta separately
+      from the install delta: item 9 found C++ sources compress to nearly
+      nothing, so a big install win can be a small download win.
 - More import formats (OBJ, IGES — near-free via occt-import-js)
 - Tier-3 true nesting (experimental; see ADR-0003 revisit triggers)
 - Box tare weight; material density library (ADR-0004 revisit triggers)

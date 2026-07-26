@@ -1,6 +1,6 @@
 {
   "name": "carton-fit",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Drag in a CAD model, enter a carton, get the best packing orientation, part count, and a 3D view of the packed box.",
   "author": {
     "name": "Logan Bresnahan",

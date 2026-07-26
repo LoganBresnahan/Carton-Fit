@@ -9,6 +9,14 @@
   part count, and a 3D view of the packed box.
 </p>
 
+<p align="center">
+  <a href="https://github.com/LoganBresnahan/Carton-Fit/releases/latest"><strong>Version 1.0.0</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/LoganBresnahan/Carton-Fit/releases/latest">Download</a>
+  &nbsp;·&nbsp;
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
+
 ---
 
 Given a 3D model of a part (or an assembly) and a shipping carton, Carton Fit
@@ -70,10 +78,10 @@ or the packed carton with every part in its computed position.
 Grab the latest installer from
 [Releases](https://github.com/LoganBresnahan/Carton-Fit/releases):
 
-- **Windows** — `Carton Fit Setup.exe` (NSIS installer). The build is
+- **Windows** — `Carton-Fit-Setup-1.0.0.exe` (NSIS installer). The build is
   currently unsigned, so SmartScreen will warn on first run; choose "More info"
   → "Run anyway".
-- **Linux** — `Carton Fit.AppImage`; make it executable and run it.
+- **Linux** — `Carton-Fit-1.0.0-linux.AppImage`; make it executable and run it.
 - **macOS** — not yet built. The configuration exists, but a dmg nobody can
   test is an untested artifact wearing a ship label; it waits for a Mac to
   verify it on.

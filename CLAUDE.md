@@ -36,6 +36,9 @@ when scope changes.
   under `## [Unreleased]` until a version ships. It is not a second roadmap and not a
   commit log: a change nobody using the app would notice does not belong in it, and each
   entry links the ADR carrying the reasoning. Add to it in the same commit as the change.
+- **Releasing bumps the version in three places** — `package.json`, the `CHANGELOG.md`
+  heading, and the README banner. CI's gate only checks that the tag matches
+  `package.json`; the other two are on you. What the number promises is ADR-0020.
 - **Every decision gets an ADR** in `doc/adr/NNNN-slug.md` (Nygard style: Context /
   Decision / Consequences / Alternatives / Revisit triggers). New dependency, changed
   algorithm or contract, pattern adopted or rejected — that's a decision. Implementation

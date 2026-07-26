@@ -10,6 +10,12 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-07-25
+
+The first release meant to be installed and used. Everything below landed after
+the unpublished 0.1.0 tag; the app is also renamed, so read *Upgrading* before
+installing over an older build.
+
 ### Added
 
 - **Per-kind weight overrides.** In a mixed assembly, set the weight of any
@@ -124,5 +130,6 @@ and the work above landed before anyone was handed the artifact.
   untested artifact wearing a ship label; it waits for a Mac to verify it on.
 - **No auto-update.**
 
-[Unreleased]: https://github.com/LoganBresnahan/Carton-Fit/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/LoganBresnahan/Carton-Fit/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/LoganBresnahan/Carton-Fit/releases/tag/v1.0.0
 [0.1.0]: https://github.com/LoganBresnahan/Carton-Fit/releases/tag/v0.1.0
