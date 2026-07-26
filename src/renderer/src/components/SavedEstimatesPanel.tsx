@@ -53,7 +53,7 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
   }, [])
 
   return (
-    <section className="panel" data-testid="saved-estimates-panel">
+    <section className="panel-section" data-testid="saved-estimates-panel">
       <h2>Saved estimates</h2>
 
       {savedEstimates.length === 0 ? (

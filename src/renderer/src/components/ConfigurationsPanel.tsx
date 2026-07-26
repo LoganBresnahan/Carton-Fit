@@ -43,7 +43,7 @@ export function ConfigurationsPanel(): React.JSX.Element {
   }
 
   return (
-    <section className="panel" data-testid="configurations-panel">
+    <section className="panel-section" data-testid="configurations-panel">
       <h2>Presets</h2>
       <p className="panel-hint">Reusable carton setups — no part attached.</p>
 

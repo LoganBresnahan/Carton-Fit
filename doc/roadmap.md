@@ -203,6 +203,18 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       — carry-in: export stays OUT (ADR-0016 §4). Copy-summary + packed-view PNG
       are cheap schema-free conveniences; CSV/PDF wait for a real dogfooding
       request.
+      — **dogfood finding (2026-07-25), fixed**: both lists were written with
+      `className="panel"` — the LEFT COLUMN's own class, carrying `width: 360px`
+      and a `border-right`. Nested inside that same 360px column, which already
+      spends 1.5rem on padding, they overhung both edges by ~24px and put a
+      horizontal scrollbar on the inputs column. Every functional spec passed
+      throughout — the controls were present, clickable and correct, just 24px
+      into the margin. Now `.panel-section` (full width, `.inputs` spacing, and
+      its `h2` folded into the same uppercase-label rule as CARTON and
+      CLEARANCES). `e2e/panel-layout.spec.ts` guards it by RELATIONSHIP rather
+      than pixel value — the column must not scroll sideways, and sections in
+      one column share one left edge — and was mutation-tested by restoring the
+      old class.
       — **e2e isolation bug found and fixed here**: window persistence (ADR-0014)
       had made the suite stateful, and a dogfooded maximized-on-second-monitor
       window made the packaged run take 12.2 minutes instead of 53 s WITH

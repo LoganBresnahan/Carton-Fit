@@ -201,7 +201,8 @@ body {
   margin: 0;
 }
 .control-group legend,
-.inputs h2 {
+.inputs h2,
+.panel-section h2 {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -424,13 +425,25 @@ body {
   cursor: pointer;
 }
 
+/* Presets and saved estimates are SECTIONS INSIDE the scrolling column, not
+   columns of their own. Both wore `.panel` — the left column's own class — which
+   gave each a fixed 360px width and a border-right inside a 360px column that
+   already spends 1.5rem on padding. They overhung both edges by 24px and put a
+   horizontal scrollbar on the column. Same width and gap as `.inputs`, so the
+   headings line up with CARTON and CLEARANCES rather than starting off-panel. */
+.panel-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
 /* Saved configurations (ADR-0007). Deliberately plain: this panel sits in the
    same scrolling column as the inputs, so it borrows their spacing rather than
    introducing a second visual language. */
 .config-save {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
 }
 
 .config-save input {
@@ -529,7 +542,6 @@ body {
 .panel-hint {
   font-size: 0.72rem;
   color: var(--muted);
-  margin-bottom: 0.2rem;
 }
 .estimate-list {
   list-style: none;
