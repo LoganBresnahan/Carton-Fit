@@ -132,11 +132,21 @@ export function canRedo(): boolean {
  * platform, and hijacking it to rewind the carton would be worse than not
  * having undo at all. Native undo there re-fires `onChange`, which lands back
  * here as an ordinary edit — so the two mechanisms compose instead of fighting.
+ *
+ * NUMBER INPUTS ARE THE EXCEPTION, found by dogfooding: spinner clicks and
+ * arrow-key steps are not text edits, so they never enter the browser's undo
+ * buffer — deferring left Ctrl+Z dead whenever focus sat in the field it had
+ * just changed. And nothing is lost by taking over: every keystroke in a
+ * number field commits to the store and coalesces (typing "125" is one step),
+ * so app undo subsumes the native buffer there. The deference stays only where
+ * it pays — real text fields like the preset name, whose text the store does
+ * not track.
  */
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
+  if (target instanceof HTMLInputElement) return target.type !== 'number'
   const tag = target.tagName
-  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+  return tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
 }
 
 /** Ctrl/Cmd+Z, and both spellings of redo (Ctrl+Shift+Z, and Ctrl+Y on Windows). */

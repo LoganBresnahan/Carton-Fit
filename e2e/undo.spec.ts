@@ -91,6 +91,34 @@ test('undo does nothing at the start of the session rather than breaking', async
   await expect(page.locator('[data-testid="results-headline"]')).toBeVisible()
 })
 
+test('Ctrl+Z works inside a number field — spinner steps are not text edits', async () => {
+  // Dogfooding found Ctrl+Z dead after clicking the spinner arrows: focus stays
+  // in the input, and the old rule deferred to the browser there — whose undo
+  // buffer only holds TEXT edits, so a spinner step left it with nothing to
+  // undo and the app forbidden to act. Number fields now keep app undo.
+  // ArrowUp exercises the same non-text step as a spinner click, and Playwright
+  // can drive it.
+  const { page } = handle
+  await importSample(page, 'cube-10x10.stl')
+  await page.click('[data-testid="mode-max-quantity"]')
+  await setCarton(page, [12, 12, 12])
+  await waitForEstimate(page)
+
+  const dim = page.locator('[data-testid="dim-0"]')
+  await dim.focus()
+  await dim.press('ArrowUp')
+  await expect(dim).toHaveValue('13')
+  await waitForEstimate(page)
+
+  // Focus is STILL in the field — the exact state that used to kill the key.
+  await dim.press('Control+KeyZ')
+  await expect(dim).toHaveValue('12')
+
+  // And redo works from the same place.
+  await dim.press('Control+Shift+KeyZ')
+  await expect(dim).toHaveValue('13')
+})
+
 test('Ctrl+Z inside a text field is left to the browser', async () => {
   // Hijacking it there would break the one thing every user expects Ctrl+Z to
   // do in a text box, and would be worse than having no undo at all.

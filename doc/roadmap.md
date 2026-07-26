@@ -203,6 +203,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       — carry-in: export stays OUT (ADR-0016 §4). Copy-summary + packed-view PNG
       are cheap schema-free conveniences; CSV/PDF wait for a real dogfooding
       request.
+      — **dogfood finding (2026-07-25), fixed**: Ctrl+Z was dead after a spinner
+      click. The steps WERE recorded — but focus stays in the number input, and
+      the routing rule deferred every editable field to the browser, whose undo
+      buffer holds only TEXT edits; a spinner step left the browser with nothing
+      to undo and the app forbidden to act. Number inputs now keep app undo
+      (which subsumes native undo there, since every keystroke commits and
+      coalesces); real text fields like the preset name still defer. ADR-0016 §2
+      amended; e2e drives ArrowUp-then-Ctrl+Z with focus still in the field,
+      mutation-tested against the old rule.
       — **dogfood finding (2026-07-25), fixed**: both lists were written with
       `className="panel"` — the LEFT COLUMN's own class, carrying `width: 360px`
       and a `border-right`. Nested inside that same 360px column, which already

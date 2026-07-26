@@ -56,6 +56,14 @@ restored.
 - **Preset and history restores are one undo step each.**
 - **File loads are outside undo.** Re-importing on Ctrl+Z would be heavyweight
   and surprising; undo is for inputs, not for documents.
+- **Keystroke routing** (amended 2026-07-25 after dogfooding): Ctrl+Z inside a
+  *text* field is left to the browser — it means "undo my typing" everywhere,
+  and native undo re-fires `onChange`, so the mechanisms compose. **Number
+  inputs are the exception**: spinner clicks and arrow-key steps are not text
+  edits, so they never enter the browser's undo buffer, and deferring left
+  Ctrl+Z dead whenever focus sat in the field it had just changed. Number
+  fields keep app undo — nothing is lost, because every keystroke there
+  commits to the store and coalesces, so app undo subsumes the native buffer.
 - The stack does not survive a restart, and none of this persists anywhere.
 
 ### 3. Restoring a history row loads its settings, never its result
