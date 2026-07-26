@@ -84,6 +84,12 @@ product decisions:
 - **Undo/redo over the inputs** (Ctrl+Z / Ctrl+Shift+Z): session-scoped and
   in-memory; under auto-run, undoing an input is undoing the estimate
   (ADR-0016).
+- **Export** (ADR-0017): the live estimate can leave the app as a
+  clipboard-ready text summary, a measurements CSV (per-part dims, quantities,
+  weights, in the on-screen units), and a PNG of the packed view. Warnings —
+  open-mesh, truncated layout — travel with every export: an answer that is
+  qualified on screen stays qualified in a quote. PDF reports are deliberately
+  later; the text summary is their prototype.
 
 ## Non-goals for v1
 

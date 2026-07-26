@@ -200,9 +200,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         without a DOM. Ctrl+Z inside a text field is left to the browser.
       - Vocabulary split: **Presets** ("reusable carton setups — no part
         attached") vs **Saved estimates**.
-      — carry-in: export stays OUT (ADR-0016 §4). Copy-summary + packed-view PNG
-      are cheap schema-free conveniences; CSV/PDF wait for a real dogfooding
-      request.
+      — carry-in **resolved by ADR-0017 / item 12** (2026-07-25): dogfooding
+      produced the real request the deferral was waiting on. Copy-summary,
+      measurements CSV and packed-view PNG are item 12; PDF stays deferred.
       — **dogfood finding (2026-07-25), fixed**: Ctrl+Z was dead after a spinner
       click. The steps WERE recorded — but focus stays in the number input, and
       the routing rule deferred every editable field to the browser, whose undo
@@ -228,6 +228,29 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       had made the suite stateful, and a dogfooded maximized-on-second-monitor
       window made the packaged run take 12.2 minutes instead of 53 s WITH
       NOTHING FAILING. `launchApp` now gives every launch its own temp profile.
+
+- [ ] 12. Export — **ADR-0017**: copy summary + measurements CSV + packed-view
+      PNG, all derived from the live request/result pair; warnings travel with
+      every export (ADR-0015 extended past the app boundary); one `export:save`
+      IPC in main (dialog + write bytes). PDF and bulk export stay out — see the
+      ADR's revisit triggers. Scoped 2026-07-25, effort-ordered:
+      - [ ] **summary + CSV builders** (`export/` module) — pure text derivation
+        from request + result + parts + display units; open-mesh and truncation
+        qualifiers included; unit-tested in Node, including the
+        warnings-travel test the ADR mandates.
+      - [ ] **copy summary button** — results header next to Save estimate,
+        clipboard write, disabled while the result is stale/in-flight (same
+        guard as Save estimate).
+      - [ ] **export IPC** — `export:save` channel (shared constants → preload
+        method → main handler with `dialog.showSaveDialog` + write), suggested
+        filename from part + carton.
+      - [ ] **save CSV button** — builders + IPC, first consumer of the channel.
+      - [ ] **save PNG button** — packed-view capture (render then read back in
+        the same frame, no standing `preserveDrawingBuffer`), only offered when
+        a current packed view exists.
+      - [ ] **e2e** — clipboard summary asserted for content AND qualifiers;
+        CSV/PNG driven through the IPC with a stubbed save path (the dialog is
+        native); mutation-test the qualifier path.
 
 ## Later
 
