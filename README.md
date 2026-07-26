@@ -11,14 +11,22 @@
 
 ---
 
-Given a 3D model of a part (or an assembly) and a shipping carton, Packaging
-Estimator answers the questions packaging engineers actually ask — **does it
-fit, in what orientation, and how many can I ship per box** — without doing the
-math by hand or mocking it up physically.
+Given a 3D model of a part (or an assembly) and a shipping carton, Carton Fit
+answers the questions packaging engineers actually ask — **does it fit, in what
+orientation, and how many can I ship per box** — without doing the math by hand
+or mocking it up physically.
 
 Drop a STEP or STL file onto the window, type in the carton, and the estimate
 follows your inputs live: no compute button. The 3D view shows either the model
 or the packed carton with every part in its computed position.
+
+<p align="center">
+  <img src="doc/screenshot.png"
+       alt="Carton Fit: an 18-part assembly packed into a carton measuring 12 × 5 × 12 inches
+            outside, shown as a 3D packed view beside the inputs panel, with a &quot;Fits&quot;
+            result reporting all 18 parts placed and space as the binding constraint."
+       width="100%" />
+</p>
 
 ## Features
 
