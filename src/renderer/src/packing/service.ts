@@ -36,9 +36,10 @@ export function startAutoPack(): () => void {
     if (
       state.parts !== prev.parts ||
       state.settings !== prev.settings ||
-      state.unitPartName !== prev.unitPartName
+      state.unitPartName !== prev.unitPartName ||
+      state.partWeightsG !== prev.partWeightsG
     ) {
-      autoPack.changed(state.parts, state.settings, state.unitPartName)
+      autoPack.changed(state.parts, state.settings, state.unitPartName, state.partWeightsG)
     }
   })
 

@@ -38,7 +38,8 @@ export function collectExport(): EstimateExport | null {
     request: packRequest,
     result: packResult,
     settings,
-    warnings
+    warnings,
+    overrides: state.partWeightsG
   }
 }
 

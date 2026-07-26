@@ -1,4 +1,5 @@
 import { useAppStore, type PackingSettings } from '../store'
+import type { PartWeightOverrides } from '../packing/kinds'
 
 // Undo/redo over the packing inputs (ADR-0016 §2).
 //
@@ -20,8 +21,24 @@ const MAX_DEPTH = 100
 /** Edits to the same field within this window collapse into one step. */
 const COALESCE_MS = 600
 
-interface Entry {
+/**
+ * One undoable state: the settings plus the per-kind weight overrides
+ * (ADR-0018 §4).
+ *
+ * Overrides are undoable for the same reason settings are — typing weights
+ * into a list of kinds is precisely the fiddling Ctrl+Z exists for — but they
+ * live in their own store slice, so the snapshot has to carry both. Grouping
+ * them here rather than adding a second stack keeps one timeline: an undo
+ * walks back whatever the last edit touched, without the user having to know
+ * which kind of input it was.
+ */
+interface Snapshot {
   settings: PackingSettings
+  overrides: PartWeightOverrides
+}
+
+interface Entry {
+  state: Snapshot
   /** What changed to produce this entry — the coalescing key. */
   signature: string
   at: number
@@ -46,11 +63,11 @@ let detach: (() => void) | null = null
  * which matters, because the number fields commit on every keystroke, so typing
  * "125" is three store writes.
  */
-export function changeSignature(prev: PackingSettings, next: PackingSettings): string {
+export function changeSignature(prev: Snapshot, next: Snapshot): string {
   const changed: string[] = []
-  for (const key of Object.keys(next) as (keyof PackingSettings)[]) {
-    const before = prev[key]
-    const after = next[key]
+  for (const key of Object.keys(next.settings) as (keyof PackingSettings)[]) {
+    const before = prev.settings[key]
+    const after = next.settings[key]
     if (Array.isArray(before) && Array.isArray(after)) {
       const indices = after
         .map((value, i) => (value === before[i] ? null : i))
@@ -60,10 +77,19 @@ export function changeSignature(prev: PackingSettings, next: PackingSettings): s
       changed.push(String(key))
     }
   }
+
+  // Per-kind overrides are named INDIVIDUALLY, for the same reason the carton
+  // dimensions are named per index: they share one container, so a
+  // container-level signature would collapse "set the bolt, then set the nut"
+  // into a single undo step while still splitting a typed number into three.
+  for (const kind of new Set([...Object.keys(prev.overrides), ...Object.keys(next.overrides)])) {
+    if (prev.overrides[kind] !== next.overrides[kind]) changed.push(`weight:${kind}`)
+  }
+
   return changed.sort().join('|')
 }
 
-function record(settings: PackingSettings, signature: string, now: number): void {
+function record(state: Snapshot, signature: string, now: number): void {
   const top = stack[cursor]
   const coalesces =
     top !== undefined &&
@@ -75,14 +101,14 @@ function record(settings: PackingSettings, signature: string, now: number): void
   if (coalesces) {
     // Same field, still typing: move the current entry rather than adding one,
     // so the step behind the burst is the state before it started.
-    stack[cursor] = { settings, signature, at: now }
+    stack[cursor] = { state, signature, at: now }
     return
   }
 
   // A fresh edit invalidates anything that was ahead of us: you cannot redo
   // into a future you just diverged from.
   stack = stack.slice(0, cursor + 1)
-  stack.push({ settings, signature, at: now })
+  stack.push({ state, signature, at: now })
   if (stack.length > MAX_DEPTH) stack.shift()
   cursor = stack.length - 1
 }
@@ -90,10 +116,14 @@ function record(settings: PackingSettings, signature: string, now: number): void
 function apply(entry: Entry): void {
   applying = true
   try {
-    // Through the normal setter, so persistence and auto-run behave exactly as
+    // Through the normal setters, so persistence and auto-run behave exactly as
     // they do for a user edit. A snapshot carries every key, so merging equals
     // replacing.
-    useAppStore.getState().updateSettings(entry.settings)
+    //
+    // ONE write covering both slices — the same action a restore uses. The
+    // `applying` guard would stop a second write being recorded anyway, but a
+    // single write also means a single re-pack rather than two.
+    useAppStore.getState().restoreInputs(entry.state.settings, entry.state.overrides)
   } finally {
     // The store notifies subscribers synchronously inside `set`, so by here our
     // own write has already been seen and skipped.
@@ -184,15 +214,19 @@ export function startUndoHistory(now: () => number = Date.now): () => void {
   if (started) return () => {}
   started = true
 
-  stack = [
-    { settings: useAppStore.getState().settings, signature: '', at: now() }
-  ]
+  const snapshot = (state: ReturnType<typeof useAppStore.getState>): Snapshot => ({
+    settings: state.settings,
+    overrides: state.partWeightsG
+  })
+
+  stack = [{ state: snapshot(useAppStore.getState()), signature: '', at: now() }]
   cursor = 0
 
   const unsubscribe = useAppStore.subscribe((state, prev) => {
-    if (state.settings === prev.settings) return
+    if (state.settings === prev.settings && state.partWeightsG === prev.partWeightsG) return
     if (applying) return // our own undo/redo write
-    record(state.settings, changeSignature(prev.settings, state.settings), now())
+    const next = snapshot(state)
+    record(next, changeSignature(snapshot(prev), next), now())
   })
 
   detach = () => {

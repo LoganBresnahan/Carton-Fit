@@ -40,6 +40,9 @@ beforeEach(() => {
     maxWeightG: 1000,
     clearancePartMm: 0
   })
+  // Overrides are a separate slice, so resetting settings alone leaves the
+  // previous test's weights in place and the next assertion reads them.
+  useAppStore.getState().setPartWeights({})
   now = 1_000_000
   startUndoHistory(clock)
 })
@@ -213,19 +216,104 @@ describe('bulk restores are one step', () => {
 })
 
 describe('changeSignature', () => {
+  /** A snapshot: settings plus the per-kind overrides (ADR-0018). */
+  const snap = (
+    patch: Partial<ReturnType<typeof settings>> = {},
+    overrides: Record<string, number> = {}
+  ) => ({ settings: { ...settings(), ...patch }, overrides })
+
   it('names the array INDEX that changed, not just the field', () => {
-    const a = { ...settings(), boxDimsMm: [1, 2, 3] as [number, number, number] }
-    const b = { ...settings(), boxDimsMm: [1, 9, 3] as [number, number, number] }
+    const a = snap({ boxDimsMm: [1, 2, 3] as [number, number, number] })
+    const b = snap({ boxDimsMm: [1, 9, 3] as [number, number, number] })
     expect(changeSignature(a, b)).toBe('boxDimsMm[1]')
   })
 
   it('is empty when nothing changed, which never coalesces', () => {
-    expect(changeSignature(settings(), { ...settings() })).toBe('')
+    expect(changeSignature(snap(), snap())).toBe('')
   })
 
   it('is order-independent across several fields', () => {
-    const a = settings()
-    const b = { ...a, maxWeightG: 5, clearancePartMm: 9 }
-    expect(changeSignature(a, b)).toBe('clearancePartMm|maxWeightG')
+    expect(changeSignature(snap(), snap({ maxWeightG: 5, clearancePartMm: 9 }))).toBe(
+      'clearancePartMm|maxWeightG'
+    )
+  })
+
+  // ADR-0018 §4: overrides share one container, so a container-level signature
+  // would collapse "set the bolt, then set the nut" into one undo step.
+  it('names the KIND whose weight changed', () => {
+    expect(changeSignature(snap({}, {}), snap({}, { bolt: 7 }))).toBe('weight:bolt')
+  })
+
+  it('distinguishes two different kinds', () => {
+    const a = snap({}, { bolt: 7 })
+    const b = snap({}, { bolt: 7, nut: 3 })
+    expect(changeSignature(a, b)).toBe('weight:nut')
+  })
+
+  it('names a CLEARED override too, so undoing a clear is its own step', () => {
+    expect(changeSignature(snap({}, { bolt: 7 }), snap({}, {}))).toBe('weight:bolt')
+  })
+
+  it('reports a settings edit and a weight edit together', () => {
+    expect(changeSignature(snap({}, {}), snap({ maxWeightG: 5 }, { bolt: 7 }))).toBe(
+      'maxWeightG|weight:bolt'
+    )
+  })
+})
+
+// ADR-0018 §4: typing weights into a list of kinds is exactly the fiddling
+// Ctrl+Z exists for, and overrides live in their own slice — so the snapshot
+// has to carry both halves or undo silently skips half the inputs.
+describe('undo over per-kind weight overrides', () => {
+  const overrides = () => useAppStore.getState().partWeightsG
+  const setWeight = (kind: string, grams: number | null): void =>
+    useAppStore.getState().setPartWeight(kind, grams)
+
+  it('walks an override back and forward', () => {
+    setWeight('bolt', 7)
+    expect(undo()).toBe(true)
+    expect(overrides()).toEqual({})
+    expect(redo()).toBe(true)
+    expect(overrides()).toEqual({ bolt: 7 })
+  })
+
+  it('coalesces retyping ONE kind but not two different kinds', () => {
+    setWeight('bolt', 1)
+    setWeight('bolt', 12) // same key, same window — still typing
+    advance(1000)
+    setWeight('nut', 5)
+
+    expect(undo()).toBe(true)
+    expect(overrides()).toEqual({ bolt: 12 })
+    expect(undo()).toBe(true)
+    expect(overrides()).toEqual({})
+  })
+
+  it('undoes a clear back to the value it removed', () => {
+    setWeight('bolt', 7)
+    advance(1000)
+    setWeight('bolt', null)
+    expect(overrides()).toEqual({})
+
+    expect(undo()).toBe(true)
+    expect(overrides()).toEqual({ bolt: 7 })
+  })
+
+  it('restores settings and overrides together in one step', () => {
+    // A single undo has to put BOTH halves back — the failure mode is a
+    // snapshot that carries settings only, leaving the weights where they were.
+    useAppStore.getState().updateSettings({ maxWeightG: 2000 })
+    advance(1000)
+    setWeight('bolt', 7)
+    advance(1000)
+    useAppStore.getState().updateSettings({ maxWeightG: 3000 })
+
+    expect(undo()).toBe(true)
+    expect(settings().maxWeightG).toBe(2000)
+    expect(overrides()).toEqual({ bolt: 7 })
+
+    expect(undo()).toBe(true)
+    expect(settings().maxWeightG).toBe(2000)
+    expect(overrides()).toEqual({})
   })
 })

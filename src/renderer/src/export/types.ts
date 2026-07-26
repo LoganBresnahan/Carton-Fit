@@ -1,6 +1,7 @@
 import { computeAabb, aabbSize } from '../core/geometry'
 import type { PackRequest, PackResult, Vec3 } from '../core/packing/types'
 import type { PackingSettings } from '../store'
+import type { PartWeightOverrides } from '../packing/kinds'
 
 // What an export is made of (ADR-0017).
 //
@@ -29,6 +30,16 @@ export interface EstimateExport {
    * the one place that owns the wording.
    */
   warnings: readonly string[]
+  /**
+   * Per-kind weight overrides in play (ADR-0018).
+   *
+   * The per-part numbers already reach the CSV through the request, which
+   * carries RESOLVED grams — so this exists only so the summary can say the
+   * weights were corrected by hand rather than all derived from one source.
+   * A reader who is told "density × volume" and given a table that disagrees
+   * with it has been misled by an omission.
+   */
+  overrides: PartWeightOverrides
 }
 
 /** One part's measurements, in canonical units — formatting happens per format. */

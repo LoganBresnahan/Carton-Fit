@@ -30,10 +30,14 @@ export default function ResultsPanel() {
   const parts = useAppStore((s) => s.parts)
   const settings = useAppStore((s) => s.settings)
   const unitPartName = useAppStore((s) => s.unitPartName)
+  const partWeightsG = useAppStore((s) => s.partWeightsG)
 
   // Cheap after the first call per part (memoized in packing/request.ts), and
-  // skipped entirely outside density mode.
-  const openMesh = openMeshWarning(openMeshParts(parts, settings, unitPartName))
+  // skipped entirely outside density mode. Overrides are passed because a kind
+  // with an entered weight no longer depends on its volume (ADR-0018 §4).
+  const openMesh = openMeshWarning(
+    openMeshParts(parts, settings, unitPartName, partWeightsG)
+  )
 
   if (status === 'idle' && !result) return null
 

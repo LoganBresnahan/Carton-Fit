@@ -45,7 +45,16 @@ function weightLines(input: EstimateExport): string[] {
     settings.weightMode === 'direct'
       ? `${weightText(settings.partWeightG, units)} ${unit} per part, entered directly`
       : `density ${settings.densityGPerCm3} g/cm³ × part volume`
-  return [`Packed weight: ${packed} of ${cap} ${unit}`, `Part weight: ${source}`]
+
+  // Naming the source alone would misdescribe a mixed assembly (ADR-0018): the
+  // per-part figures below come from entered weights for some kinds, so a flat
+  // "density × volume" claim is contradicted by the table under it.
+  const overridden = Object.keys(input.overrides).length
+  const qualifier =
+    overridden > 0
+      ? ` — ${overridden} kind${overridden === 1 ? '' : 's'} overridden individually`
+      : ''
+  return [`Packed weight: ${packed} of ${cap} ${unit}`, `Part weight: ${source}${qualifier}`]
 }
 
 function partLines(input: EstimateExport): string[] {

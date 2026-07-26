@@ -4,6 +4,7 @@ import type { ImportSink, ImportStats, ImportStatus, LoadedFile } from './import
 import type { ConfigurationSummary, EstimateRow } from '../../shared/storage'
 import type { PackMode, PackRequest, PackResult, QualityTier, Vec3 } from './core/packing/types'
 import type { PackSink, PackStatus } from './packing/types'
+import type { PartWeightOverrides } from './packing/kinds'
 import type { UnitSystem } from './core/units'
 import { DEFAULT_MAX_WEIGHT_G, inToMm } from './core/units'
 
@@ -115,6 +116,25 @@ interface AppState {
   unitPartName: string | null
   setUnitPartName: (name: string | null) => void
 
+  /** Per-kind weight overrides in grams (ADR-0018), keyed by the product name
+   *  before our ordinal suffix. File-scoped for the same reason
+   *  `unitPartName` is: a kind name belongs to the loaded file, and a
+   *  persisted `bolt → 23 g` silently repricing next week's unrelated file
+   *  would be corruption wearing a convenience's face. Cleared on import,
+   *  absent from `settings`, and therefore never in a preset. */
+  partWeightsG: PartWeightOverrides
+  /** Set an override, or clear it back to the mode's answer with null. */
+  setPartWeight: (kind: string, grams: number | null) => void
+  /** Replace the whole map — used when undo/redo re-applies a snapshot. */
+  setPartWeights: (overrides: PartWeightOverrides) => void
+  /** Apply settings AND overrides as ONE store write.
+   *
+   *  Restoring a saved estimate touches both slices, and two writes are two
+   *  subscription notifications — which is two entries on the undo stack, so
+   *  the restore would cost two Ctrl+Z presses. ADR-0016 §2 says a restore is
+   *  one step, and this is what makes that true. */
+  restoreInputs: (settings: Partial<PackingSettings>, overrides: PartWeightOverrides) => void
+
   /** Which 3D view is showing (VISION: "toggle between model view and packed
    *  view"). 'auto' follows the estimate — the packed carton once one exists —
    *  while an explicit choice pins it, so inspecting the model does not get
@@ -172,6 +192,7 @@ export const useAppStore = create<AppState>((set) => ({
       stats: null,
       contentHash: null,
       unitPartName: null,
+      partWeightsG: {},
       ...NO_PACK
     }),
   importSucceeded: (parts, stats, contentHash) =>
@@ -184,6 +205,7 @@ export const useAppStore = create<AppState>((set) => ({
       stats: null,
       contentHash: null,
       unitPartName: null,
+      partWeightsG: {},
       ...NO_PACK
     }),
   resetImport: () =>
@@ -195,6 +217,7 @@ export const useAppStore = create<AppState>((set) => ({
       stats: null,
       contentHash: null,
       unitPartName: null,
+      partWeightsG: {},
       ...NO_PACK
     }),
 
@@ -203,6 +226,20 @@ export const useAppStore = create<AppState>((set) => ({
 
   unitPartName: null,
   setUnitPartName: (unitPartName) => set({ unitPartName }),
+
+  partWeightsG: {},
+  setPartWeight: (kind, grams) =>
+    set((s) => {
+      // Clearing removes the key rather than storing a sentinel, so "has an
+      // override" stays a plain `in` test everywhere downstream.
+      const next = { ...s.partWeightsG }
+      if (grams === null) delete next[kind]
+      else next[kind] = grams
+      return { partWeightsG: next }
+    }),
+  setPartWeights: (partWeightsG) => set({ partWeightsG }),
+  restoreInputs: (patch, partWeightsG) =>
+    set((s) => ({ settings: { ...s.settings, ...patch }, partWeightsG })),
 
   viewMode: 'auto',
   setViewMode: (viewMode) => set({ viewMode }),

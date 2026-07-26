@@ -1,4 +1,5 @@
 import { useAppStore, type PackingSettings } from '../store'
+import { pruneOverrides, type PartWeightOverrides } from '../packing/kinds'
 import { storageMessage } from './message'
 import type { EstimateRow, StorageApi } from '../../../shared/storage'
 
@@ -47,7 +48,12 @@ export async function saveEstimate(injected?: StorageApi): Promise<boolean> {
       // Empty when hashing failed; the row still saves, it just cannot be
       // threaded to other imports of the same geometry.
       contentHash: state.contentHash ?? '',
-      settings: state.settings,
+      // Overrides ride ALONGSIDE settings rather than inside them (ADR-0018
+      // §3): they are file-scoped, so folding them into PackingSettings would
+      // put them in presets and localStorage, which is exactly what that
+      // decision forbids. The blob is opaque JSON to storage, so carrying one
+      // more key needs no schema change and no migration.
+      settings: { ...state.settings, partWeightsG: state.partWeightsG },
       result: state.packResult
     })
     await refreshSavedEstimates(injected)
@@ -83,5 +89,29 @@ export async function refreshSavedEstimates(injected?: StorageApi): Promise<void
  * replacing wholesale would leave them undefined.
  */
 export function restoreEstimateSettings(row: EstimateRow): void {
-  useAppStore.getState().updateSettings(row.settings as Partial<PackingSettings>)
+  const state = useAppStore.getState()
+  const saved = (row.settings ?? {}) as Partial<PackingSettings> & {
+    partWeightsG?: unknown
+  }
+
+  // Per-kind overrides are restored separately from settings, and PRUNED to
+  // the kinds the loaded file actually has (ADR-0018 §4). A row saved against
+  // another assembly would otherwise leave invisible state: overrides with no
+  // row in the panel, silently repricing nothing — or worse, a kind name that
+  // happens to collide.
+  // ONE store write, not two: two would be two undo entries, and ADR-0016 §2
+  // makes a restore one step.
+  const { partWeightsG, ...settings } = saved
+  state.restoreInputs(
+    settings,
+    isOverrides(partWeightsG) ? pruneOverrides(partWeightsG, state.parts) : {}
+  )
+}
+
+/** A row's blob is JSON written by whatever build was running at the time, so
+ *  its shape is a claim, not a guarantee — the same defensiveness
+ *  `packing/summary.ts` applies to the rest of the row. Individual values are
+ *  re-checked at use (`overrideForPart`); this only rejects a wrong container. */
+function isOverrides(value: unknown): value is PartWeightOverrides {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

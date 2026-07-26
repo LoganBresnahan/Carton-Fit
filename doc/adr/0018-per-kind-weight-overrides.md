@@ -72,6 +72,14 @@ it.
 
 ## Consequences
 
+- **A restore has to be ONE store write** (learned while implementing, caught
+  by ADR-0016's existing undo test). Restoring an estimate now touches two
+  slices, and two writes are two subscription notifications — which is two undo
+  entries, so a restore quietly cost two Ctrl+Z presses. `restoreInputs`
+  applies settings and overrides in a single `set`; undo's own apply uses it
+  too, which also collapses two re-packs into one. Any future slice that
+  participates in undo inherits this rule.
+
 - Renderer-only: no schema change (the settings blob is opaque JSON to
   storage), no IPC change, no migration.
 - The pack request builder takes the overrides as an argument and stays pure;

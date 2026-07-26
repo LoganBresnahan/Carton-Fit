@@ -101,6 +101,13 @@ export function buildCsv(input: EstimateExport): string {
   if (result.mode === 'fit-check' && result.unplaced.length > 0) {
     lines.push(row(['Did not fit', result.unplaced.join('; ')]))
   }
+  // Which kinds were corrected by hand (ADR-0018). The per-part columns above
+  // already hold the resolved weights; this says where they came from, so the
+  // table cannot be mistaken for one uniform source.
+  const overridden = Object.keys(input.overrides)
+  if (overridden.length > 0) {
+    lines.push(row(['Weight overrides', overridden.join('; ')]))
+  }
 
   for (const warning of input.warnings) lines.push(row(['Warning', warning]))
 

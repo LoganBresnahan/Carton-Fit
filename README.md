@@ -34,7 +34,9 @@ or the packed carton with every part in its computed position.
   implemented.
 - **Weight is a hard constraint, not a footnote.** Set a max package weight
   (default 35 lb); enter part weight directly or derive it from material
-  density × mesh volume. Every result states which constraint — space or
+  density × mesh volume. Either is a *default*: in a mixed assembly you can
+  override the weight of any **kind** of part individually — one entry covers
+  all six instances of a bolt. Every result states which constraint — space or
   weight — was the binding one.
 - **Honest numbers.** Counts are labeled as heuristic where they are heuristic,
   a positive fit is backed by a concrete arrangement, and a density weight

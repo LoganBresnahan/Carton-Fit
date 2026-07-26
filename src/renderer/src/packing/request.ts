@@ -1,5 +1,6 @@
 import { isClosedMesh, meshVolume } from '../core/geometry'
 import { densityWeightG } from '../core/units'
+import { overrideForPart, type PartWeightOverrides } from './kinds'
 import { innerCartonMm, type PackingSettings } from '../store'
 import type { PackPart, PackRequest } from '../core/packing/types'
 import type { ImportedPart } from '../workers/import-protocol'
@@ -26,10 +27,30 @@ function volumeOf(part: ImportedPart): number {
 /** Per-part weight in grams, from whichever ADR-0004 source the user selected.
  *  Direct entry is per part, so it applies to each part in a multi-part file.
  *  On an open mesh the density branch is WRONG, not approximate — see
- *  {@link openMeshParts}, which is what makes that visible instead of silent. */
+ *  {@link openMeshParts}, which is what makes that visible instead of silent.
+ *
+ *  This is the DEFAULT a part gets. A per-kind override replaces it — see
+ *  {@link effectiveWeightG}, which is what the request is actually built from. */
 export function partWeightG(part: ImportedPart, settings: PackingSettings): number {
   if (settings.weightMode === 'direct') return settings.partWeightG
   return densityWeightG(settings.densityGPerCm3, volumeOf(part))
+}
+
+/**
+ * What a part actually weighs for packing: its kind's override if one is set,
+ * else the mode's answer (ADR-0018 §1).
+ *
+ * The layering is the decision. Density stays useful as a default GENERATOR —
+ * set the steel once, then correct the two nylon parts — rather than being
+ * replaced by a mode that makes every weight a typing job.
+ */
+export function effectiveWeightG(
+  part: ImportedPart,
+  settings: PackingSettings,
+  names: ReadonlySet<string>,
+  overrides: PartWeightOverrides
+): number {
+  return overrideForPart(part, names, overrides) ?? partWeightG(part, settings)
 }
 
 // Closedness is as expensive as the volume it qualifies and just as stable per
@@ -62,10 +83,19 @@ function isClosed(part: ImportedPart): boolean {
 export function openMeshParts(
   parts: readonly ImportedPart[],
   settings: PackingSettings,
-  unitPartName: string | null = null
+  unitPartName: string | null = null,
+  overrides: PartWeightOverrides = {}
 ): string[] {
   if (settings.weightMode !== 'density') return []
+  const names = new Set(parts.map((part) => part.name))
   return partsForRequest(parts, settings, unitPartName)
+    // An overridden kind no longer derives its weight from its volume, so the
+    // volume being meaningless costs nothing (ADR-0018 §4). This is not merely
+    // consistency: entering the weight directly is one of the two fixes this
+    // warning's own wording recommends, so the warning has to retire when the
+    // user takes its advice — otherwise it is telling them to do something it
+    // will not acknowledge.
+    .filter((part) => overrideForPart(part, names, overrides) === null)
     .filter((part) => !isClosed(part))
     .map((part) => part.name)
 }
@@ -97,14 +127,19 @@ function partsForRequest(
 export function buildPackRequest(
   parts: readonly ImportedPart[],
   settings: PackingSettings,
-  unitPartName: string | null = null
+  unitPartName: string | null = null,
+  overrides: PartWeightOverrides = {}
 ): PackRequest | null {
   if (parts.length === 0) return null
+  // Resolved against the WHOLE file's names, not the selected subset: kind
+  // membership is a property of the file, and a max-quantity run over one
+  // chosen part must still know that `bolt (2)` is a bolt.
+  const names = new Set(parts.map((part) => part.name))
   const selected = partsForRequest(parts, settings, unitPartName)
   const packParts: PackPart[] = selected.map((part) => ({
     name: part.name,
     positions: part.positions,
-    weightG: partWeightG(part, settings)
+    weightG: effectiveWeightG(part, settings, names, overrides)
   }))
   return {
     mode: settings.mode,

@@ -2,6 +2,7 @@ import DropZone from './components/DropZone'
 import ImportResult from './components/ImportResult'
 import ModeTierSelectors from './components/ModeTierSelectors'
 import InputsPanel from './components/InputsPanel'
+import PartWeightsPanel from './components/PartWeightsPanel'
 import ResultsPanel from './components/ResultsPanel'
 import StorageBanner from './components/StorageBanner'
 import UnitPicker from './components/UnitPicker'
@@ -29,6 +30,9 @@ export default function App() {
             <ModeTierSelectors />
             <UnitPicker />
             <InputsPanel />
+            {/* Directly under the weight inputs it overrides — the section is
+                a correction to them, not an unrelated feature. */}
+            <PartWeightsPanel />
             <ConfigurationsPanel />
             <SavedEstimatesPanel />
           </div>

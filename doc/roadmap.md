@@ -264,31 +264,44 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       to `Number()`. The count is the one figure in that file someone computes
       with. Now plain, pinned at both layers.
 
-- [ ] 13. Per-kind weight overrides — **ADR-0018**: effective weight = override
-      for the part's kind (base name before our ordinal suffix), else the
-      current mode's answer; no third weight mode. File-scoped slice cleared on
-      import (the `unitPartName` precedent), never in persisted settings.
-      Renderer-only; no schema, IPC or migration. Scoped 2026-07-26,
-      effort-ordered:
-      - [ ] **kind grouping + effective weight** — pure helpers: group parts by
-        base name with instance counts; resolve override ?? mode weight in
-        `packing/request.ts` (overrides as an argument, builder stays pure).
-        Unit-tested, including suffix-parsing edge cases (`bolt (2)` groups
-        with `bolt`; a part literally named with parentheses doesn't break).
-      - [ ] **store slice + warning skip** — `partWeightsG` map cleared on
-        import; auto-run watches it; `openMeshParts` skips overridden kinds
-        (entering the override retires the warning that suggested it).
-      - [ ] **Part weights panel** — one row per kind with count
-        (`bolt ×6`), computed default shown until overridden, clear-to-computed
-        affordance; must not crowd the 360px column.
-      - [ ] **saved estimates round-trip** — overrides ride the settings blob;
-        restore re-applies by kind, ignoring names the loaded file lacks.
-      - [ ] **undo coverage** — ADR-0016 §2 extended past `settings`: per-kind
-        change signature, so bolt-then-nut is two steps and one typed value is
-        one.
-      - [ ] **e2e + export ripple** — override changes the count end-to-end;
-        the open-mesh warning disappears when the open part's kind is
-        overridden; summary's "Part weight:" line says overrides are in play.
+- [x] 13. Per-kind weight overrides — **ADR-0018**, shipped 2026-07-26 in six
+      slices. Effective weight = override for the part's kind (base name before
+      our ordinal suffix), else the current mode's answer; no third weight mode.
+      File-scoped slice cleared on import (the `unitPartName` precedent), never
+      in persisted settings. Renderer-only; no schema, IPC or migration.
+      - [x] **kind grouping + effective weight** (`packing/kinds.ts`) — the
+        suffix rule is the subtle part: ` (N)` is OUR uniquing, so it is
+        stripped only when the base name is genuinely in the file. A CAD part
+        named `flange (2)` with no `flange` beside it stays its own kind rather
+        than being filed under a phantom group. Corrupt override values
+        (negative, NaN, non-numeric) fall back to the computed weight — they
+        round-trip through a saved estimate's JSON, so the shape is a claim.
+      - [x] **store slice + warning skip** — `partWeightsG` cleared on import;
+        auto-run watches it; `openMeshParts` skips overridden kinds, so taking
+        the warning's own advice retires the warning.
+      - [x] **Part weights panel** — one row per kind with count (`bolt ×6`);
+        18 parts of the AS1 assembly collapse to 5 rows. Computed weight shown
+        as a dimmed placeholder, so the default is visible without looking
+        entered; clearing the field is how you get it back. Hidden entirely
+        below 2 kinds, where the file-wide weight already says everything.
+      - [x] **saved estimates round-trip** — overrides ride ALONGSIDE settings
+        in the blob (inside would put them in presets and localStorage, which
+        ADR-0018 §3 forbids); restore prunes to the loaded file's kinds.
+      - [x] **undo coverage** — the snapshot carries both slices, with a
+        `weight:<kind>` signature so bolt-then-nut is two steps.
+      - [x] **e2e + export ripple** — 7 specs; the summary and CSV now say
+        which kinds were corrected by hand, because "density × volume" alone
+        is contradicted by a table it no longer explains.
+      — **the existing undo test caught a real ripple**: restoring an estimate
+      began writing two slices, and two store writes are two undo entries — so
+      a restore silently cost two Ctrl+Z presses, against ADR-0016 §2's "one
+      step". Fixed with a `restoreInputs` action that writes both in one `set`;
+      undo's own apply uses it too, which also collapses two re-packs into one.
+      — coverage note: the warning-retires-on-override path is pinned at the
+      UNIT layer (`tests/part-kinds.test.ts`). The e2e proves the alternative
+      documented fix (switch to direct entry) because the only open-mesh golden
+      is a single-kind file, and a single kind hides the panel. A multi-kind
+      open-mesh sample would close that gap if one is ever added.
 
 ## Later
 

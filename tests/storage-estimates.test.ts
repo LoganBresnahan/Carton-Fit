@@ -69,7 +69,24 @@ describe('saveEstimate', () => {
     expect(api.recorded[0].fileName).toBe('bracket.stp')
     expect(api.recorded[0].contentHash).toBe('hash-abc')
     expect(api.recorded[0].result).toBe(RESULT)
-    expect(api.recorded[0].settings).toEqual(useAppStore.getState().settings)
+    // Settings PLUS the per-kind overrides (ADR-0018 §4). They ride alongside
+    // rather than inside PackingSettings, because they are file-scoped and
+    // folding them in would put them in presets and localStorage.
+    expect(api.recorded[0].settings).toEqual({
+      ...useAppStore.getState().settings,
+      partWeightsG: useAppStore.getState().partWeightsG
+    })
+  })
+
+  it('carries the per-kind weight overrides into the row', async () => {
+    const api = fakeApi()
+    withEstimate()
+    useAppStore.getState().setPartWeight('bolt', 23)
+
+    expect(await saveEstimate(api)).toBe(true)
+    expect((api.recorded[0].settings as { partWeightsG: unknown }).partWeightsG).toEqual({
+      bolt: 23
+    })
   })
 
   it('saves once per press — not once per estimate', async () => {
@@ -176,5 +193,49 @@ describe('restoreEstimateSettings', () => {
     expect(useAppStore.getState().settings.maxWeightG).toBe(777)
     expect(useAppStore.getState().settings.clearancePartMm).toBe(5)
     expect(useAppStore.getState().settings.mode).toBeDefined()
+  })
+
+  // ADR-0018 §4: overrides restore by KIND, and only for kinds this file has.
+  describe('per-kind weight overrides', () => {
+    /** Two parts named so `bolt (2)` groups under `bolt`. */
+    const parts = [
+      { name: 'bolt', positions: new Float32Array(), normals: null, indices: new Uint32Array() },
+      { name: 'bolt (2)', positions: new Float32Array(), normals: null, indices: new Uint32Array() }
+    ]
+
+    beforeEach(() => {
+      useAppStore.getState().importSucceeded(parts, { elapsedMs: 1, partCount: 2, triangleCount: 0 }, 'h')
+    })
+
+    it('restores an override for a kind the loaded file has', () => {
+      restoreEstimateSettings(row({ maxWeightG: 5, partWeightsG: { bolt: 23 } }))
+      expect(useAppStore.getState().partWeightsG).toEqual({ bolt: 23 })
+    })
+
+    it('DROPS an override naming a kind this file lacks', () => {
+      // A row saved against another assembly would otherwise leave invisible
+      // state: an override with no row in the panel, repricing nothing.
+      restoreEstimateSettings(row({ partWeightsG: { sprocket: 9 } }))
+      expect(useAppStore.getState().partWeightsG).toEqual({})
+    })
+
+    it('clears existing overrides when the row has none', () => {
+      useAppStore.getState().setPartWeight('bolt', 99)
+      restoreEstimateSettings(row({ maxWeightG: 5 }))
+      expect(useAppStore.getState().partWeightsG).toEqual({})
+    })
+
+    it('survives a row whose overrides are the wrong shape entirely', () => {
+      // The blob is JSON from whatever build wrote it — a claim, not a promise.
+      for (const bad of [null, 'bolt', 42, ['bolt', 1]]) {
+        restoreEstimateSettings(row({ partWeightsG: bad }))
+        expect(useAppStore.getState().partWeightsG).toEqual({})
+      }
+    })
+
+    it('does not leak partWeightsG into settings', () => {
+      restoreEstimateSettings(row({ partWeightsG: { bolt: 23 } }))
+      expect('partWeightsG' in useAppStore.getState().settings).toBe(false)
+    })
   })
 })

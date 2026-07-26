@@ -104,6 +104,7 @@ function input(patch: Partial<EstimateExport> = {}): EstimateExport {
     result: fitResult(),
     settings: settings(),
     warnings: [],
+    overrides: {},
     ...patch
   }
 }
@@ -242,6 +243,15 @@ describe('buildCsv', () => {
     expect(csv).not.toContain('27,000')
   })
 
+  it('names the kinds whose weight was corrected by hand (ADR-0018)', () => {
+    const csv = buildCsv(input({ overrides: { bolt: 7, plate: 900 } }))
+    expect(csv).toContain('Weight overrides,bolt; plate')
+  })
+
+  it('says nothing about overrides when there are none', () => {
+    expect(buildCsv(input())).not.toContain('Weight overrides')
+  })
+
   it('ends with a newline', () => {
     expect(buildCsv(input()).endsWith('\n')).toBe(true)
   })
@@ -273,6 +283,24 @@ describe('buildSummary', () => {
     )
     expect(text).toContain('Carton (inner): 11.5 × 11.5 × 11.5 in')
     expect(text).toContain('entered as outer 12 × 12 × 12 in with 0.25 in walls')
+  })
+
+  it('qualifies the weight source when kinds were overridden (ADR-0018)', () => {
+    // "density × volume" alone would be contradicted by the table under it.
+    const text = buildSummary(
+      input({
+        settings: settings({ weightMode: 'density', densityGPerCm3: 7.85 }),
+        overrides: { bolt: 7 }
+      })
+    )
+    expect(text).toContain('density 7.85 g/cm³ × part volume — 1 kind overridden individually')
+
+    const two = buildSummary(input({ overrides: { bolt: 7, plate: 9 } }))
+    expect(two).toContain('2 kinds overridden individually')
+  })
+
+  it('makes no such claim when nothing was overridden', () => {
+    expect(buildSummary(input())).not.toContain('overridden')
   })
 
   it('names what did not fit', () => {

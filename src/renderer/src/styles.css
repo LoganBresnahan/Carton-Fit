@@ -529,6 +529,52 @@ body {
   gap: 0.3rem;
   margin-left: auto;
 }
+/* Per-kind weight overrides (ADR-0018). Borrows the inputs' field metrics so a
+   row reads as another input, which is what it is — a correction to the weight
+   entered above it. Long kind names truncate rather than pushing the number
+   field off the panel, the same rule .config-name follows. */
+.kind-list {
+  list-style: none;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.kind-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.kind-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kind-count {
+  color: var(--muted);
+  font-size: 0.8em;
+}
+.kind-weight {
+  width: 5.5rem;
+  padding: 0.3rem 0.4rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  text-align: right;
+}
+/* An un-overridden row shows its computed weight as a placeholder; dimming it
+   keeps "this is what it would be" distinct from "this is what I typed". */
+.kind-weight::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
 /* CSV and PNG wrap together rather than separately — see ExportFileButtons. */
 .export-group {
   display: flex;

@@ -2,6 +2,7 @@ import { buildPackRequest } from './request'
 import type { PackingSettings } from '../store'
 import type { PackRequest } from '../core/packing/types'
 import type { ImportedPart } from '../workers/import-protocol'
+import type { PartWeightOverrides } from './kinds'
 
 // Auto-run (roadmap item 4): the estimate follows the inputs — no "compute"
 // button. Every settings edit and every new import re-packs.
@@ -39,7 +40,8 @@ export interface AutoPack {
   changed(
     parts: readonly ImportedPart[],
     settings: PackingSettings,
-    unitPartName?: string | null
+    unitPartName?: string | null,
+    overrides?: PartWeightOverrides
   ): void
   dispose(): void
 }
@@ -54,14 +56,14 @@ export function createAutoPack(
   let pending: unknown = null
 
   return {
-    changed(parts, settings, unitPartName = null) {
+    changed(parts, settings, unitPartName = null, overrides = {}) {
       if (pending !== null) timer.cancel(pending)
       // The request is built when the timer FIRES, from the arguments of the
       // last call — so the dispatched request always reflects the newest inputs,
       // and superseded intermediates cost nothing (not even a mesh-volume pass).
       pending = timer.schedule(() => {
         pending = null
-        const request = buildPackRequest(parts, settings, unitPartName)
+        const request = buildPackRequest(parts, settings, unitPartName, overrides)
         if (request) dispatch(request)
       }, delayMs)
     },
