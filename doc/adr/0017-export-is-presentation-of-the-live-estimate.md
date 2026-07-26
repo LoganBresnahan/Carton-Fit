@@ -74,6 +74,22 @@ storage banner is not reused.
 
 - Export lives in the renderer as pure derivation (`export/` module) plus one
   dumb IPC; the pure text/CSV builders unit-test in Node like everything else.
+- **Exported numbers are never locale-grouped** (learned while implementing).
+  `27,000` is two cells in a CSV and `NaN` back through `Number()`, even
+  quoted. The results panel groups digits because a human reads it; a file is
+  read by a spreadsheet first. The two vocabularies genuinely differ here, so
+  the CSV formats the count itself rather than reusing `verdictHeadline` — the
+  one place the export deliberately does NOT reuse the panel's wording.
+- **The PNG needed a registration seam, not an exported renderer.** The
+  viewport's three.js lifecycle lives in a closure (ADR-0008); rather than
+  hoisting it, the island registers a capture function while mounted
+  (`viewport/capture.ts`). Export imports that file and never three.
+- CSV shape: the per-part table, a blank line, then a `Field,Value` tail
+  carrying the estimate and the warnings. Parsers read a ragged tail as extra
+  two-column rows, so the table stays machine-clean and nothing is dropped for
+  tidiness. A per-row warning column was the alternative and is worse — a
+  caveat about the whole estimate, repeated on every line, reads as a property
+  of the part.
 - The PNG button only makes sense when the packed view has something to show —
   it shares the results panel's notion of a current, non-stale result.
 - A new preload surface means the e2e can drive export end-to-end, but the save

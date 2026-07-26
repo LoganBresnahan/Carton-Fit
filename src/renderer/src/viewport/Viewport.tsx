@@ -14,6 +14,7 @@ import { buildPartsScene } from './sceneFromParts'
 import { boundsOfCarton, buildPackedScene } from './sceneFromPlacements'
 import { boundsOfParts, frameBox } from './cameraFraming'
 import { swapContent } from './sceneContent'
+import { registerViewportCapture } from './capture'
 import { resolvedView, useAppStore } from '../store'
 
 // The viewport island (ADR-0008). Owns the imperative three lifecycle and syncs
@@ -127,6 +128,14 @@ export default function Viewport() {
       invalidate()
     }
 
+    // Export's window onto the scene (ADR-0017): render and read back inside
+    // one call, so the drawing buffer is still intact — no standing
+    // preserveDrawingBuffer taxing every frame for a rare click.
+    registerViewportCapture(() => {
+      renderer.render(scene, camera)
+      return renderer.domElement.toDataURL('image/png')
+    })
+
     controls.addEventListener('change', invalidate)
     const observer = new ResizeObserver(() => {
       resize()
@@ -151,6 +160,7 @@ export default function Viewport() {
 
     return () => {
       unsubscribe()
+      registerViewportCapture(null) // the context below is about to be lost
       if (rafId) cancelAnimationFrame(rafId)
       observer.disconnect()
       controls.removeEventListener('change', invalidate)

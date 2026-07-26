@@ -44,9 +44,16 @@ or the packed carton with every part in its computed position.
   inner dimensions directly or outer dimensions with wall thickness.
 - **mm ⇄ inch** display toggle (kg ⇄ lb correspondingly); everything is stored
   in millimeters and grams internally.
-- **Saved configurations and history.** Carton setups save under a name and
-  reload; every completed estimate is recorded to a local SQLite database,
-  keyed by a content hash so history survives file renames.
+- **Presets and saved estimates.** Carton setups save under a name and reload.
+  Estimates you *choose* to keep are saved to a local SQLite database, keyed by
+  a content hash so they survive a file rename — and restoring one loads its
+  inputs and recomputes, so the answer on screen is never a replay.
+- **Undo/redo over the inputs** (Ctrl+Z / Ctrl+Shift+Z). Typing a dimension is
+  one step, not one per keystroke.
+- **Export what you found.** Copy the estimate as text for a quote or an email,
+  save the per-part measurements as a CSV, or save the packed view as a PNG.
+  Warnings travel with every export: an answer that is qualified on screen
+  stays qualified once it leaves the app.
 
 ## Install
 

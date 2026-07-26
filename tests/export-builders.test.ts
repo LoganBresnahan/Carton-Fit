@@ -232,6 +232,16 @@ describe('buildCsv', () => {
     expect(csv).toContain('Carton inner (in),12 × 12 × 12')
   })
 
+  it('writes the count as a plain number, unlike the headline on screen', () => {
+    // Caught by the e2e first: the Result cell went through verdictHeadline,
+    // which groups digits — `Result,"27,000"` survives parsing only because it
+    // is quoted, and still comes back from Number() as NaN. The count is the
+    // one figure in this file someone computes with.
+    const csv = buildCsv(input({ result: qtyResult({ count: 27000 }) }))
+    expect(csv).toContain('Result,27000')
+    expect(csv).not.toContain('27,000')
+  })
+
   it('ends with a newline', () => {
     expect(buildCsv(input()).endsWith('\n')).toBe(true)
   })

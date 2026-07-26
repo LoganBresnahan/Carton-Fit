@@ -1,6 +1,7 @@
 import { app, BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { registerStorageIpc, closeStorage } from './storage'
+import { registerExportIpc } from './exportFile'
 import {
   attachWindowState,
   placeWindow,
@@ -53,6 +54,9 @@ app.whenReady().then(() => {
   // Registers handlers only — the database itself opens on first use, so a
   // storage problem cannot delay or prevent the window appearing (ADR-0007).
   registerStorageIpc()
+  // No lazy resource behind it — the dialog and the write are per-call
+  // (ADR-0017), so registering costs nothing.
+  registerExportIpc()
   createWindow()
 
   app.on('activate', () => {

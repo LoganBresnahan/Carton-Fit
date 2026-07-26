@@ -229,28 +229,40 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       window made the packaged run take 12.2 minutes instead of 53 s WITH
       NOTHING FAILING. `launchApp` now gives every launch its own temp profile.
 
-- [ ] 12. Export — **ADR-0017**: copy summary + measurements CSV + packed-view
-      PNG, all derived from the live request/result pair; warnings travel with
-      every export (ADR-0015 extended past the app boundary); one `export:save`
-      IPC in main (dialog + write bytes). PDF and bulk export stay out — see the
-      ADR's revisit triggers. Scoped 2026-07-25, effort-ordered:
-      - [ ] **summary + CSV builders** (`export/` module) — pure text derivation
-        from request + result + parts + display units; open-mesh and truncation
-        qualifiers included; unit-tested in Node, including the
-        warnings-travel test the ADR mandates.
-      - [ ] **copy summary button** — results header next to Save estimate,
-        clipboard write, disabled while the result is stale/in-flight (same
-        guard as Save estimate).
-      - [ ] **export IPC** — `export:save` channel (shared constants → preload
-        method → main handler with `dialog.showSaveDialog` + write), suggested
-        filename from part + carton.
-      - [ ] **save CSV button** — builders + IPC, first consumer of the channel.
-      - [ ] **save PNG button** — packed-view capture (render then read back in
-        the same frame, no standing `preserveDrawingBuffer`), only offered when
-        a current packed view exists.
-      - [ ] **e2e** — clipboard summary asserted for content AND qualifiers;
-        CSV/PNG driven through the IPC with a stubbed save path (the dialog is
-        native); mutation-test the qualifier path.
+- [x] 12. Export — **ADR-0017**, shipped 2026-07-25 in six slices: copy summary
+      + measurements CSV + packed-view PNG, all derived from the live
+      request/result pair; warnings travel with every export (ADR-0015 extended
+      past the app boundary); one `export:save` IPC in main (dialog + write
+      bytes). PDF and bulk export stay out — see the ADR's revisit triggers.
+      - [x] **summary + CSV builders** (`export/`) — pure derivation, 24 unit
+        tests against hand-computed numbers. Every phrase that also appears on
+        screen comes from `packing/verdict.ts`, so the email cannot start
+        disagreeing with the app; `truncatedLayoutNote` moved there from inline
+        JSX because the export needs the same sentence.
+      - [x] **copy summary button** — clipboard write, same readiness guard as
+        Save estimate (a stale estimate copied silently would have nothing to
+        notice the mistake by).
+      - [x] **export IPC** — `export:save`: main shows the dialog and writes
+        bytes, the renderer decides what the bytes are. Cancel and write
+        failures come back as DATA, never a rejected invoke — that wrapper
+        (`Error invoking remote method '…'`) is the one item 9 had to strip out
+        of the storage banner, so this channel never generates it.
+      - [x] **save CSV button** + [x] **save PNG button** — PNG captured by
+        render-then-read-back inside one call, no standing
+        `preserveDrawingBuffer`; the button is disabled unless the packed view
+        is actually showing. `viewport/capture.ts` is the seam: the island
+        registers a capture fn while mounted, so three.js stays inside the
+        viewport (ADR-0008) and the export module never imports it.
+      - [x] **e2e** — 6 specs, dialog stubbed at the Electron layer (it is
+        native) with real bytes on both sides. Both guards mutation-tested:
+        emptying the warnings list fails only the qualifier spec, and dropping
+        the render-before-read-back drops the PNG from 91.8 kB to 16.6 kB
+        against a 20 kB threshold.
+      — **the e2e caught a real bug the unit tests could not**: the CSV's
+      Result cell went through `verdictHeadline`, which locale-groups, writing
+      `Result,"27,000"` — parseable only because it was quoted, and still NaN
+      to `Number()`. The count is the one figure in that file someone computes
+      with. Now plain, pinned at both layers.
 
 ## Later
 

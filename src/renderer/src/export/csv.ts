@@ -1,6 +1,6 @@
 import { lengthUnitLabel, volumeUnitLabel, weightUnitLabel } from '../core/units'
 import { bindingLabel, packedWeightG, utilizationPercent, verdictHeadline } from '../packing/verdict'
-import { dimsText, lengthText, modeLabel, tierLabel, volumeText, weightText } from './format'
+import { decimal, dimsText, lengthText, modeLabel, tierLabel, volumeText, weightText } from './format'
 import { measurementRows, type EstimateExport } from './types'
 
 // The measurements CSV (ADR-0017 §1) — the table a spreadsheet ingests.
@@ -30,6 +30,18 @@ export function csvCell(value: string | number): string {
 }
 
 const row = (cells: readonly (string | number)[]): string => cells.map(csvCell).join(',')
+
+/**
+ * The answer as a CELL, which is not the same as the answer as a headline.
+ *
+ * `verdictHeadline` groups digits — right in prose, wrong in a spreadsheet:
+ * `27,000` needs quoting to survive at all, and comes back from `Number()` as
+ * NaN even then. The count is the one number in this file someone will actually
+ * compute with, so it stays plain.
+ */
+function resultCell(result: EstimateExport['result']): string {
+  return result.mode === 'max-quantity' ? decimal(result.count, 0) : verdictHeadline(result)
+}
 
 export function buildCsv(input: EstimateExport): string {
   const { settings, request, result, fileName } = input
@@ -71,7 +83,7 @@ export function buildCsv(input: EstimateExport): string {
   lines.push(row(['File', fileName ?? '']))
   lines.push(row(['Mode', modeLabel(request.mode)]))
   lines.push(row(['Quality', tierLabel(request.tier)]))
-  lines.push(row(['Result', verdictHeadline(result)]))
+  lines.push(row(['Result', resultCell(result)]))
   lines.push(row(['Limited by', bindingLabel(result.binding)]))
   lines.push(row(['Fill', utilizationPercent(result.utilization)]))
   lines.push(row([`Carton inner (${length})`, dimsText(request.carton, units)]))

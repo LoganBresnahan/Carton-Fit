@@ -10,6 +10,8 @@ import {
 } from '../packing/verdict'
 import { openMeshParts } from '../packing/request'
 import SaveEstimateButton from './SaveEstimateButton'
+import CopySummaryButton from './CopySummaryButton'
+import ExportFileButtons from './ExportFileButtons'
 import { gToWeight, weightUnitLabel } from '../core/units'
 
 // Thin declarative island (ADR-0006): reads the pack slice and renders the
@@ -69,7 +71,13 @@ export default function ResultsPanel() {
     >
       <div className="results-head">
         <h2>Estimate</h2>
-        <SaveEstimateButton />
+        {/* Keeping it and taking it away sit together: both act on the estimate
+            currently on screen, and both are disabled while one is in flight. */}
+        <div className="results-actions">
+          <SaveEstimateButton />
+          <CopySummaryButton />
+          <ExportFileButtons />
+        </div>
       </div>
 
       <p className="results-headline" data-testid="results-headline">

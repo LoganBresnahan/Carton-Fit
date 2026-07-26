@@ -8,6 +8,12 @@ import {
   type StorageApi,
   type StorageHealth
 } from '../shared/storage'
+import {
+  EXPORT_CHANNELS,
+  type ExportApi,
+  type ExportSaveRequest,
+  type ExportSaveResult
+} from '../shared/exportFile'
 
 // The renderer's only route to the main process (ADR-0007 storage; ADR-0006
 // keeps the renderer declarative).
@@ -45,9 +51,15 @@ const storage: StorageApi = {
     >
 }
 
+const exportFile: ExportApi = {
+  save: (request: ExportSaveRequest) =>
+    ipcRenderer.invoke(EXPORT_CHANNELS.save, request) as Promise<ExportSaveResult>
+}
+
 const api = {
   platform: process.platform,
-  storage
+  storage,
+  exportFile
 }
 
 contextBridge.exposeInMainWorld('api', api)

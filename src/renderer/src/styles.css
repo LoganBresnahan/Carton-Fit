@@ -512,12 +512,40 @@ body {
   color: var(--text);
 }
 
-/* Estimate header: the heading and the keep-this-one action on one line. */
+/* Estimate header: the heading, then everything you can do with the estimate.
+   The actions wrap rather than shrink — a 360px column cannot hold four
+   buttons on one line, and squeezing them would truncate their labels. */
 .results-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.results-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+/* CSV and PNG wrap together rather than separately — see ExportFileButtons. */
+.export-group {
+  display: flex;
+  gap: 0.3rem;
+}
+/* Export feedback, on its own line under the buttons (it is a full-width flex
+   item, so it forces the wrap). Failures are red and stay put; a success is a
+   brief tick. */
+.export-message {
+  flex-basis: 100%;
+  text-align: right;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.export-message.failed {
+  color: var(--error);
+  text-align: left;
 }
 .save-estimate {
   padding: 0.25rem 0.6rem;
