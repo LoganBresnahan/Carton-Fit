@@ -1,5 +1,13 @@
 import { lengthUnitLabel, weightUnitLabel } from '../core/units'
-import { bindingLabel, packedWeightG, utilizationPercent, verdictCaption, verdictHeadline } from '../packing/verdict'
+import {
+  bindingLabel,
+  freeSpaceNote,
+  packedWeightG,
+  upperBoundLabel,
+  utilizationPercent,
+  verdictCaption,
+  verdictHeadline
+} from '../packing/verdict'
 import { dimsText, lengthText, modeLabel, tierLabel, weightText } from './format'
 import { measurementRows, type EstimateExport } from './types'
 
@@ -90,12 +98,18 @@ export function buildSummary(input: EstimateExport): string {
   const { settings, request, result, fileName } = input
   const units = settings.unitSystem
 
+  // The bound rides on the Result line, exactly as it does on screen — a cap the
+  // reader can quote is worth as much in an email as in the window (ADR-0022 §7,
+  // ADR-0017 parity).
+  const bound = upperBoundLabel(result)
+
   const lines: string[] = [
     'Carton Fit — estimate',
     `File: ${fileName ?? '(no file)'}`,
     `Mode: ${modeLabel(request.mode)} · ${tierLabel(request.tier)} quality`,
     '',
-    `Result: ${verdictHeadline(result)}${result.mode === 'max-quantity' ? ' fit' : ''}`,
+    `Result: ${verdictHeadline(result)}${result.mode === 'max-quantity' ? ' fit' : ''}` +
+      `${bound ? ` (${bound})` : ''}`,
     verdictCaption(result),
     `Limited by: ${bindingLabel(result.binding)}`,
     `Fill: ${utilizationPercent(result.utilization)}`,
@@ -110,6 +124,10 @@ export function buildSummary(input: EstimateExport): string {
 
   if (result.mode === 'fit-check' && result.unplaced.length > 0) {
     lines.push('', `Did not fit: ${result.unplaced.join(', ')}`)
+    // Same sentence as the panel, in the same units — the free space is the one
+    // fact that turns "did not fit" into a next carton size to try.
+    const freeSpace = freeSpaceNote(result, units)
+    if (freeSpace) lines.push(freeSpace)
   }
 
   for (const warning of input.warnings) lines.push('', `! ${warning}`)

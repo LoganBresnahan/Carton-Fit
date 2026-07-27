@@ -243,6 +243,49 @@ describe('buildCsv', () => {
     expect(csv).not.toContain('27,000')
   })
 
+  it('writes the bound as a plain number too — it sizes the next carton', () => {
+    const csv = buildCsv(input({ result: qtyResult({ count: 27000, upperBound: 31500 }) }))
+    expect(csv).toContain('Upper bound,31500')
+    expect(csv).not.toContain('31,500')
+  })
+
+  it('restates the §7 explanation in Field,Value shape rather than as a sentence', () => {
+    // The facts are the panel's — same gate, same descending triples, via
+    // freeSpaceReport — but a CSV's wording is its field names, and a dimension
+    // triple in its own cell is what every other measurement here looks like.
+    const csv = buildCsv(
+      input({
+        result: fitResult({
+          fits: false,
+          placements: [],
+          unplaced: ['bracket'],
+          largestFreeSpace: [inToMm(2), inToMm(6), inToMm(4)],
+          smallestUnplaced: { name: 'bracket', extentMm: [inToMm(1), inToMm(8), inToMm(3)] }
+        })
+      })
+    )
+    expect(csv).toContain('Largest free space (in),6 × 4 × 2')
+    expect(csv).toContain('Smallest part left over,bracket')
+    expect(csv).toContain('Its smallest orientation (in),8 × 3 × 1')
+  })
+
+  it('applies the same gate as the panel — no comparison the reader can refute', () => {
+    const csv = buildCsv(
+      input({
+        result: fitResult({
+          fits: false,
+          placements: [],
+          unplaced: ['bolt'],
+          binding: 'weight',
+          largestFreeSpace: [inToMm(10), inToMm(8), inToMm(4)],
+          smallestUnplaced: { name: 'bolt', extentMm: [inToMm(0.5), inToMm(0.5), inToMm(0.25)] }
+        })
+      })
+    )
+    expect(csv).toContain('Largest free space (in),10 × 8 × 4')
+    expect(csv).not.toContain('Smallest part left over')
+  })
+
   it('names the kinds whose weight was corrected by hand (ADR-0018)', () => {
     const csv = buildCsv(input({ overrides: { bolt: 7, plate: 900 } }))
     expect(csv).toContain('Weight overrides,bolt; plate')
@@ -308,6 +351,29 @@ describe('buildSummary', () => {
       input({ result: fitResult({ fits: false, placements: [], unplaced: ['nut', 'washer'] }) })
     )
     expect(text).toContain('Did not fit: nut, washer')
+  })
+
+  it('carries the §7 free-space explanation under what did not fit', () => {
+    const text = buildSummary(
+      input({
+        result: fitResult({
+          fits: false,
+          placements: [],
+          unplaced: ['bracket'],
+          largestFreeSpace: [inToMm(2), inToMm(6), inToMm(4)],
+          smallestUnplaced: { name: 'bracket', extentMm: [inToMm(1), inToMm(8), inToMm(3)] }
+        })
+      })
+    )
+    // Same sentence as the panel, same units, same gate — ADR-0017 parity.
+    expect(text).toContain(
+      'Largest free space: 6 × 4 × 2 in — smallest orientation of “bracket” needs 8 × 3 × 1 in.'
+    )
+  })
+
+  it('carries the quantity bound on the Result line', () => {
+    const text = buildSummary(input({ result: qtyResult({ count: 47, upperBound: 54 }) }))
+    expect(text).toContain('Result: 47 fit (upper bound 54)')
   })
 
   it('caps the part list and points at the CSV for the rest', () => {

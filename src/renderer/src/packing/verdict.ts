@@ -1,15 +1,21 @@
+import { EPS } from '../core/geometry'
 import type {
   BindingConstraint,
   MaxQuantityResult,
   PackRequest,
-  PackResult
+  PackResult,
+  Vec3
 } from '../core/packing/types'
+import { lengthUnitLabel, type UnitSystem } from '../core/units'
+import { dimsText } from '../export/format'
 
 // Result presentation (roadmap item 4). Lives on the RENDERER side, not in
 // core/packing, because it is presentation rather than engine math — and
 // because a component importing core/packing/pack.ts would pull the whole
 // engine graph (hull search, strategies) into the main-thread bundle, defeating
-// the worker boundary. This module imports types only.
+// the worker boundary. This module imports engine TYPES only — plus the unit
+// boundary and `export/format`'s number formatting, which depend on nothing in
+// packing, so there is no cycle and no second spelling of "120 × 80 × 40".
 
 /**
  * The heuristic labeling ADR-0003 mandates. The epistemic direction differs by
@@ -38,6 +44,105 @@ export function verdictCaption(result: PackResult): string {
   return (
     `At least ${result.count.toLocaleString()} fit (${limit}). ` +
     `Heuristic — a mixed arrangement may fit more.`
+  )
+}
+
+/**
+ * The bound that travels with a count (ADR-0022 §7): `47 fit (upper bound 54)`,
+ * the achieved count first and authoritative, the bound parenthetical.
+ *
+ * Stated flatly, with no hedge, because unlike the count it is NOT a heuristic —
+ * `quantityBound` derives it from volume, per-axis and weight limits that no
+ * arrangement can beat. The gap between the two numbers is the honest measure of
+ * how much a cleverer arrangement could still recover; when they meet, the answer
+ * is optimal and the two identical numbers say so.
+ *
+ * Null when the result carries no finite bound (a weightless zero-extent unit),
+ * never a guess.
+ */
+export function upperBoundLabel(result: PackResult): string | null {
+  if (result.mode !== 'max-quantity' || result.upperBound === undefined) return null
+  return `upper bound ${result.upperBound.toLocaleString()}`
+}
+
+/** Extents descending, so two triples compare by eye down the line (ADR-0022 §7)
+ *  instead of the reader having to match axes that mean nothing here — the
+ *  engine's x/y/z is its own placement choice, not a property of the part. */
+function descending(extent: Vec3): Vec3 {
+  const e = [...extent].sort((a, b) => b - a)
+  return [e[0], e[1], e[2]]
+}
+
+/** Would a part of extents `need` go into a space of dims `space`, in SOME axis
+ *  assignment? Comparing both sorted descending is exactly that test. */
+function wouldFit(need: Vec3, space: Vec3): boolean {
+  const a = descending(need)
+  const b = descending(space)
+  for (let axis = 0; axis < 3; axis++) {
+    if (a[axis] - b[axis] > EPS) return false
+  }
+  return true
+}
+
+/** The two triples behind the non-fit explanation, sorted for presentation, with
+ *  the comparison gate already applied — or null when there is nothing honest to
+ *  report. Separate from the sentence because the CSV states the same facts in
+ *  its own Field,Value shape and must not re-derive them. */
+export interface FreeSpaceReport {
+  /** Largest usable free space left by this arrangement, descending. */
+  spaceMm: Vec3
+  /** The smallest leftover part, present only when it genuinely would not go
+   *  into that space. */
+  need?: { name: string; extentMm: Vec3 }
+}
+
+/**
+ * The EMS-backed non-fit explanation (ADR-0022 §7), or null when it has nothing
+ * to say.
+ *
+ * THE GATE IS THE SUBTLE PART. The engine reports the smallest leftover part as
+ * data, whether or not it would have fit the space; pairing the two triples only
+ * makes sense when it would NOT. On a weight-bound non-fit the leftovers usually
+ * fit the space perfectly well — the cap stopped them, not the geometry — and
+ * printing "largest free space 250 × 180 × 100 — smallest orientation of bolt
+ * needs 8 × 8 × 5" invites the reader to conclude the app cannot do arithmetic.
+ * The free space alone is still worth saying there: it is true, and next to a
+ * weight binding it reads correctly as "there is room, the scale stopped you".
+ */
+export function freeSpaceReport(result: PackResult): FreeSpaceReport | null {
+  if (result.mode !== 'fit-check' || result.fits) return null
+  const space = result.largestFreeSpace
+  if (space === undefined) return null
+
+  const report: FreeSpaceReport = { spaceMm: descending(space) }
+  const smallest = result.smallestUnplaced
+  if (smallest !== undefined && !wouldFit(smallest.extentMm, space)) {
+    report.need = { name: smallest.name, extentMm: descending(smallest.extentMm) }
+  }
+  return report
+}
+
+/**
+ * The non-fit explanation as a sentence, in the on-screen units like every other
+ * figure — *"Largest free space: 120 × 80 × 40 mm — smallest orientation of
+ * “bracket” needs 150 × 60 × 30 mm."*
+ *
+ * Two numbers side by side and no verdict between them, deliberately: placement
+ * is heuristic (ADR-0003), so a cleverer arrangement might still fit the part,
+ * and any phrasing that concluded something — "too small", "cannot fit" — would
+ * be a proof of non-fit the engine did not produce. It explains where THIS
+ * attempt stopped, and the caption above it already says that is not the last
+ * word.
+ */
+export function freeSpaceNote(result: PackResult, units: UnitSystem): string | null {
+  const report = freeSpaceReport(result)
+  if (report === null) return null
+  const unit = lengthUnitLabel(units)
+  const space = `Largest free space: ${dimsText(report.spaceMm, units)} ${unit}`
+  if (report.need === undefined) return `${space}.`
+  return (
+    `${space} — smallest orientation of “${report.need.name}” needs ` +
+    `${dimsText(report.need.extentMm, units)} ${unit}.`
   )
 }
 

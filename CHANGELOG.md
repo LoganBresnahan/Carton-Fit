@@ -10,6 +10,29 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
+### Added
+
+- **A "doesn't fit" now tells you what room was left.** Under the list of parts
+  that did not fit, the estimate says how big the largest usable gap in the
+  carton was and what the smallest leftover part needs — for example *"Largest
+  free space: 3 × 3 × 2.2 in — smallest orientation of “rod” needs 7.9 × 0.4 ×
+  0.4 in."* Both figures already account for the clearances you asked for, and
+  both are sorted largest-first so they compare at a glance, which is usually
+  enough to tell whether the next carton up would do it. The line is left off
+  when it would say nothing useful — notably when the weight limit, not the
+  space, is what stopped the packing. It explains where this attempt stopped; it
+  is still not a proof that nothing would fit.
+  ([ADR-0022](doc/adr/0022-extreme-point-placement-shelf-stays-as-incumbent.md))
+
+- **Max quantity shows how many could possibly fit, beside how many it placed.**
+  The count now reads *"27,000 fit (upper bound 27,000)"*. Unlike the count, the
+  bound is not a best effort — nothing can beat it, whatever the arrangement — so
+  the gap between the two numbers tells you how much a cleverer packing could
+  still recover, and two identical numbers mean the answer is the most that
+  physically fits. Both the free-space line and the bound travel with the copied
+  summary and the CSV.
+  ([ADR-0022](doc/adr/0022-extreme-point-placement-shelf-stays-as-incumbent.md))
+
 ### Changed
 
 - **Fit check finds arrangements it used to miss.** The app now tries two ways of

@@ -183,6 +183,10 @@ export async function readEstimate(page: Page): Promise<{
   weight: string | null
   truncated: string | null
   unplaced: string | null
+  /** ADR-0022 §7's non-fit explanation, or null when the panel says nothing. */
+  freeSpace: string | null
+  /** ADR-0022 §7's rigorous cap beside the count, or null in fit check. */
+  upperBound: string | null
 }> {
   return page.evaluate(() => {
     const text = (id: string): string | null => {
@@ -197,7 +201,9 @@ export async function readEstimate(page: Page): Promise<{
       tier: text('results-tier') ?? '',
       weight: text('results-weight'),
       truncated: text('results-truncated'),
-      unplaced: text('results-unplaced')
+      unplaced: text('results-unplaced'),
+      freeSpace: text('results-free-space'),
+      upperBound: text('results-upper-bound')
     }
   })
 }

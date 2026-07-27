@@ -1,5 +1,11 @@
 import { lengthUnitLabel, volumeUnitLabel, weightUnitLabel } from '../core/units'
-import { bindingLabel, packedWeightG, utilizationPercent, verdictHeadline } from '../packing/verdict'
+import {
+  bindingLabel,
+  freeSpaceReport,
+  packedWeightG,
+  utilizationPercent,
+  verdictHeadline
+} from '../packing/verdict'
 import { decimal, dimsText, lengthText, modeLabel, tierLabel, volumeText, weightText } from './format'
 import { measurementRows, type EstimateExport } from './types'
 
@@ -98,8 +104,29 @@ export function buildCsv(input: EstimateExport): string {
       Number.isFinite(request.maxWeightG) ? weightText(request.maxWeightG, units) : ''
     ])
   )
+  if (result.mode === 'max-quantity' && result.upperBound !== undefined) {
+    // Plain, for the same reason the Result cell is (see resultCell): a bound is
+    // a number someone computes the next carton size with, and `54` beats a
+    // grouped `27,000` that comes back NaN.
+    lines.push(row(['Upper bound', decimal(result.upperBound, 0)]))
+  }
   if (result.mode === 'fit-check' && result.unplaced.length > 0) {
     lines.push(row(['Did not fit', result.unplaced.join('; ')]))
+    // The §7 explanation, restated in this file's Field,Value shape rather than
+    // pasted as a sentence: the facts are identical to the panel's — same
+    // gate, same sorted triples, via freeSpaceReport — but a CSV's wording is
+    // its field names, and a triple in its own cell is what every other
+    // dimension here looks like.
+    const freeSpace = freeSpaceReport(result)
+    if (freeSpace) {
+      lines.push(row([`Largest free space (${length})`, dimsText(freeSpace.spaceMm, units)]))
+      if (freeSpace.need) {
+        lines.push(row(['Smallest part left over', freeSpace.need.name]))
+        lines.push(
+          row([`Its smallest orientation (${length})`, dimsText(freeSpace.need.extentMm, units)])
+        )
+      }
+    }
   }
   // Which kinds were corrected by hand (ADR-0018). The per-part columns above
   // already hold the resolved weights; this says where they came from, so the

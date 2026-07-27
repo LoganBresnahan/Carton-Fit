@@ -1,9 +1,11 @@
 import { useAppStore } from '../store'
 import {
   bindingLabel,
+  freeSpaceNote,
   openMeshWarning,
   packedWeightG,
   truncatedLayoutNote,
+  upperBoundLabel,
   utilizationPercent,
   verdictCaption,
   verdictHeadline
@@ -65,6 +67,8 @@ export default function ResultsPanel() {
   // steadier than blanking the panel on every keystroke.
   const stale = status === 'packing'
   const truncated = truncatedLayoutNote(result)
+  const bound = upperBoundLabel(result)
+  const freeSpace = freeSpaceNote(result, unitSystem)
 
   return (
     <section
@@ -87,6 +91,15 @@ export default function ResultsPanel() {
       <p className="results-headline" data-testid="results-headline">
         {verdictHeadline(result)}
         {result.mode === 'max-quantity' && <span className="results-unit"> fit</span>}
+        {/* The rigorous cap next to the heuristic count (ADR-0022 §7): the gap
+            between them is how much a better arrangement could still recover,
+            and it belongs where the count is, not in a footnote. */}
+        {bound && (
+          <span className="results-unit" data-testid="results-upper-bound">
+            {' '}
+            ({bound})
+          </span>
+        )}
       </p>
 
       <p className="results-caption" data-testid="results-caption">
@@ -147,6 +160,13 @@ export default function ResultsPanel() {
               <li key={`${name}-${i}`}>{name}</li>
             ))}
           </ul>
+          {/* Appended to the unplaced summary (ADR-0022 §7), where the question
+              it answers — why did these not go in? — is already being asked. */}
+          {freeSpace && (
+            <p className="results-note" data-testid="results-free-space">
+              {freeSpace}
+            </p>
+          )}
         </>
       )}
 

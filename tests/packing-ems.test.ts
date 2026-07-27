@@ -453,5 +453,63 @@ describe('pack() carries the void on a non-fit', () => {
     expect(result.fits).toBe(false)
     expect(result.binding).toBe('weight')
     expect(result.largestFreeSpace).toBeDefined()
+    // ...and the leftover is reported even though it would fit that space. The
+    // pairing is the wording layer's call (freeSpaceReport's gate); the engine
+    // states the fact.
+    expect(result.smallestUnplaced).toEqual({ name: 'b', extentMm: [2, 2, 2] })
+  })
+})
+
+// The other half of §7's sentence: what the smallest leftover needs. Data only —
+// the comparison, and whether it is worth stating, belongs to packing/verdict.ts.
+describe('pack() names the smallest part left over', () => {
+  const request = (parts: PackPart[], carton: Vec3, maxWeightG = Infinity): PackRequest => ({
+    mode: 'fit-check',
+    tier: 'fast',
+    carton,
+    clearances: NO_GAPS,
+    maxWeightG,
+    parts
+  })
+
+  it('picks the SMALLEST of several leftovers, not the first', () => {
+    // The 10-carton holds one 8-cube; the 7-cube and the 5×5×5 are both left, and
+    // the informative one is the smaller: if what is left would not go in even at
+    // its most accommodating, saying so about the big one explains nothing.
+    const result = pack(
+      request([boxPart('big', [8, 8, 8]), boxPart('mid', [7, 7, 7]), boxPart('small', [5, 5, 5])], [10, 10, 10])
+    )
+    if (result.mode !== 'fit-check') return
+    expect(result.unplaced).toEqual(['mid', 'small'])
+    expect(result.smallestUnplaced).toEqual({ name: 'small', extentMm: [5, 5, 5] })
+  })
+
+  it('reports the smallest ORIENTATION of that part', () => {
+    // Under the fast tier the six axis orientations are permutations of one
+    // extent triple, so the reported one is the provider's first — a fixed,
+    // deterministic choice rather than whichever the placer last tried.
+    const result = pack(request([boxPart('slab', [30, 4, 12])], [10, 10, 10]))
+    if (result.mode !== 'fit-check') return
+    const extent = result.smallestUnplaced?.extentMm ?? [0, 0, 0]
+    expect([...extent].sort((a, b) => b - a)).toEqual([30, 12, 4])
+  })
+
+  it('is absent on a fit, and absent when nothing has a measurable orientation', () => {
+    const fits = pack(request([boxPart('a', [6, 6, 6])], [10, 10, 7]))
+    if (fits.mode !== 'fit-check') return
+    expect(fits.smallestUnplaced).toBeUndefined()
+    expect('smallestUnplaced' in fits).toBe(false) // absent, not undefined-valued (JSON shape)
+
+    // Garbage geometry must never be reported as needing NaN × NaN × NaN — a
+    // sentence that says nothing while looking like it says something. Either the
+    // field is absent or every number in it is real; both are honest, and the
+    // absence-over-misinformation rule is what makes the choice safe.
+    const nan = pack(
+      request([{ name: 'ghost', positions: new Float32Array([NaN, NaN, NaN]), weightG: 0 }], [10, 10, 10])
+    )
+    if (nan.mode !== 'fit-check') return
+    for (const value of nan.smallestUnplaced?.extentMm ?? []) {
+      expect(Number.isFinite(value)).toBe(true)
+    }
   })
 })

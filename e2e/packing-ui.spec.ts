@@ -75,6 +75,64 @@ test('names the parts that did not fit', async () => {
   expect(estimate.caption).toMatch(/not a proof the rest cannot fit/)
 })
 
+test('explains a non-fit with the free space it could not use (ADR-0022 §7)', async () => {
+  const { page } = handle
+  await importSample(page, AS1_ASSEMBLY.file)
+  await setCarton(page, [3, 3, 3]) // 76.2 mm: holds some of the assembly, not all
+  await waitForEstimate(page)
+
+  const estimate = await readEstimate(page)
+  expect(estimate.headline).toBe("Doesn't fit")
+  const note = estimate.freeSpace ?? ''
+  expect(note).not.toHaveLength(0)
+
+  // Asserted as RELATIONSHIPS, not as dimensions: the exact void depends on the
+  // arrangement two engines raced for, and a hand-computed triple here would just
+  // re-record whatever the winner happened to do (ADR-0005's golden rule).
+  //
+  // 1. On-screen units, said once per triple — a bare number is how a 3 in carton
+  //    gets read as 3 mm.
+  expect(note).toMatch(/Largest free space: [\d.]+ × [\d.]+ × [\d.]+ in/)
+  // 2. Both triples descending, so they compare down the line.
+  const triples = [...note.matchAll(/([\d.]+) × ([\d.]+) × ([\d.]+)/g)].map((m) =>
+    m.slice(1).map(Number)
+  )
+  expect(triples.length).toBeGreaterThanOrEqual(1)
+  for (const [a, b, c] of triples) {
+    expect(a).toBeGreaterThanOrEqual(b)
+    expect(b).toBeGreaterThanOrEqual(c)
+  }
+  // 3. When the comparison is stated, it names a part the panel ALSO lists as
+  //    unplaced — a sentence about a part that fit would be worse than silence.
+  const named = note.match(/orientation of “([^”]+)”/)
+  if (named) {
+    expect(estimate.unplaced ?? '').toContain(named[1])
+    // ...and the gate held: what it needs does not fit what is left.
+    const [space, need] = triples
+    expect(need.some((value, axis) => value > space[axis])).toBe(true)
+  }
+  // 4. It explains; it never concludes. Placement is still heuristic.
+  expect(note).not.toMatch(/too small|cannot|impossible/i)
+  expect(estimate.caption).toMatch(/not a proof the rest cannot fit/)
+})
+
+test('states the rigorous upper bound beside the count (ADR-0022 §7)', async () => {
+  const { page } = handle
+  await importSample(page, CUBE_STL.file)
+  await page.click('[data-testid="mode-max-quantity"]')
+  await setCarton(page, [12, 12, 12])
+  await waitForEstimate(page)
+
+  // Hand-computed, and the interesting case: 304.8 mm / 10 mm = 30 per axis, so
+  // 27,000 copies — and the per-axis bound is that same 30³, below the volumetric
+  // bound of floor(304.8³ / 1000) = 28,315. Count and bound MEET, which means this
+  // answer is not a heuristic at all any more: nothing can beat it, and the panel
+  // says so by printing the same number twice.
+  const estimate = await readEstimate(page)
+  expect(estimate.headline).toContain('27,000')
+  expect(estimate.upperBound).toBe('(upper bound 27,000)')
+})
+
 test('the unit picker changes what max-quantity replicates (ADR-0003)', async () => {
   const { page } = handle
   await importSample(page, AS1_ASSEMBLY.file)

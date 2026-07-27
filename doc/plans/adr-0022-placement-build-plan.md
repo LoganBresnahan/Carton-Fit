@@ -356,20 +356,91 @@
       test built for it.
 
 ### 5. Opus batch B: composition, guarantees, surfaces — **opus** (mutually independent)
-- [ ] `crash-barrier-wrapper` · low — try/catch around EP, validate its output with
+- [x] `crash-barrier-wrapper` · low — try/catch around EP, validate its output with
       the phase-1 validator, check the backstop trip; on any of the three, discard
       EP and return the raced incumbent (risk 3: after `incumbent-race-fit-check`).
       Not a mode — either trigger firing on a realistic carton is a defect (§2).
-- [ ] `determinism-tests` · medium — same PackRequest repeatedly through the pure
+      *Done: `racedFit` and `refineWithBarrier` in `pack.ts` — the race moved
+      behind a barrier rather than a barrier being bolted on beside it, so there
+      is no path that consults EP output without checking it. Each takes an
+      optional challenger, which is the only way the triggers can be tested at
+      all: the real engine does not throw, overlap or trip on anything a carton
+      holds, so every trigger needs an engine written to fire it.*
+      **Three decisions §2 had left implicit, now amended into it.** (1) The
+      judge is asked about CLEARANCES too, not just physical possibility —
+      `isPhysicallyImpossible` exists for callers that must be lenient, and one
+      with a free correct fallback is not one. (2) The clearances are SANITIZED
+      first: unsanitized, `wall: Infinity` makes the judge reject every
+      arrangement on every pack and the app silently stops being ADR-0022 while
+      looking healthy — the one mutation whose survival would have been invisible.
+      (3) A backstop trip discards in fit check but NOT in quantity mode, where
+      §4 makes the same budget the bound on refinement cost, so tripping is how a
+      large refinement is *supposed* to end.
+      *Mutation-tested six ways — both try/catches, both validator calls, the trip
+      check, and the sanitize call — each killing exactly the specs written for
+      it and nothing else.* The first pass also caught a **spec that passed for
+      the wrong reason**: two "discards an invalid arrangement" cases used
+      challengers that lost the race anyway, so deleting the validator left them
+      green. Both now place everything and would win outright unless discarded.
+      A standing spec asserts the barrier is DORMANT on healthy output, because a
+      barrier that discarded everything would satisfy every other test here while
+      deleting the whole ADR.
+- [x] `determinism-tests` · medium — same PackRequest repeatedly through the pure
       functions, deep-equal placements; plus an audit of the new EP/EMS code for
       unstable orderings. Covers the engine, backstop (identical trip every run),
       quantity refinement, and EMS (reported void dims stable too).
-- [ ] `result-wording-and-exports` · medium — ADR-0022 §7 wording across
+      *Done: `tests/packing-determinism.test.ts`, 12 cases × 5 runs over both
+      modes, both tiers, clearances, weight binding, non-fit reporting, truncated
+      layouts and the refinement path, plus the backstop (same op COUNT and same
+      prefix every run), the reported void, and `refineQuantity`. Deep-equal on
+      the whole result, not a summary: a stable count with rotating placements is
+      still nondeterminism, and placements are what get drawn and exported. Each
+      case rebuilds its request with fresh `Float32Array`s, so memoization cannot
+      hide an instability.*
+      Two things worth recording. **Why the suite is needed at all**: every other
+      packing spec runs its case once, so an unstable ordering does not fail any
+      of them — it just makes the answer change between runs, and a user retyping
+      the same number sees a different estimate. **A matrix guard** asserts the
+      case list still exercises refinement, the void and the thorough tier, since
+      a list that quietly stopped covering them would keep passing. The audit half
+      is held by a source check (nothing in `core/packing/` reads a clock or a
+      random number, comments stripped so the modules can keep discussing the
+      rule they follow) — Set/Map membership-only use was reviewed by hand, which
+      is not honestly greppable.
+- [x] `result-wording-and-exports` · medium — ADR-0022 §7 wording across
       `ResultsPanel.tsx`, `export/summary.ts`, `export/csv.ts`: non-fit line
       ("Largest free space: … — smallest orientation of `part` needs …", both
       triples sorted descending, on-screen units, gated on EMS presence, never
       phrased as proof) and the quantity bound ("47 fit (upper bound 54)").
       Exports carry both lines unchanged (ADR-0017 parity).
+      *Done: `freeSpaceNote` / `freeSpaceReport` / `upperBoundLabel` in
+      `packing/verdict.ts`, which stays the single owner of every phrase that
+      appears in two places. The engine gained `smallestUnplaced` (the part named
+      plus its smallest orientation) so the renderer keeps importing engine TYPES
+      only. On the AS1 assembly in a 3 in carton the real sentence reads:*
+      "Largest free space: 3 × 3 × 2.213 in — smallest orientation of “rod” needs
+      7.874 × 0.394 × 0.393 in."
+      **Writing the sentence found the case the ADR's wording does not survive**,
+      and §7 is amended for it: on a weight-bound non-fit the leftovers usually
+      fit the free space perfectly well, so the two triples printed under a "Did
+      not fit" heading read as an app that cannot do arithmetic. The comparison
+      clause is now gated on the part genuinely not fitting the space in any
+      rotation; the free-space clause still stands alone, where beside a weight
+      binding it reads correctly as "there is room, the scale stopped you".
+      *The CSV restates the same facts in its own `Field,Value` shape rather than
+      pasting the sentence — same gate and same sorted triples, via
+      `freeSpaceReport`, because a CSV's wording is its field names. The bound
+      goes in plain (`Upper bound,31500`), the resultCell lesson applied: it is a
+      number someone sizes the next carton with.*
+      *Guarded at both layers: 14 unit specs against hand-computed dimensions
+      (10 mutants, each killing only its own), and 2 e2e — the bound one is
+      hand-derivable and lands on the interesting case, 27,000 copies against a
+      27,000 bound, so the panel prints the same number twice and the answer is
+      no longer heuristic at all. The free-space e2e asserts RELATIONSHIPS (units
+      present, both triples descending, the named part also listed as unplaced,
+      the gate actually held, nothing concluded) rather than a void triple that
+      would only re-record whatever the race produced. Both mutation-tested by
+      dropping the panel line.*
 
 ### 6. Ship: docs — **opus** (the shipping commit)
 - [ ] `adr-0003-amendment-and-docs` · low — amend ADR-0003's fit-check placement

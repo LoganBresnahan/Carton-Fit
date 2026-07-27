@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   bindingLabel,
+  freeSpaceNote,
+  freeSpaceReport,
   openMeshWarning,
   packedWeightG,
   truncatedLayout,
+  upperBoundLabel,
   utilizationPercent,
   verdictCaption,
   verdictHeadline
 } from '../src/renderer/src/packing/verdict'
+import { inToMm } from '../src/renderer/src/core/units'
 import type {
   FitCheckResult,
   MaxQuantityResult,
@@ -174,5 +178,106 @@ describe('truncatedLayout', () => {
     expect(truncatedLayout(qty({ count: 200_000, placements: [placement] }))).toBe(true)
     expect(truncatedLayout(qty({ count: 1, placements: [placement] }))).toBe(false)
     expect(truncatedLayout(fit({ placements: [placement] }))).toBe(false)
+  })
+})
+
+// ADR-0022 §7 wording. These pin the CLAIM again, not the prose: the bound may be
+// stated flatly because it is rigorous, and the free-space line may only put two
+// numbers side by side — never draw the conclusion.
+
+describe('upperBoundLabel', () => {
+  it('states the bound flatly, grouped like the count beside it', () => {
+    expect(upperBoundLabel(qty({ count: 47, upperBound: 54 }))).toBe('upper bound 54')
+    expect(upperBoundLabel(qty({ count: 27_000, upperBound: 31_500 }))).toBe('upper bound 31,500')
+    // No hedge: unlike the count, this one is not a heuristic.
+    expect(upperBoundLabel(qty({ count: 47, upperBound: 54 }))).not.toMatch(/about|roughly|may/)
+  })
+
+  it('says nothing when there is no bound, and nothing in fit check', () => {
+    expect(upperBoundLabel(qty({ count: 5 }))).toBeNull()
+    expect(upperBoundLabel(fit({ fits: false, unplaced: ['a'] }))).toBeNull()
+  })
+
+  it('shows the bound even when the count has met it — that is optimality', () => {
+    expect(upperBoundLabel(qty({ count: 12, upperBound: 12 }))).toBe('upper bound 12')
+  })
+})
+
+describe('freeSpaceNote', () => {
+  const nonFit = (patch: Partial<FitCheckResult> = {}): FitCheckResult =>
+    fit({ fits: false, placements: [placement], unplaced: ['bracket'], ...patch })
+
+  it('puts the two triples side by side, both descending, in on-screen units', () => {
+    const note = freeSpaceNote(
+      nonFit({
+        largestFreeSpace: [80, 40, 120],
+        smallestUnplaced: { name: 'bracket', extentMm: [60, 150, 30] }
+      }),
+      'metric'
+    )
+    // Descending on both sides so they compare down the line — the engine's axis
+    // order is its own placement choice, not a property of the part.
+    expect(note).toBe(
+      'Largest free space: 120 × 80 × 40 mm — smallest orientation of “bracket” needs 150 × 60 × 30 mm.'
+    )
+  })
+
+  it('converts to inches at the UI boundary like every other figure', () => {
+    const note = freeSpaceNote(
+      nonFit({
+        largestFreeSpace: [inToMm(4), inToMm(2), inToMm(6)],
+        smallestUnplaced: { name: 'bracket', extentMm: [inToMm(3), inToMm(8), inToMm(1)] }
+      }),
+      'imperial'
+    )
+    expect(note).toBe(
+      'Largest free space: 6 × 4 × 2 in — smallest orientation of “bracket” needs 8 × 3 × 1 in.'
+    )
+  })
+
+  it('never concludes anything — placement is still heuristic', () => {
+    const note = freeSpaceNote(
+      nonFit({
+        largestFreeSpace: [10, 10, 10],
+        smallestUnplaced: { name: 'bracket', extentMm: [50, 50, 50] }
+      }),
+      'metric'
+    )
+    expect(note).not.toMatch(/too small|cannot|won't|will not|impossible/i)
+  })
+
+  it('THE GATE: drops the comparison when the leftover would have fit the space', () => {
+    // A weight-bound non-fit leaves parts that fit the space perfectly well. Two
+    // triples that plainly do fit, printed side by side under "did not fit", read
+    // as an app that cannot do arithmetic.
+    const result = nonFit({
+      binding: 'weight',
+      largestFreeSpace: [250, 180, 100],
+      smallestUnplaced: { name: 'bolt', extentMm: [8, 8, 5] }
+    })
+    expect(freeSpaceReport(result)?.need).toBeUndefined()
+    expect(freeSpaceNote(result, 'metric')).toBe('Largest free space: 250 × 180 × 100 mm.')
+  })
+
+  it('gates on the sorted comparison, not on axis order', () => {
+    // 40×10×10 does not fit 20×20×20 axis-for-axis, and does not fit it in any
+    // rotation either — the sorted compare is what says so.
+    const blocked = nonFit({
+      largestFreeSpace: [20, 20, 20],
+      smallestUnplaced: { name: 'rod', extentMm: [10, 40, 10] }
+    })
+    expect(freeSpaceReport(blocked)?.need?.extentMm).toEqual([40, 10, 10])
+    // ...while a part that only needs turning DOES fit, so the comparison drops.
+    const turnable = nonFit({
+      largestFreeSpace: [30, 10, 20],
+      smallestUnplaced: { name: 'rod', extentMm: [10, 25, 15] }
+    })
+    expect(freeSpaceReport(turnable)?.need).toBeUndefined()
+  })
+
+  it('says nothing without EMS data, on a fit, or in quantity mode', () => {
+    expect(freeSpaceNote(nonFit(), 'metric')).toBeNull() // no largestFreeSpace
+    expect(freeSpaceNote(fit({ fits: true, largestFreeSpace: [10, 10, 10] }), 'metric')).toBeNull()
+    expect(freeSpaceNote(qty({ count: 3 }), 'metric')).toBeNull()
   })
 })

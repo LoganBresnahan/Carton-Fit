@@ -73,6 +73,26 @@ Two things are decided now; the rest is listed as open.
      cartons are tens of parts and EP finishes in milliseconds). Either firing on a
      real carton is a defect to fix — guarded by the differential fuzz — not a UX
      to design.
+     **Amended 2026-07-27 (phase 5), three things this section left implicit once
+     the barrier was actually built** (`racedFit` / `refineWithBarrier` in
+     `core/packing/pack.ts`):
+     - **It judges clearances, not just physical possibility.** `validate.ts`
+       separates the two kinds so a caller *can* be lenient about dunnage; this
+       caller is not, because an arrangement that quietly eats the gap the user
+       asked for is a broken promise stated with full confidence, and the
+       incumbent — which honors the gap by construction — is free.
+     - **It sanitizes the clearances before asking.** The engines clamp a
+       negative or non-finite gap to zero; the validator takes it at face value.
+       Left unsanitized, `wall: Infinity` makes the judge reject *every*
+       arrangement on *every* pack, and the app silently stops being this ADR
+       while looking perfectly healthy.
+     - **A backstop trip discards in fit check but NOT in quantity mode.** Fit
+       check follows this section: a trip means a part count no realistic carton
+       has, so the incumbent stands, and the cost — throwing away a truncated EP
+       arrangement that was winning — is accepted. In quantity mode §4 makes the
+       same backstop the *bound on refinement cost*, so tripping is how a large
+       refinement is supposed to end and the count it reports is a real achieved
+       arrangement; discarding there would delete the feature §4 asks for.
 
 3. **Extreme points place; EMS explains** (resolved 2026-07-26). EP is the placement
    algorithm. EMS bookkeeping is carried only for its reporting value — the "largest
@@ -112,6 +132,21 @@ Two things are decided now; the rest is listed as open.
      Stated only when EMS data exists; never phrased as proof (the placement is
      still heuristic, so a cleverer arrangement might fit — this explains *this*
      attempt's stopping point).
+     **Amended 2026-07-27 (phase 5): the comparison is GATED on the named part
+     not fitting the space.** Writing the sentence exposed a case this wording
+     does not survive — a weight-bound non-fit, where the leftovers usually fit
+     the free space perfectly well and the cap is what stopped them. "Largest
+     free space: 250 × 180 × 100 mm — smallest orientation of `bolt` needs
+     8 × 8 × 5 mm" invites the reader to conclude the app cannot do arithmetic,
+     and it is printed directly under a list headed "Did not fit". So the second
+     clause appears only when the part genuinely would not go into the space (in
+     any rotation — both triples sorted, compared down the line); the free-space
+     clause alone still appears, where next to a weight binding it reads
+     correctly as "there is room, the scale stopped you". Which part is named is
+     the SMALLEST leftover, because "what is left will not go in even at its most
+     accommodating" is the informative statement; naming the biggest one explains
+     nothing the part list did not already say. The engine reports the part as
+     data either way (`smallestUnplaced`) — the gate is presentation's.
    - Quantity-mode bound: *"47 fit (upper bound 54)"* — the achieved count first
      and authoritative, the bound parenthetical. The bound is the min of the
      volumetric and per-axis bounds, which ARE rigorous, so the phrasing may state

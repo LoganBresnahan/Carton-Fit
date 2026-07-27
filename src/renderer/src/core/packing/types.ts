@@ -66,6 +66,25 @@ export interface Clearances {
 }
 
 /**
+ * The clearances an engine actually honors: negative and non-finite gaps clamped
+ * to zero, so a nonsense request degrades to "no gap" rather than to an
+ * impossible arrangement (a negative gap offsets placements INTO each other; a
+ * NaN one silently stops every comparison from rejecting anything).
+ *
+ * Each engine already clamps identically at its own entry — this is the shared
+ * statement of that rule, for the callers that have to ask a QUESTION about an
+ * arrangement rather than build one. The crash barrier is the reason it exists:
+ * it judges extreme-point output with `validatePlacements`, which takes the
+ * clearances at face value, so without this the judge and the engine would be
+ * asked different questions on exactly the malformed inputs where the barrier
+ * matters most.
+ */
+export function sanitizeClearances(clearances: Clearances): Clearances {
+  const clamp = (value: number): number => (Number.isFinite(value) ? Math.max(0, value) : 0)
+  return { betweenParts: clamp(clearances.betweenParts), wall: clamp(clearances.wall) }
+}
+
+/**
  * One part to pack. Carries the mesh positions (mm) because the tier chooses what
  * to derive: fast uses the AABB extent, thorough runs the OBB search over the
  * point cloud. Weight is grams (direct entry or density × mesh volume, ADR-0004).
@@ -195,6 +214,14 @@ export interface FitCheckResult extends PackResultBase {
    *  reported honestly (see ems.ts) — absence over misinformation, like
    *  `upperBound`. Explains THIS attempt's stopping point; never a proof. */
   largestFreeSpace?: Vec3
+  /** The smallest part left over, and the extent (mm) of its smallest
+   *  orientation — the other half of ADR-0022 §7's non-fit sentence, so the
+   *  reader can compare "what is left" against "what the smallest leftover
+   *  needs" without doing geometry. Data, not a claim: whether the two triples
+   *  are worth putting side by side is the wording layer's gate (a weight-bound
+   *  non-fit can leave a part that fits the space perfectly well). Present only
+   *  on a non-fit, and only when some unplaced part has a usable orientation. */
+  smallestUnplaced?: { name: string; extentMm: Vec3 }
 }
 
 export interface MaxQuantityResult extends PackResultBase {
