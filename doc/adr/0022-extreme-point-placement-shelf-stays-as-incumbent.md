@@ -53,6 +53,14 @@ Two things are decided now; the rest is listed as open.
      so fuzzing both engines over random part sets — asserting the new placer never
      places fewer, and its placements pass an independent overlap check — gives a
      generative counterpart to the `samples/` goldens.
+     **Amended 2026-07-27 (phase 3), because measurement refuted "never places
+     fewer" as written**: raw extreme-point placement loses to greedy shelf on
+     roughly 1 in 300 generated inputs, under either scoring rule. Corner-and-
+     projection search is not a superset of the shelf's layer discipline. The
+     invariant is therefore asserted against the RACED result, which dominates by
+     construction, and raw EP's loss rate is tracked as a statistic with a ceiling.
+     This strengthens the incumbent's case rather than weakening it: the reason to
+     keep shelf was never that it usually loses gracefully.
    - **Crash barrier** (the role first drafted as "fallback", renamed because it is
      not a mode): EP/EMS is the first placement code that needs an overlap check —
      the first that *can* be wrong in that sense. If it throws, emits an invalid
@@ -114,11 +122,27 @@ Two things are decided now; the rest is listed as open.
 
 ## Open at build time (measurement questions, not decision questions)
 
-- Scoring rule (deepest-bottom-left vs. best-fit-volume) and its interaction with the
-  per-part orientation loop — settle with the differential fuzz on real parts.
-- The operation backstop's number (kind is settled: deterministic count, never wall
-  clock). It also bounds quantity-mode refinement (§4), so sizing it is a
-  responsiveness decision, not only a safety one — measure, don't guess.
+Both were settled in build-plan phase 3 (2026-07-27) by the instruments this ADR
+called for, not by argument. The measurements live in the tests that took them —
+`tests/packing-differential-fuzz.test.ts` and `tests/packing-ep-backstop.test.ts` —
+so they re-run rather than rot.
+
+- **Scoring rule: deepest-bottom-left.** Over a 3000-case generated sweep the two
+  rules are statistically level — 20 910 parts placed against 20 901, ahead in 98
+  cases against 89, level in 2813 — and on the AS1 assembly they are *identical* at
+  every carton size from 610 mm down to 160 mm, including the sizes where parts stop
+  fitting. Nothing in the packing quality chose between them, so cost did:
+  deepest-bottom-left compares three coordinates per candidate, best-fit-volume
+  builds and sorts an envelope volume. The loser stays behind the switch — it is
+  tested, and quantity refinement (§4) may want to revisit it — which keeps changing
+  our mind a one-line change.
+- **Backstop: 2e8 operations**, where an operation is one candidate evaluated or one
+  pairwise test against a placed box. Measured at a steady ~1e5 ops/ms: the AS1
+  assembly costs 4.6e4 (5 ms), 100 mixed parts 1.1e7 (123 ms), 250 parts 1.8e8
+  (1.9 s), 500 parts 1.5e9 (15 s). Cost grows with the *cube* of the part count, so
+  no number is both generous to 500 parts and quick — and since §4 makes this the
+  bound on quantity refinement too, responsiveness is what binds. 2e8 buys about two
+  seconds, which the real-world anchor spends 0.02% of.
 
 ## Consequences
 

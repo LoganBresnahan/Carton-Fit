@@ -10,6 +10,19 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
+### Changed
+
+- **Fit check finds arrangements it used to miss.** The app now tries two ways of
+  packing the carton and keeps whichever fits more — the original layer-by-layer
+  method, plus a new one that can drop a part into the space above a shorter
+  neighbour instead of leaving that air unused. On assemblies of mixed shapes and
+  heights it is the difference between "couldn't find a fit" and a packed carton:
+  across a 240-case test sweep it improved the answer on a third of them and made
+  none worse. The verdict is still a best effort rather than a proof — "doesn't
+  fit" means this app could not find an arrangement, not that none exists — and
+  nothing about the screen changes.
+  ([ADR-0022](doc/adr/0022-extreme-point-placement-shelf-stays-as-incumbent.md))
+
 ## [1.0.0] — 2026-07-27
 
 The first release meant to be installed and used. Everything below landed after

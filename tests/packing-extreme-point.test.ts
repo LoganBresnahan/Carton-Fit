@@ -143,10 +143,10 @@ describe('extremePointFit', () => {
     const boxes = [box('slab', perms([60, 60, 20])), box('cube', [opt(40, 40, 40)])]
     const carton: Vec3 = [100, 100, 100]
 
-    const dbl = extremePointFit(boxes, carton, NO_GAPS, 1e9, 'deepest-bottom-left')
+    const dbl = extremePointFit(boxes, carton, NO_GAPS, 1e9, { scoring: 'deepest-bottom-left' })
     expect(dbl.placements[1].boxMin).toEqual([60, 0, 0])
 
-    const bfv = extremePointFit(boxes, carton, NO_GAPS, 1e9, 'best-fit-volume')
+    const bfv = extremePointFit(boxes, carton, NO_GAPS, 1e9, { scoring: 'best-fit-volume' })
     expect(bfv.placements[1].boxMin).toEqual([0, 0, 20])
 
     expectValid(dbl.placements, carton)
@@ -326,7 +326,7 @@ describe('extremePointFit', () => {
       [10, 10, 10],
       NO_GAPS,
       1e9,
-      'best-fit-volume'
+      { scoring: 'best-fit-volume' }
     )
     expect(r.placements[0].boxMax).toEqual([0.7, 0.3, 0.1])
   })
@@ -365,8 +365,8 @@ describe('extremePointFit', () => {
     expect(r1.placements.length).toBeGreaterThanOrEqual(shelf.placements.length)
 
     // The other scoring rule obeys the same contracts on the same load.
-    const b1 = extremePointFit(boxes, carton, clearances, 4000, 'best-fit-volume')
-    const b2 = extremePointFit(boxes, carton, clearances, 4000, 'best-fit-volume')
+    const b1 = extremePointFit(boxes, carton, clearances, 4000, { scoring: 'best-fit-volume' })
+    const b2 = extremePointFit(boxes, carton, clearances, 4000, { scoring: 'best-fit-volume' })
     expect(b2).toEqual(b1)
     expectValid(b1.placements, carton, clearances)
     expect(b1.placements.length + b1.unplaced.length).toBe(30)

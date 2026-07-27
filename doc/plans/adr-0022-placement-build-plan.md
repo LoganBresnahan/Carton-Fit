@@ -156,17 +156,56 @@
       quantity mode is next open.*
 
 ### 3. Opus batch A: harden and race the engine — **opus** (mutually independent)
-- [ ] `operation-count-backstop` · medium — deterministic counter (placement
+- [x] `operation-count-backstop` · medium — deterministic counter (placement
       attempts / overlap tests) inside the EP loops with a clean abort path; never
       wall clock (ADR-0022 §6). The non-mechanical half is SIZING: measure on real
       workloads here, because quantity refinement (phase 4) inherits the number.
       A mis-sized constant degrades depth, never correctness — the floor stands.
-- [ ] `incumbent-race-fit-check` · medium — rework `fitCheck()` in `pack.ts`
+      *Done: `DEFAULT_MAX_EP_OPS = 2e8`, charged one per candidate evaluated plus
+      one per pairwise test against a placed box — the pairwise half is what makes
+      the budget track cost, since the search is ~O(points × orientations × placed)
+      and only the last factor is invisible from outside.*
+      **The measurement moved the number by an order of magnitude from what a guess
+      would have set**: ops grow with the CUBE of the part count (AS1's 18 parts
+      4.6e4 / 5 ms; 100 parts 1.1e7 / 123 ms; 250 parts 1.8e8 / 1.9 s; 500 parts
+      1.5e9 / 15 s at a steady ~1e5 ops/ms), so there is no constant that is both
+      generous to 500 parts and quick. Sized on responsiveness — 2e8 ≈ two seconds —
+      which is the right axis because §4 makes it quantity refinement's bound too.
+      *The abort is a PREFIX, not a truncation at an arbitrary point*: a box whose
+      own candidate scan was cut short is dropped rather than placed, so a budgeted
+      run's placements equal the unbudgeted run's placements up to the trip, part
+      for part. Pinned by test; without it the last placement would depend on where
+      the counter happened to run out. A trip also joins geometry in the binding
+      attribution — otherwise the all-placed headroom comparison can label a
+      truncated arrangement 'weight'.
+      *Mutation-tested four ways, each killed by exactly the test built for it —
+      and the binding test SURVIVED its mutation on the first write*: it used
+      weightless parts, and with every weight zero the headroom comparison can only
+      ever say 'geometry', so the guard was never consulted. Same shape as phase 2's
+      toothless-literal test. The parts now carry weight.
+- [x] `incumbent-race-fit-check` · medium — rework `fitCheck()` in `pack.ts`
       (currently calls greedyShelfFit alone) to run-both-compare-return through the
       FitStrategy seam. Comparator semantics: fewer-unplaced wins, deterministic
       tie-break, binding/utilization/heuristic taken from the winner. No worker
       protocol change; the stale lifecycle (ADR-0009) already covers the UX.
-- [ ] `differential-fuzz-oracle` · medium — fresh vitest suite (first generative one
+      *Done: `beatsIncumbent()` in `pack.ts`, exported because the fuzz tests the
+      comparator directly — it is the one place where a better engine could still
+      produce a worse answer. Fewer unplaced wins; on a tie, more volume placed
+      wins (the same COUNT is not the same answer when one arrangement got the big
+      ones in); a dead heat leaves the incumbent standing, which is what makes the
+      race a one-way ratchet. The volume margin is EPS, not `>`: the two sums add
+      the same volumes in different orders, so noise rather than the rule would
+      otherwise pick the winner on genuinely equal arrangements.*
+      **The backstop trip is deliberately NOT consulted here** — a truncated EP
+      result has more parts unplaced and loses on its own merits, so the crash
+      barrier (phase 5) stays a separate, explicit decision rather than something
+      the race quietly half-does.
+      *The engine is now WIRED: this is the phase where ADR-0022 starts changing
+      answers.* Hand-derived regression case (3 parts, 50 mm carton) where shelf
+      declares a non-fit and EP fits everything, by using the 40 mm of air directly
+      above the first slab that the shelf cursor abandoned. Mutation-tested four
+      ways including reading utilization off the loser.
+- [x] `differential-fuzz-oracle` · medium — fresh vitest suite (first generative one
       in the repo): seeded PRNG, part-set generator that stresses the gaps shelf
       abandons (heterogeneous heights, tight cartons, near-degenerate dims). Two
       invariants: EP count ≥ shelf count on every input; every EP placement passes
@@ -178,6 +217,35 @@
       counterexamples in the verify report). Assert it against the RACED result
       (which dominates by construction) and track the raw-EP loss rate as a
       statistic, not an invariant.
+      *Done: `tests/packing-differential-fuzz.test.ts`, 240 seeded cases across six
+      generators, each aimed at a different way the engines can disagree — `mixed`,
+      `heights` (the shelf weakness itself), `tight`, `degenerate` (zero-thickness
+      and hair-thin extents), `gapped` (the two engines implement clearances by
+      completely different means and must still agree), `capped`. Four invariants:
+      every EP arrangement passes the phase-1 validator including clearances, the
+      RACED answer is never worse than shelf's, no engine exceeds the weight cap,
+      and repeated runs are identical.*
+      **The statistic runs in the direction that matters.** Tracking only losses
+      would let EP quietly degrade into a worse shelf — every invariant would still
+      pass, the race would hide it perfectly, and the app would simply stop getting
+      better answers. So the assertion is a FLOOR on wins: EP places more than shelf
+      in 80 of 240 cases, and the wins concentrate exactly where the ADR predicted —
+      tight cartons 31/40, clearance-laden 18/40, mixed heights 16/40, ordinary
+      mixed 14/40 — and vanish where geometry is not the question (weight-capped
+      1/40, hair-thin parts 0/40). The loss rate is the ceiling half, kept loose;
+      this corpus happens to contain zero losses, the 3000-case sweep 3.
+      *Mutation-tested four ways: overlap tested against only the most recent box,
+      wall clearance dropped from the usable window, the weight cap checked after
+      the placement is committed, and EP degraded to placing one part. Each goes
+      red, and the first three are silent against every other test in the repo.*
+      **Scoring rule settled: deepest-bottom-left** — ADR-0022's "Open at build
+      time" section is now closed with the numbers. The two rules turned out
+      statistically level (3000-case sweep: 20 910 parts placed against 20 901,
+      ahead in 98 cases against 89, level in 2813) and *identical* on AS1 at every
+      carton size from 610 mm down to 160 mm, including where parts stop fitting.
+      Packing quality did not choose between them, so cost did — three coordinate
+      compares against building and sorting an envelope volume per candidate. The
+      loser stays behind the switch, tested, so revisiting is one line.
 
 ### 4. Fable batch B: EMS + quantity refinement — **fable, adversarial verify both**
 - [ ] `ems-bookkeeping` · high — empty-maximal-space maintenance alongside EP: split

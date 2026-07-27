@@ -150,9 +150,10 @@ export interface QuantityPlacement {
 }
 
 /**
- * Fit-check placement (heterogeneous boxes). Greedy shelf/layer today; extreme-
- * point tomorrow — same signature. Weight is co-equal with fit: the strategy stops
- * on whichever binds and reports which.
+ * Fit-check placement (heterogeneous boxes). Two implementations share this
+ * signature — greedy shelf/layer and extreme-point — and pack.ts runs both and
+ * returns the better (ADR-0022 §2), which is exactly what the seam was for. Weight
+ * is co-equal with fit: the strategy stops on whichever binds and reports which.
  */
 export type FitStrategy = (
   boxes: readonly PackBox[],

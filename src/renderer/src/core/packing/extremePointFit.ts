@@ -18,8 +18,14 @@ import type {
 // point in every orientation, with a real overlap check. It is the first placement
 // code here that CAN be geometrically wrong, which is why it exists alongside the
 // validator (validate.ts) and not instead of shelf: shelf stays as incumbent,
-// oracle, and crash barrier (ADR-0022 §2). This module is deliberately UNWIRED —
-// pack.ts still calls greedyShelfFit alone until the incumbent race lands.
+// oracle, and crash barrier (ADR-0022 §2). pack.ts RACES it against shelf and
+// returns the better of the two, so this engine can only improve an answer,
+// never worsen one.
+//
+// A deterministic operation backstop bounds the search (ADR-0022 §6 — a count,
+// never a clock). See DEFAULT_MAX_EP_OPS for what is charged and how it was
+// sized; the abort is clean, leaving a valid truncated arrangement rather than a
+// suspect one.
 //
 // The safety split that shapes everything below: CANDIDATE GENERATION AFFECTS
 // QUALITY, NEVER VALIDITY. Every candidate is re-checked at placement time against
@@ -48,6 +54,28 @@ import type {
 
 export type EpScoringRule = 'deepest-bottom-left' | 'best-fit-volume'
 
+/** Options the engine accepts beyond the FitStrategy seam's four arguments. Both
+ *  are engine-internal knobs, which is why they live behind one optional object
+ *  rather than growing the shared strategy signature. */
+export interface EpOptions {
+  scoring?: EpScoringRule
+  /** Deterministic operation budget (ADR-0022 §6). See DEFAULT_MAX_EP_OPS. */
+  maxOps?: number
+}
+
+/** What the engine returns beyond a plain FitPlacement: the work it actually did,
+ *  and whether the backstop cut the search short. Structurally still a
+ *  FitPlacement, so the function satisfies FitStrategy unchanged. */
+export interface EpFitPlacement extends FitPlacement {
+  /** Operations charged — pairwise box tests plus candidate evaluations. */
+  ops: number
+  /** True when `maxOps` was exhausted and the search abandoned the remaining
+   *  boxes. The placements returned are still valid; the arrangement is just
+   *  truncated, so a tripped result loses the incumbent race on its own merits
+   *  rather than needing to be special-cased. */
+  backstopTripped: boolean
+}
+
 /** Provisional default until phase 3's differential fuzz measures both rules on
  *  the samples/ parts (ADR-0022 "Open at build time"). The switch exists so
  *  settling the rule is a one-line change that reopens nothing verified here.
@@ -56,6 +84,41 @@ export type EpScoringRule = 'deepest-bottom-left' | 'best-fit-volume'
  *    corner over everything placed, candidate included) — compactness, directly.
  */
 export const DEFAULT_EP_SCORING: EpScoringRule = 'deepest-bottom-left'
+
+/** The deterministic operation backstop (ADR-0022 §6): a COUNT, never a clock, so
+ *  the same input trips — or doesn't — identically on every machine and every run.
+ *
+ *  One "operation" is one unit of the work that actually dominates this engine:
+ *  each candidate (point × orientation) evaluated, plus each pairwise test against
+ *  an already-placed box (clearance, dead-point, projection). Charging the pairwise
+ *  tests rather than only the candidates is what makes the budget track cost — the
+ *  search is ~O(points × orientations × placed), and only the last factor is
+ *  invisible from the outside.
+ *
+ *  SIZED BY MEASUREMENT, not by guess (build plan risk 2). Measured 2026-07-27 on
+ *  the dev machine, seeded heterogeneous loads in snug cartons, throughput a
+ *  steady ~1e5 ops/ms:
+ *
+ *      AS1 golden, 18 real solids, 24 in carton    4.6e4 ops      5 ms
+ *      50 mixed parts                              1.2e6 ops     17 ms
+ *      100 mixed parts                             1.1e7 ops    123 ms
+ *      250 mixed parts                             1.8e8 ops    1.9 s
+ *      500 mixed parts                             1.5e9 ops     15 s
+ *
+ *  The number that binds is RESPONSIVENESS, not safety — §4 makes the backstop the
+ *  bound on quantity-mode refinement cost as well, and the growth above is why:
+ *  ops go up with the cube of the part count, so there is no budget that is both
+ *  generous to 500 parts and quick. 2e8 buys roughly two seconds at the measured
+ *  throughput, which covers every realistic fit check with room to spare — the
+ *  real-world anchor spends 0.02% of it, and 100 parts (already an unusual file,
+ *  since every solid was modelled by hand) spend 5%. Past ~250 parts the search
+ *  truncates and the incumbent's answer stands.
+ *
+ *  A mis-sized constant degrades depth, never correctness: the incumbent's answer
+ *  is still standing (ADR-0022 §2) and every placement made before the trip is
+ *  validator-clean. If a dogfooded load ever reads as a hang, this constant is the
+ *  tuning knob ADR-0022 §5 names — not a spinner. */
+export const DEFAULT_MAX_EP_OPS = 2e8
 
 /** Tolerant ≤, in the SUBTRACTION shape the validator uses (`a − b > EPS` flags).
  *  The additive shape `a <= b + EPS` is not equivalent: when `b + EPS` rounds up,
@@ -112,8 +175,26 @@ export function extremePointFit(
   carton: Vec3,
   clearances: Clearances,
   maxWeightG: number,
-  scoring: EpScoringRule = DEFAULT_EP_SCORING
-): FitPlacement {
+  options: EpOptions = {}
+): EpFitPlacement {
+  const scoring = options.scoring ?? DEFAULT_EP_SCORING
+  // A non-finite or negative budget would make the trip test meaningless (NaN
+  // comparisons are always false — the backstop would silently stop existing).
+  // Clamp to the default rather than to zero: a garbled knob must not turn a
+  // working engine into one that places nothing.
+  const maxOps =
+    typeof options.maxOps === 'number' && options.maxOps >= 0 && Number.isFinite(options.maxOps)
+      ? options.maxOps
+      : DEFAULT_MAX_EP_OPS
+
+  // Charged in the three pairwise loops and once per candidate evaluated. `tripped`
+  // latches: once the budget is gone the search only unwinds, never resumes.
+  let ops = 0
+  let tripped = false
+  const charge = (n: number): void => {
+    ops += n
+    if (ops > maxOps) tripped = true
+  }
   // Sanitized at entry: a negative or non-finite clearance reaches this seam
   // through the public Clearances type, and unclamped it becomes interpenetration
   // (a negative gap offsets spawn points INTO placed boxes) or NaN-poisoned
@@ -160,6 +241,7 @@ export function extremePointFit(
       if (!Number.isFinite(e[a]) || e[a] < 0) return false
       if (!fitsLe(p[a] + e[a], carton[a] - wall)) return false
     }
+    charge(placed.length)
     for (const b of placed) {
       if (separation(p, e, b) < gap - EPS) return false
     }
@@ -172,6 +254,7 @@ export function extremePointFit(
    *  it. Strictness (beyond EPS) keeps points ON faces alive — touching is not
    *  overlapping, and a zero-extent part may still land there legally. */
   const isDead = (pt: Vec3): boolean => {
+    charge(placed.length)
     for (const b of placed) {
       let inside = true
       for (let a = 0; a < 3; a++) {
@@ -194,6 +277,7 @@ export function extremePointFit(
   const project = (point: Vec3, axis: number): Vec3 => {
     const [u, v] = OTHER_AXES[axis]
     let floor = wall
+    charge(placed.length)
     for (const b of placed) {
       const landing = b.max[axis] + gap
       if (landing > point[axis] + EPS) continue // at or above the point — not below it
@@ -257,9 +341,20 @@ export function extremePointFit(
   let geometryRejected = false
 
   for (const box of order) {
+    // The clean abort path: once the budget is gone, this box and every box after
+    // it goes unplaced, untouched. The suffix is abandoned rather than partially
+    // searched, so "tripped" means exactly one thing — the arrangement is a prefix
+    // of the search, and everything in it was chosen under the full rule set.
+    if (tripped) {
+      unplaced.push(box.name)
+      continue
+    }
+
     let best: Candidate | null = null
     for (const point of points) {
+      if (tripped) break
       for (const option of box.orientations) {
+        charge(1)
         if (!clearsAll(point, option.extent)) continue
         const candidate: Candidate = {
           point,
@@ -270,6 +365,14 @@ export function extremePointFit(
       }
     }
 
+    if (tripped) {
+      // Tripped DURING this box's own search: its candidate scan is incomplete, so
+      // `best` is the best of an arbitrary prefix rather than the best available.
+      // Drop it — placing it would make the arrangement depend on where the budget
+      // happened to run out, and it is not a geometry rejection either.
+      unplaced.push(box.name)
+      continue
+    }
     if (!best) {
       unplaced.push(box.name)
       geometryRejected = true
@@ -329,9 +432,13 @@ export function extremePointFit(
   // wins over geometry when both occurred (the user-facing limit); with
   // everything placed, report the constraint with the least headroom, and never
   // call a weightless packing weight-bound (0 ≥ 0 is a degenerate tie).
+  // A backstop trip joins geometry here: parts are unplaced and the cap did not
+  // reject them. Leaving it out would fall through to the headroom comparison,
+  // which assumes everything was placed and could label a truncated arrangement
+  // 'weight' — a confident wrong answer about which constraint bound.
   let binding: BindingConstraint
   if (weightRejected) binding = 'weight'
-  else if (geometryRejected) binding = 'geometry'
+  else if (geometryRejected || tripped) binding = 'geometry'
   else {
     const cartonVolume = boxVolume(carton)
     const weightFraction = maxWeightG > 0 ? totalWeightG / maxWeightG : 0
@@ -339,9 +446,10 @@ export function extremePointFit(
     binding = weightFraction > 0 && weightFraction >= volumeFraction ? 'weight' : 'geometry'
   }
 
-  return { placements, unplaced, binding }
+  return { placements, unplaced, binding, ops, backstopTripped: tripped }
 }
 
-// The 4-arg strategy shape pack.ts consumes; the 5th (scoring) parameter is
-// engine-internal and optional, so the function itself satisfies the seam.
+// The 4-arg strategy shape pack.ts consumes; the 5th (options) parameter is
+// engine-internal and optional, and the extra return fields are additive, so the
+// function itself satisfies the seam.
 extremePointFit satisfies FitStrategy

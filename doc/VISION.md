@@ -58,7 +58,8 @@ product decisions:
 
 ## Packing quality tiers (selectable in the UI from day one)
 
-1. **Fast** — axis-aligned bounding box, 6 orientations, grid/greedy placement. Instant.
+1. **Fast** — axis-aligned bounding box, 6 orientations, grid/greedy placement plus
+   extreme-point placement, whichever packs more (ADR-0022). Instant.
 2. **Thorough** — minimal oriented bounding box + rotation search. Seconds.
 3. **True nesting** — pack real geometry so concave parts interlock. Visible in the UI
    but disabled and marked *experimental / coming later*; not part of v1.

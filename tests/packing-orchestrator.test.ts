@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { pack } from '../src/renderer/src/core/packing/pack'
-import { applyMat3 } from '../src/renderer/src/core/packing/orientations'
+import { beatsIncumbent, pack } from '../src/renderer/src/core/packing/pack'
+import { aabbOrientations, applyMat3 } from '../src/renderer/src/core/packing/orientations'
+import { greedyShelfFit } from '../src/renderer/src/core/packing/shelfFit'
+import { validatePlacements } from '../src/renderer/src/core/packing/validate'
+import { IDENTITY_MAT3 } from '../src/renderer/src/core/packing/types'
 import { MAX_GRID_PLACEMENTS } from '../src/renderer/src/core/packing/quantityGrid'
 import type {
   Clearances,
+  FitPlacement,
   Mat3,
+  Placement,
   PackMode,
   PackPart,
   PackRequest,
@@ -188,5 +193,140 @@ describe('pack — thorough ≥ fast (superset guarantee at the orchestrator)', 
     if (fast.mode !== 'fit-check' || thorough.mode !== 'fit-check') return
     expect(fast.fits).toBe(false)
     expect(thorough.fits).toBe(true)
+  })
+})
+
+// --- the incumbent race (ADR-0022 §2) --------------------------------------
+// fitCheck runs greedy shelf AND extreme-point placement and returns the better
+// of the two. The property that matters is a RATCHET: the answer can only improve
+// on what shelf alone produced, never regress, because engines are invisible to
+// the user and a worse verdict is the one regression they would notice.
+
+describe('pack — fit-check races shelf against extreme-point', () => {
+  // Hand-derived from the shelf weakness ADR-0003 named in its own consequences.
+  // Volumes sort a (20 000) > c (16 000) > b (12 000), so the order is a, c, b.
+  // Shelf: a lies flat as 50×40×10 at the origin; c opens a NEW SHELF beside it
+  // at y = 40 as 40×10×40; b then has nowhere to go — the row is full, the next
+  // shelf would start at y = 50, and a new LAYER starts at z = 40 with only 10 mm
+  // of height left. The 40 mm of empty air directly above a was abandoned the
+  // moment the shelf cursor moved on. Extreme-point keeps that corner as a
+  // candidate and drops b straight into it.
+  const SHELF_BLIND_SPOT: [string, Vec3][] = [
+    ['a', [10, 40, 50]],
+    ['b', [20, 30, 20]],
+    ['c', [10, 40, 40]]
+  ]
+  const CARTON: Vec3 = [50, 50, 50]
+
+  it('fits a set that shelf alone declares unfittable', () => {
+    const parts = SHELF_BLIND_SPOT.map(([n, s]) => boxPart(n, s))
+    const shelfAlone = greedyShelfFit(
+      parts.map((p) => ({ name: p.name, weightG: p.weightG, orientations: aabbOrientations(p) })),
+      CARTON,
+      NO_CLEARANCE,
+      Infinity
+    )
+    expect(shelfAlone.unplaced).toEqual(['b']) // the incumbent's own answer, first
+
+    const r = pack(request('fit-check', parts, CARTON))
+    if (r.mode !== 'fit-check') return
+    expect(r.fits).toBe(true)
+    expect(r.unplaced).toEqual([])
+    // The winner's placements are what ships — and they are judged by the
+    // independent validator, not by the engine that produced them.
+    expect(r.placements).toHaveLength(3)
+    expect(validatePlacements(r.placements, CARTON, { clearances: NO_CLEARANCE })).toEqual([])
+    expect(r.heuristic).toBe(true) // the better of two heuristics is still one
+  })
+
+  it('never returns fewer placed parts than the incumbent would alone', () => {
+    // The ratchet, over a spread of cartons rather than one lucky case: whatever
+    // shelf achieves is a floor the raced answer must meet or beat.
+    const parts = SHELF_BLIND_SPOT.map(([n, s]) => boxPart(n, s))
+    const boxes = parts.map((p) => ({
+      name: p.name,
+      weightG: p.weightG,
+      orientations: aabbOrientations(p)
+    }))
+    for (const side of [30, 40, 45, 50, 60, 80, 100]) {
+      const carton: Vec3 = [side, side, side]
+      const shelfAlone = greedyShelfFit(boxes, carton, NO_CLEARANCE, Infinity)
+      const r = pack(request('fit-check', parts, carton))
+      if (r.mode !== 'fit-check') return
+      expect(r.placements.length, `carton ${side}`).toBeGreaterThanOrEqual(
+        shelfAlone.placements.length
+      )
+      expect(validatePlacements(r.placements, carton), `carton ${side}`).toEqual([])
+    }
+  })
+
+  it('utilization and binding are read off the winner, not the loser', () => {
+    const parts = SHELF_BLIND_SPOT.map(([n, s]) => boxPart(n, s))
+    const r = pack(request('fit-check', parts, CARTON))
+    if (r.mode !== 'fit-check') return
+    // All three placed: 20 000 + 12 000 + 16 000 mm³ of 125 000.
+    expect(r.utilization).toBeCloseTo(48000 / 125000, 10)
+    expect(r.binding).toBe('geometry')
+  })
+
+  it('the weight cap still binds when the challenger wins on geometry', () => {
+    // A weight rejection must survive the race: the challenger placing more parts
+    // does not make the cap stop being the reason the rest were left out.
+    const parts = SHELF_BLIND_SPOT.map(([n, s], i) => boxPart(n, s, i === 2 ? 5000 : 100))
+    const r = pack(request('fit-check', parts, CARTON, { maxWeightG: 1000 }))
+    if (r.mode !== 'fit-check') return
+    expect(r.fits).toBe(false)
+    expect(r.unplaced).toContain('c')
+    expect(r.binding).toBe('weight')
+  })
+})
+
+describe('beatsIncumbent', () => {
+  const at = (name: string, min: Vec3, max: Vec3): Placement => ({
+    partName: name,
+    rotation: IDENTITY_MAT3,
+    translation: [0, 0, 0],
+    boxMin: min,
+    boxMax: max
+  })
+  const fit = (placements: Placement[], unplaced: string[]): FitPlacement => ({
+    placements,
+    unplaced,
+    binding: 'geometry'
+  })
+
+  it('fewer unplaced wins — that is the question fit check asks', () => {
+    const challenger = fit([at('a', [0, 0, 0], [1, 1, 1])], [])
+    const incumbent = fit([], ['a'])
+    expect(beatsIncumbent(challenger, incumbent)).toBe(true)
+    expect(beatsIncumbent(incumbent, challenger)).toBe(false)
+  })
+
+  it('on a tie, more volume placed wins — the same count is not the same answer', () => {
+    const big = fit([at('a', [0, 0, 0], [10, 10, 10])], ['x'])
+    const small = fit([at('b', [0, 0, 0], [1, 1, 1])], ['y'])
+    expect(beatsIncumbent(big, small)).toBe(true)
+    expect(beatsIncumbent(small, big)).toBe(false)
+  })
+
+  it('a dead heat leaves the incumbent standing', () => {
+    // The one-way ratchet: a challenger that cannot demonstrate an improvement
+    // does not get to change the answer.
+    const a = fit([at('a', [0, 0, 0], [10, 10, 10])], [])
+    const b = fit([at('a', [5, 5, 5], [15, 15, 15])], [])
+    expect(beatsIncumbent(a, b)).toBe(false)
+    expect(beatsIncumbent(b, a)).toBe(false)
+  })
+
+  it('last-ulp noise is not an improvement', () => {
+    // The two sums add the same volumes in different orders, so an arrangement
+    // that is genuinely equal can come out a few ulps ahead. Without the margin,
+    // that noise would decide the race instead of the rule.
+    const incumbent = fit([at('a', [0, 0, 0], [0.1, 0.3, 0.7])], [])
+    const challenger = fit(
+      [at('a', [0, 0, 0], [0.1, 0.3, 0.7 + Number.EPSILON])],
+      []
+    )
+    expect(beatsIncumbent(challenger, incumbent)).toBe(false)
   })
 })
