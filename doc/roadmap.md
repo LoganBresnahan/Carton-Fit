@@ -318,6 +318,60 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       number. Worth revisiting when a second reason for a mixed-material
       fixture appears.
 
+- [ ] 15. Update check + the header status area — **ADR-0021**, accepted
+      2026-07-26. Two things the same decision, because adding a second banner
+      is what exposed the first one's home as wrong.
+      **Ordering constraint: this must land in 1.0.0 itself, before the draft is
+      published.** An installed build with no update check can never learn that
+      1.1.0 exists, so 1.1.0 could only announce itself to people already
+      running a build that knows how to look. The window is open only while the
+      release is still a draft.
+      - **the check** — main process, on launch, after the window shows.
+        `net.fetch` (no new dependency) against
+        `/repos/LoganBresnahan/Carton-Fit/releases/latest`, which returns only
+        published non-draft non-prerelease releases, so ADR-0012's human-publish
+        gate is inherited for free. Compare `tag_name` to `app.getVersion()` as
+        three integers — no `semver` package for a three-line compare.
+      - **every failure is silence** — offline, DNS, a 403 from rate-limiting, a
+        changed response shape, an unparseable tag. A packing estimator must
+        never nag about the network. This is a contract, so it gets its own e2e;
+        `UPDATE_CHECK_URL` lets the specs point at a local fixture.
+      - **the banner is the whole UI** — one line, "Version X is available ·
+        Download", opening the release page via `shell.openExternal` brokered
+        through preload like every other privileged call. Nothing downloads,
+        nothing installs, nothing blocks.
+      - **both banners move to the header**, and `StorageBanner` leaves the
+        360px control column. Item 9's requirement — a storage failure must
+        never scroll out of sight — stops being an arrangement of flex siblings
+        and becomes structural, since the header cannot scroll. Its existing
+        e2e asserts a *relationship* (`toBeInViewport()` at both scroll
+        extremes), so it should survive the move unedited and prove more than it
+        did before. Storage outranks news when both are present.
+      - **the header's height must not depend on its contents** — the update
+        banner arrives asynchronously, and a header that grew when it appeared
+        would shift the window under a moving cursor. Fixed height; messages
+        truncate to a `title` tooltip rather than wrap.
+      - **dismissal is per occurrence, not per banner** — no persisted state
+        (ADR-0020 made the localStorage key a versioned surface). The subtle
+        half is the re-arm: dismissal keys on an occurrence counter, never the
+        message text, because two consecutive failed saves usually produce the
+        *identical* string — exactly the case where the user has retried and
+        most needs telling. Deleting the re-arm must fail one spec and nothing
+        else.
+      — **release mechanics, verified 2026-07-26**: the draft does NOT need
+      deleting. `v1.0.0` is pushed and annotated (peels to 69aabd8), and
+      `release.yml`'s `draft-release` job is create-or-update — it clobbers the
+      existing draft's assets by name. So: land this, `git tag -f v1.0.0` and
+      force-push, and the workflow rebuilds in place. Asset names are stamped at
+      `1.0.0` and unchanged, so the clobber leaves no orphans (it would not if
+      the version moved). **Two notes-shaped traps**: the re-run path never
+      touches release notes, so `.github/release-notes.md` — whose known-
+      limitations list currently ends "No auto-update." — needs editing here
+      *and* applying to the live draft by hand
+      (`gh release edit v1.0.0 --notes-file …`). The `api.github.com` contact is
+      a user-visible behaviour change, so it belongs in CHANGELOG **under
+      `[1.0.0]`, not `[Unreleased]`** — it ships inside that release.
+
 ## Later
 
 - [ ] 14. Slim the packaged app, second pass — **~40 MB of the 59 MB
@@ -347,4 +401,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 - More import formats (OBJ, IGES — near-free via occt-import-js)
 - Tier-3 true nesting (experimental; see ADR-0003 revisit triggers)
 - Box tare weight; material density library (ADR-0004 revisit triggers)
-- Auto-update via electron-updater
+- ~~Auto-update via electron-updater~~ — **superseded by ADR-0021 / item 15**,
+  not deferred by it. The app now notifies and links; it deliberately never
+  installs. Silent install is trust-negative while the installer is unsigned
+  (it relocates the SmartScreen moment to one the user did not initiate), and
+  electron-updater is a runtime dependency plus a server-side release contract
+  sized for a cadence this project does not have. Becomes worth revisiting only
+  behind a code-signing certificate — see ADR-0021's revisit triggers.
