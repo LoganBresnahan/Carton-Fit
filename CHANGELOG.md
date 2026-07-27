@@ -10,7 +10,7 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
-## [1.0.0] — 2026-07-25
+## [1.0.0] — 2026-07-27
 
 The first release meant to be installed and used. Everything below landed after
 the unpublished 0.1.0 tag; the app is also renamed, so read *Upgrading* before
