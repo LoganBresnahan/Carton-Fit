@@ -76,8 +76,12 @@ function bestGrid(unit: PackBox, carton: Vec3, clearances: Clearances): GridFit 
  * The nudge is relative (1e-9), so it only rescues values already within a
  * rounding error of an integer — at carton scale that is sub-nanometre, far
  * under the EPS the placement engines use.
+ *
+ * Exported for quantityBound (ADR-0022): the upper bound must never fall below
+ * this engine's count, and sharing the exact floor arithmetic is what keeps a
+ * tolerant boundary from inverting them by one.
  */
-function floorTolerant(ratio: number): number {
+export function floorTolerant(ratio: number): number {
   return Math.floor(ratio * (1 + 1e-9))
 }
 

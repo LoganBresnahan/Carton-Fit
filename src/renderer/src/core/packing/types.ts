@@ -192,6 +192,13 @@ export interface FitCheckResult extends PackResultBase {
 export interface MaxQuantityResult extends PackResultBase {
   mode: 'max-quantity'
   count: number
+  /** Rigorous cap on the count ANY arrangement could achieve — min of the
+   *  volumetric, per-axis, and weight bounds (ADR-0022 §7: "47 fit (upper
+   *  bound 54)", stated flatly because it is not a heuristic). Always ≥
+   *  `count`. Absent when no finite bound exists (e.g. a weightless
+   *  zero-extent unit) — absence survives the saved-estimate JSON round-trip,
+   *  where Infinity would not. */
+  upperBound?: number
 }
 
 export type PackResult = FitCheckResult | MaxQuantityResult

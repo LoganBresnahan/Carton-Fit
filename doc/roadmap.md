@@ -503,8 +503,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 - Placement upgrade: extreme-point placement + EMS reporting inside tiers 1–2 AND
   quantity mode, shelf/grid kept as incumbents, oracle, and crash barrier —
   **ADR-0022 (Accepted 2026-07-26)**, ahead of ADR-0003's dogfood trigger on
-  purpose; build plan at `doc/plans/adr-0022-placement-build-plan.md`, build not
-  yet scheduled
+  purpose; build plan at `doc/plans/adr-0022-placement-build-plan.md` — phases
+  1–2 of 6 landed (validator; EP engine + quantity upper bound, both
+  adversarially verified), engine still unwired pending the phase-3 incumbent
+  race
 - Tier-3 nesting, redefined as drop-in packing (voxelized geometry, insertion-order
   constraint, warm-started from tier 2; witness = packing instructions) — design
   recorded as **ADR-0023 (Proposed)**, refining ADR-0003's "interlocking" framing;

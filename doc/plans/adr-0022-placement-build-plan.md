@@ -67,7 +67,7 @@
       down with it), and taking the least- instead of most-separated axis.
 
 ### 2. Fable batch A: the reasoning core — **fable, adversarial verify both**
-- [ ] `extreme-point-engine` · xhigh — new `core/packing` module implementing EP
+- [x] `extreme-point-engine` · xhigh — new `core/packing` module implementing EP
       placement as a `FitStrategy`: spawn/prune logic, clearance-aware overlap
       (reproduce shelfFit's wall vs. between-parts gap semantics WITHOUT
       double-counting), per-part orientation loop, weight as co-equal binding
@@ -76,7 +76,38 @@
       equal-score points, no Math.random, no Map-iteration dependence. Both scoring
       rules behind an internal switch (risk 1). Depends on the phase-1 validator so
       an independent checker guards it from the first unit test.
-- [ ] `quantity-upper-bound` · high — one pure function + a field on
+      *Done: `core/packing/extremePointFit.ts`, 23 tests, UNWIRED (pack.ts still
+      calls shelf alone until the phase-3 race).* CPT-style spawn: three face
+      points offset by the gap along the face normal only, each projected toward
+      the wall along its two perpendicular axes; prune kills points strictly
+      inside a gap-inflated placed box. The organizing principle the safety story
+      hangs on: **candidate generation affects quality, never validity** — every
+      candidate is re-checked against bounds and every placed box at placement
+      time, so projection/prune stay tunable without re-verifying physics. Both
+      rules behind a 5th argument: `deepest-bottom-left` (provisional default)
+      and `best-fit-volume` = smallest packed-envelope volume, with DBL then
+      lying-flat as tie-breaks. Weight protocol and binding attribution are
+      shelf's verbatim (spot first, then cap; rejection consumes nothing).
+      *Adversarial verify (3 agents, all counterexamples executed): validity
+      REFUTED 3× and fixed+pinned* — (1) the additive `a <= b + EPS` admits what
+      the validator's subtraction-shape test flags when `b + EPS` rounds up
+      (~1e-16 window; engine now uses the validator's exact arithmetic), (2)
+      negative/non-finite clearances reach the seam and became interpenetration
+      — now sanitized at entry like the validator's own `reach`, (3) −Infinity/
+      negative extents placed as inverted boxes — now rejected as unplaceable.
+      *Determinism NOT refuted* (500-run deep-equals, cross-process sha256, tie
+      totality audit); its fragile finding — the envelope product re-imports the
+      ulp bug `sortedVolume` fixed, letting last-ulp noise beat the documented
+      tie-break — was independently confirmed by the coverage agent with a
+      2-part counterexample (bfv 1 vs shelf 2) and fixed by sorting the factors.
+      *Coverage: shelf > raw EP on ~0.3% of 3,200 seeded inputs (both rules) —
+      greedy variance (DBL staircases fragmenting space a fresh shelf layer
+      keeps whole), not missed spawns; every hand-aimed nook was found. EP > 
+      shelf on 56.6%, and on the tiling family EP achieves the perfect packing
+      128/400 vs shelf's 23/400.* Mutation-tested five ways (gap dropped from
+      spawns, EPS sign flip, scoring switch ignored, preferOption dropped,
+      additive fitsLe restored), each killed by exactly the tests built for it.
+- [x] `quantity-upper-bound` · high — one pure function + a field on
       `MaxQuantityResult` (currently `count` only): min of volumetric and per-axis
       bounds, and the ADR promises this bound IS rigorous. Both candidate formulas
       have traps: the volumetric bound must honor the clearance halo the way
@@ -84,6 +115,45 @@
       gap), and a per-axis product over ONE orientation is a lower bound, not an
       upper one, since mixed orientations can beat it. No dependencies — it bounds
       the existing grid incumbent; batched here for the shared verify profile.
+      *Done: `core/packing/quantityBound.ts` + optional `upperBound` on
+      `MaxQuantityResult` (absent when no finite bound exists — Infinity does
+      not survive the saved-estimate JSON), wired in `pack.ts` with a
+      max(bound, count) clamp as float insurance. 22 tests.* Both named traps
+      closed by the halo argument (inflate boxes by g/2 per face → disjoint):
+      volumetric = window ÷ min inflated volume over OPTIONS (thorough-tier
+      options differ in volume), per-axis = cells of the per-axis MINIMUM
+      extent — the domino case pins it (13 fit a 3-cube; any single-orientation
+      per-axis product says 9 and calls the achievable 13 impossible). Weight
+      is included: arrangement cannot recover a weight-capped count, so the
+      on-screen gap stays an honest arrangement signal.
+      *Adversarial verify REFUTED the first build twice, differently — the
+      slice earned its verify slot:*
+      **(1) Rigor vs the judge (the deep one): "valid" means VALIDATOR-
+      ACCEPTED, not ideal geometry.** The validator (and both EP comparisons)
+      forgive EPS = 1e-6 mm per face and per pair; the ideal-geometry bound
+      undercounted validator-clean arrangements whenever one dimension sat
+      within EPS of an exact fit (executed: 5 cubes valid in a carton 5e-7 mm
+      short of five, bound said 4 — and the EP engine itself placed bound+1 in
+      400 sweep cases, so phase 4 would have shipped "5 fit (upper bound 4)").
+      Fixed by carrying the halo argument in the tolerant metric: windows
+      +EPS per face, cells/volumes −EPS per pair. Pure-accumulation of pair
+      tolerance needs ~1 km of carton to matter at 1 mm scale; the near-fit
+      band was the live defect.
+      **(2) Compounding floors: the volumetric ratio multiplies three per-axis
+      ratios, so its rescue nudge must be (1+1e-9)³, not (1+1e-9).** 922
+      crafted inputs put the raw bound at count − 1 (grid rescues each axis;
+      single-nudged volumetric floors one short), masked only by the pack()
+      clamp. Weight arithmetic held everywhere (only rounds up).
+      Mutation-tested six ways (first-option per-axis, gapless cell, weight
+      dropped, bare weight floor, EPS terms dropped, single nudge), each killed
+      by exactly the tests built for it — the bare-floor mutation initially
+      SURVIVED because the decimal-literal test pair divides to exactly 500 in
+      binary; the test now builds its grams through the lb→g multiplication
+      the app performs, which is where the hair-below lives.
+      *Noted, out of scope: pre-existing grid-side edges (negative maxWeightG
+      → count −6 via floorTolerant(−5) = −6; NaN cap → count NaN; Infinity
+      carton → count Infinity). UI-gated today; worth a defensive slice when
+      quantity mode is next open.*
 
 ### 3. Opus batch A: harden and race the engine — **opus** (mutually independent)
 - [ ] `operation-count-backstop` · medium — deterministic counter (placement
@@ -103,6 +173,11 @@
       the phase-1 validator. ALSO the instrument that settles the scoring rule —
       compare both rules on `samples/` parts and record the outcome in ADR-0022's
       "Open at build time" section. Must run before phase 4 builds on the engine.
+      — carry-in from phase 2's verify: **the ≥-shelf invariant is FALSE for raw
+      EP** (~1-in-300 seeded inputs, both scoring rules — measured, with kept
+      counterexamples in the verify report). Assert it against the RACED result
+      (which dominates by construction) and track the raw-EP loss rate as a
+      statistic, not an invariant.
 
 ### 4. Fable batch B: EMS + quantity refinement — **fable, adversarial verify both**
 - [ ] `ems-bookkeeping` · high — empty-maximal-space maintenance alongside EP: split

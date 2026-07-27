@@ -14,6 +14,7 @@ import { aabbOrientations } from './orientations'
 import { thoroughOrientations } from './thoroughOrientations'
 import { greedyShelfFit } from './shelfFit'
 import { gridFillQuantity } from './quantityGrid'
+import { quantityUpperBound } from './quantityBound'
 import { composeUnit } from './unit'
 
 // The packing orchestrator (ADR-0003 phase 5): the one entry point the pack
@@ -79,11 +80,12 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
   }
   const unit = boxOf(composeUnit(request.parts), provider)
   const q = gridFillQuantity(unit, request.carton, request.clearances, request.maxWeightG)
+  const bound = quantityUpperBound(unit, request.carton, request.clearances, request.maxWeightG)
   // Utilization from count × one-cell volume, NOT placements.length: the grid is
   // uniform, and placements may be truncated at MAX_GRID_PLACEMENTS while count
   // reports the true total.
   const cellVolume = q.placements.length > 0 ? placementVolume(q.placements[0]) : 0
-  return {
+  const result: MaxQuantityResult = {
     mode: 'max-quantity',
     tier: request.tier,
     count: q.count,
@@ -92,6 +94,14 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
     heuristic: true, // grid fill is a lower bound — see verdictCaption
     utilization: clampUtilization(q.count * cellVolume, boxVolume(request.carton))
   }
+  if (Number.isFinite(bound)) {
+    // The max is float insurance, not arithmetic: both sides use the same
+    // tolerant floors, but "47 fit (upper bound 44)" is a visible contradiction
+    // and the achieved count is itself a proof of achievability, so the bound
+    // may only ever be raised to meet it, never trusted to sit below it.
+    result.upperBound = Math.max(bound, q.count)
+  }
+  return result
 }
 
 export function pack(request: PackRequest): PackResult {
