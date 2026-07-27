@@ -152,8 +152,12 @@ describe('pack — max-quantity', () => {
     }
     const r = pack(request('max-quantity', [a, bShifted], [100, 100, 100]))
     if (r.mode !== 'max-quantity') return
-    // Unit AABB 60×10×10: floor(100/60)=1 along x, 10 along y, 10 along z → 100.
-    expect(r.count).toBe(100)
+    // Unit AABB 60×10×10: the grid manages floor(100/60)=1 along x, 10 along y,
+    // 10 along z → 100. Since ADR-0022 phase 4, EP refinement then reclaims the
+    // 40 mm the single-orientation lattice abandons by standing units up in it:
+    // 156, measured and deterministic. The composition under test is unchanged
+    // — a wrong unit AABB would move BOTH numbers.
+    expect(r.count).toBe(156)
   })
 
   it('empty parts list yields a zero result without throwing', () => {

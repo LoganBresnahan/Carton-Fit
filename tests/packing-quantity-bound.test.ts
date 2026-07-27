@@ -267,10 +267,14 @@ describe('pack — upperBound field', () => {
     expect(r.upperBound).toBe(1000)
   })
 
-  it('shows the honest gap when the grid cannot reach the bound', () => {
+  it('the gap the bound exposed is now closed by refinement (ADR-0022 §4)', () => {
+    // When this test was written the grid answered 9 against a bound of 13 and
+    // the assertion showed the honest gap. Phase 4's EP refinement closes it:
+    // the orchestrator now achieves the bound, and the honest-gap behaviour
+    // lives where the gap still exists — between the raw grid and the bound.
     const r = pack(req([cubePart('domino', [1, 1, 2])], [3, 3, 3]))
     if (r.mode !== 'max-quantity') throw new Error('mode')
-    expect(r.count).toBe(9)
+    expect(r.count).toBe(13)
     expect(r.upperBound).toBe(13)
   })
 

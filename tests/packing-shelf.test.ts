@@ -257,4 +257,23 @@ describe('greedyShelfFit', () => {
     expect(totalWeight).toBeLessThanOrEqual(4000 + EPS)
     expect(r1.placements.length + r1.unplaced.length).toBe(30)
   })
+
+  it('clamps negative and non-finite clearances to zero, like every other consumer', () => {
+    // ADR-0022 phase-4 verify finding: shelf was the one engine still consuming
+    // clearances raw. Unclamped, wall −5 placed parts 5 mm OUTSIDE the carton —
+    // and because the incumbent race returns whichever arrangement places more,
+    // shelf's impossible layout would beat the sanitized engine's honest one
+    // and ship, with fit-check claiming `fits` for parts out of the box.
+    const boxes = [box('a', [opt(6, 6, 6)]), box('b', [opt(6, 6, 6)])]
+    const r = greedyShelfFit(boxes, [10, 10, 7], { betweenParts: NaN, wall: -5 }, Infinity)
+    // Degraded to "no gaps": one cube fits, in the true corner; the second is
+    // an honest non-fit rather than a resident of the wall.
+    expect(r.placements.map((p) => p.boxMin)).toEqual([[0, 0, 0]])
+    expect(r.unplaced).toEqual(['b'])
+    assertInsideCarton(r.placements, [10, 10, 7], 0)
+
+    const gapped = greedyShelfFit(boxes, [20, 10, 7], { betweenParts: -3, wall: 0 }, Infinity)
+    expect(gapped.unplaced).toEqual([])
+    assertNoOverlaps(gapped.placements)
+  })
 })

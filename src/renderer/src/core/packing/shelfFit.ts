@@ -47,8 +47,15 @@ function preferOption(a: OrientationOption, b: OrientationOption): boolean {
 }
 
 export const greedyShelfFit: FitStrategy = (boxes, carton, clearances, maxWeightG) => {
-  const wall = clearances.wall
-  const gap = clearances.betweenParts
+  // Sanitized at entry, like extremePointFit, the validator, and ems: a
+  // negative or non-finite clearance degrades to "no gap", never to an
+  // impossible geometry. Shelf was the one consumer of raw clearances left
+  // (adversarial-verify finding, phase 4): unclamped, a negative wall placed
+  // parts outside the carton — and because the race takes the arrangement
+  // that places more, shelf's impossible layout would BEAT the sanitized
+  // engine's honest one and ship.
+  const wall = Number.isFinite(clearances.wall) ? Math.max(0, clearances.wall) : 0
+  const gap = Number.isFinite(clearances.betweenParts) ? Math.max(0, clearances.betweenParts) : 0
   const usable: Vec3 = [carton[0] - 2 * wall, carton[1] - 2 * wall, carton[2] - 2 * wall]
 
   // Largest volume first; JS sort is stable, so equal volumes keep input order.

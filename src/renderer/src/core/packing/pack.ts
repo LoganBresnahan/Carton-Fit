@@ -18,6 +18,8 @@ import { greedyShelfFit } from './shelfFit'
 import { extremePointFit } from './extremePointFit'
 import { gridFillQuantity } from './quantityGrid'
 import { quantityUpperBound } from './quantityBound'
+import { refineQuantity } from './quantityRefine'
+import { largestFreeSpace } from './ems'
 import { composeUnit } from './unit'
 
 // The packing orchestrator (ADR-0003 phase 5): the one entry point the pack
@@ -54,7 +56,7 @@ function clampUtilization(occupied: number, cartonVolume: number): number {
 }
 
 /** Volume of everything an arrangement placed (mm³). */
-function occupiedVolume(fit: FitPlacement): number {
+function occupiedVolume(fit: Pick<FitPlacement, 'placements'>): number {
   return fit.placements.reduce((sum, p) => sum + placementVolume(p), 0)
 }
 
@@ -99,7 +101,7 @@ function fitCheck(request: PackRequest, provider: OrientationProvider): FitCheck
   const ep = extremePointFit(boxes, request.carton, request.clearances, request.maxWeightG)
   const fit = beatsIncumbent(ep, shelf) ? ep : shelf
   const occupied = occupiedVolume(fit)
-  return {
+  const result: FitCheckResult = {
     mode: 'fit-check',
     tier: request.tier,
     fits: fit.unplaced.length === 0,
@@ -109,6 +111,16 @@ function fitCheck(request: PackRequest, provider: OrientationProvider): FitCheck
     heuristic: true, // the better of two heuristics is still one — see verdictCaption
     utilization: clampUtilization(occupied, boxVolume(request.carton))
   }
+  if (!result.fits) {
+    // The void is derived from the WINNER's placements, whichever engine made
+    // them — it explains this arrangement's stopping point (ADR-0022 §3), so it
+    // must describe the arrangement actually returned. Computed only on a
+    // non-fit: that is the only place §7 speaks, and the fits path shouldn't
+    // pay for a report it never shows.
+    const space = largestFreeSpace(fit.placements, request.carton, request.clearances)
+    if (space !== null) result.largestFreeSpace = space
+  }
+  return result
 }
 
 function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQuantityResult {
@@ -126,25 +138,45 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
   const unit = boxOf(composeUnit(request.parts), provider)
   const q = gridFillQuantity(unit, request.carton, request.clearances, request.maxWeightG)
   const bound = quantityUpperBound(unit, request.carton, request.clearances, request.maxWeightG)
-  // Utilization from count × one-cell volume, NOT placements.length: the grid is
-  // uniform, and placements may be truncated at MAX_GRID_PLACEMENTS while count
-  // reports the true total.
-  const cellVolume = q.placements.length > 0 ? placementVolume(q.placements[0]) : 0
+  // The grid stands as the floor; EP refines with mixed orientations inside the
+  // operation backstop (ADR-0022 §4). refineQuantity returns non-null only on a
+  // STRICT improvement, so this is max(grid, EP) by construction — the worst
+  // case is exactly the instant grid answer, and retreating from refinement is
+  // deleting this call.
+  const refined = refineQuantity(
+    unit,
+    request.carton,
+    request.clearances,
+    request.maxWeightG,
+    q.count,
+    Number.isFinite(bound) ? bound : undefined
+  )
+  // Grid utilization from count × one-cell volume, NOT placements.length: the
+  // grid is uniform, and placements may be truncated at MAX_GRID_PLACEMENTS
+  // while count reports the true total. A refined arrangement is the opposite
+  // case — heterogeneous orientations whose volumes differ under the thorough
+  // tier's OBB options, never truncated (the ops budget trips far below any
+  // materialization ceiling) — so its utilization is summed from what was
+  // actually placed.
+  const occupied = refined
+    ? occupiedVolume(refined)
+    : q.count * (q.placements.length > 0 ? placementVolume(q.placements[0]) : 0)
+  const winner = refined ?? q
   const result: MaxQuantityResult = {
     mode: 'max-quantity',
     tier: request.tier,
-    count: q.count,
-    placements: q.placements,
-    binding: q.binding,
-    heuristic: true, // grid fill is a lower bound — see verdictCaption
-    utilization: clampUtilization(q.count * cellVolume, boxVolume(request.carton))
+    count: winner.count,
+    placements: winner.placements,
+    binding: winner.binding,
+    heuristic: true, // grid fill and EP refinement are both lower bounds — see verdictCaption
+    utilization: clampUtilization(occupied, boxVolume(request.carton))
   }
   if (Number.isFinite(bound)) {
     // The max is float insurance, not arithmetic: both sides use the same
     // tolerant floors, but "47 fit (upper bound 44)" is a visible contradiction
     // and the achieved count is itself a proof of achievability, so the bound
     // may only ever be raised to meet it, never trusted to sit below it.
-    result.upperBound = Math.max(bound, q.count)
+    result.upperBound = Math.max(bound, winner.count)
   }
   return result
 }

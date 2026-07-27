@@ -248,13 +248,57 @@
       loser stays behind the switch, tested, so revisiting is one line.
 
 ### 4. Fable batch B: EMS + quantity refinement — **fable, adversarial verify both**
-- [ ] `ems-bookkeeping` · high — empty-maximal-space maintenance alongside EP: split
+- [x] `ems-bookkeeping` · high — empty-maximal-space maintenance alongside EP: split
       intersected spaces into up to six residuals per placement, prune
       contained/non-maximal, deterministic ordering. Reporting-only (ADR-0022 §3) —
       which is exactly why it's dangerous: the fuzz guards placements, not voids, so
       a plausible-but-wrong "largest free space" ships silently as misinformation.
       Pre-declared cuttable if its cost outgrows its reporting value.
-- [ ] `quantity-mode-ep-refinement` · high — extend `maxQuantity` in `pack.ts`: grid
+      *Done: `core/packing/ems.ts` + optional `largestFreeSpace` on
+      `FitCheckResult`, computed in `pack.ts` only on a non-fit. 23 tests.*
+      Deliberate departure from the textbook pairing: EMS is derived FROM the
+      final placements, not maintained inside the EP loop — the arrangement
+      being explained is the RACED winner (which may be shelf's), reporting
+      code must not be able to perturb placement, and a pure function of the
+      output is the only shape whose obligations are checkable properties.
+      Those properties ARE the oracle the brief said didn't exist: emptiness,
+      maximality (every face pinned by a box or the window), and coverage
+      (sampled free points all lie in some space), asserted against real
+      engine arrangements by checkers that share no code with the difference
+      process. Semantics fixed for the wording slice: spaces are
+      USABLE-BY-A-PART — wall-shrunk window minus gap-inflated boxes — so the
+      §7 sentence compares the void to the part's raw extents with no gap
+      arithmetic left to the reader. Absence over misinformation (the
+      upperBound precedent): non-finite input, inverted boxes, or a space
+      count past `MAX_EMS_SPACES` return null and the results line says
+      nothing.
+      *Adversarial verify REFUTED the first build twice, executed both:*
+      **(1) an inverted (min > max) box** — the validator's degenerate-box —
+      slipped the finite-only sanity check, and its crosswise coordinates made
+      a split's two residuals overlap across the part's own interior: claimed
+      largest space 60 wide where truth was 40, 10 mm of space-into-part
+      interpenetration. Now refused as null, inversion-within-EPS still
+      forgiven (a flat part is legal). **(2) the disjoint test reopened the
+      additive-tolerance window `fitsLe` closed in phase 2** — written
+      `bmax <= s.min + EPS`, a ~1e-16 rounding window let a validator-clean
+      EPS-sliver penetrate a space beyond tolerance while the space survived
+      unshaved, breaking the module's own emptiness property. Now the
+      validator's subtraction shape, same floats, same verdicts.
+      *Verified clean at depth elsewhere:* a 32,531-comparison sweep against
+      an independent exact largest-empty-box oracle found NO understatement
+      beyond documented prune-shave noise (≤ EPS × one face area); the
+      raced-winner coupling held (the void always describes the returned
+      arrangement); worst void cost over real engine output 72 ms. Residual
+      suspicion recorded, not fixed: the within-EPS mutual-containment prune
+      admits an abstract three-space kill-cycle that 30k directed samples
+      could not construct through the difference process. Also measured: the
+      `MAX_EMS_SPACES` bail can burn ~4 s of worker time before answering
+      null on sparse floating lattices no engine emits — accepted as a cost
+      cliff behind inputs that don't exist today.
+      Mutation-tested four ways (additive disjoint restored, inverted check
+      dropped, gap inflation dropped, prune disabled), each killed by exactly
+      the tests built for it.
+- [x] `quantity-mode-ep-refinement` · high — extend `maxQuantity` in `pack.ts`: grid
       answers instantly and stands as the floor (max(grid, EP) invariant, ADR-0022
       §4); EP refines mixed orientations within the backstop. Recompute utilization
       from heterogeneous placements (not count × cellVolume), and preserve
@@ -262,6 +306,54 @@
       (`quantityGrid.ts` convention). Crash barrier is NOT a dependency — the grid
       incumbent is the fallback by construction, which also keeps the ADR's
       retreat trigger a one-line change.
+      *Done: `core/packing/quantityRefine.ts`, wired in `pack.ts`. 18 tests.
+      The headline: dominoes in a 3-cube go 9 → 13 — the perfect packing the
+      bound slice proved every single-orientation argument calls impossible —
+      and the on-screen line becomes "13 fit (upper bound 13)".* The ratchet
+      IS the contract: `refineQuantity` returns non-null only on a STRICT
+      improvement, so max(grid, EP) holds by construction, a dead heat keeps
+      the lattice, and the ADR's retreat trigger is deleting one call. Copies
+      fed = min(upperBound, `MAX_REFINE_COPIES` = 512): the rigorous bound
+      both sizes the attempt and proves it unnecessary when the grid met it
+      (10-cubes in a 100-cube: skip, no search). EP inherits the grid's own
+      degenerate-extent bar per orientation, so refinement cannot un-do the
+      float-noise-sheet refusal (the OOM finding) by "placing" quantization
+      error.
+      **The phase-3 carry-ins are both closed by measurement, no code:** the
+      default 2e8 backstop is also quantity refinement's budget (worst
+      realistic tax measured 1.74 s at grid 448/bound 512 — inside the ADR's
+      ~2 s envelope; max ops observed 6.84e7, 34% of budget, no realistic
+      config tripped), and the `EpOptions` budget seam stays unused — no
+      separate quantity budget is warranted on the evidence.
+      *Adversarial verify REFUTED the first build once, executed:* binding
+      was recomputed from `weightCapacity` alone, whose RELATIVE floorTolerant
+      out-rescues EP's ABSOLUTE-EPS cap test once total weight tops 1 kg — a
+      cap 5 µg under 11 kg of dominoes made weightCapacity say 11 while EP
+      weight-rejected the 11th copy and placed 10, shipping 'geometry' for a
+      weight-capped count (with geometry provably holding 13). Fixed by
+      trusting the rejection-derived label when copies went unplaced (the
+      engine that rejected them knows why); the grid tie convention speaks
+      only when every fed copy placed. *Held under attack:* 4,000-case seeded
+      ratchet fuzz + 250 end-to-end pack() cases (strict-improvement-only,
+      bound domination, judge-clean placements WITH clearances, bit
+      determinism), thorough-tier utilization exactly Σ placed volumes, and
+      the Array.fill aliasing.
+      *A verify finding fixed OUTSIDE the slice:* `greedyShelfFit` was the
+      one engine still consuming clearances raw — a negative wall placed
+      parts outside the carton, and the phase-3 race SHIPPED that impossible
+      arrangement because it places more; phase 4's void then reported a
+      free space bigger than the part just declared unplaced. Shelf now
+      sanitizes at entry like every other consumer (two lines, regression in
+      `packing-shelf.test.ts`).
+      *Noted, out of scope (pre-existing, bit-identical in phase 2):* an
+      Infinity carton axis with another axis too small ships count/upperBound
+      = NaN through the grid's 0 × Infinity; refinement's own guard refuses
+      the poisoned floor. UI-gated today; belongs to the same defensive
+      quantity-edges slice phase 2 recorded.
+      Mutation-tested six ways (ratchet tie-wins, degenerate filter dropped,
+      weightCapacity-only binding restored, copy ceiling dropped, grid-cell
+      utilization restored, shelf clamp reverted), each killed by exactly the
+      test built for it.
 
 ### 5. Opus batch B: composition, guarantees, surfaces — **opus** (mutually independent)
 - [ ] `crash-barrier-wrapper` · low — try/catch around EP, validate its output with

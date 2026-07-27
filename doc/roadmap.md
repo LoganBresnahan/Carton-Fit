@@ -504,13 +504,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
   quantity mode, shelf/grid kept as incumbents, oracle, and crash barrier —
   **ADR-0022 (Accepted 2026-07-26)**, ahead of ADR-0003's dogfood trigger on
   purpose; build plan at `doc/plans/adr-0022-placement-build-plan.md` — phases
-  1–3 of 6 landed (validator; EP engine + quantity upper bound, both adversarially
-  verified; then the backstop, the incumbent race, and the differential fuzz).
+  1–4 of 6 landed (validator; EP engine + quantity upper bound; backstop +
+  incumbent race + differential fuzz; then EMS bookkeeping + quantity
+  refinement, both adversarially verified — three executed refutations fixed
+  and pinned, plus shelf's missing clearance sanitization).
   **The engine is WIRED as of phase 3**: fit check runs both engines and returns
   the better, so the answer can only improve. Both of the ADR's open measurement
   questions are closed with numbers — scoring rule deepest-bottom-left, backstop
-  2e8 operations. Remaining: EMS + quantity refinement (4), crash barrier +
-  determinism + wording (5), docs (6)
+  2e8 operations. **As of phase 4 quantity mode participates too** (grid stands
+  as the floor; dominoes in a 3-cube answer 13, the bound, not the grid's 9),
+  and non-fit results carry `largestFreeSpace` data awaiting phase 5's wording.
+  Remaining: crash barrier + determinism + wording (5), docs (6)
 - Tier-3 nesting, redefined as drop-in packing (voxelized geometry, insertion-order
   constraint, warm-started from tier 2; witness = packing instructions) — design
   recorded as **ADR-0023 (Proposed)**, refining ADR-0003's "interlocking" framing;

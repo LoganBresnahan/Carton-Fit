@@ -188,6 +188,13 @@ export interface FitCheckResult extends PackResultBase {
   fits: boolean
   /** Names of parts that didn't fit (drives the results panel). */
   unplaced: string[]
+  /** Dimensions (mm) of the largest usable free space left by this arrangement
+   *  — usable meaning a part with extents ≤ these dims could sit there
+   *  honoring every requested clearance (ADR-0022 §3/§7: "Largest free
+   *  space: …"). Present only on a non-fit, and only when the void can be
+   *  reported honestly (see ems.ts) — absence over misinformation, like
+   *  `upperBound`. Explains THIS attempt's stopping point; never a proof. */
+  largestFreeSpace?: Vec3
 }
 
 export interface MaxQuantityResult extends PackResultBase {

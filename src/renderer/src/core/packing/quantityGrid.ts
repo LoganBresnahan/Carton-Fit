@@ -39,6 +39,21 @@ interface GridFit {
   option: OrientationOption
 }
 
+/** Degenerate-extent bar, RELATIVE to the part's own scale: float32
+ *  quantization leaves ~(size × 6e-8) of residual thickness on a rotated flat
+ *  part — a 30 mm sheet came back 1.4e-6 mm "thick" and dividing by it produced
+ *  a 1.8e8 count that OOMed the process (verify finding). 1e-5 of the largest
+ *  extent sits well above that noise and well below any real feature (a 1000 mm
+ *  sheet 0.1 mm thick is 1e-4 of its size).
+ *
+ *  Exported for quantityRefine (ADR-0022 §4): EP refinement must refuse the
+ *  same noise-thin orientations this engine refuses, or "refinement" would
+ *  un-do the guard by placing thousands of float-noise sheets the grid
+ *  deliberately counted as zero. */
+export function degenerateExtentBar(extent: Vec3): number {
+  return Math.max(EPS, Math.max(extent[0], extent[1], extent[2]) * 1e-5)
+}
+
 /** Best-fitting orientation and its per-axis grid counts. */
 function bestGrid(unit: PackBox, carton: Vec3, clearances: Clearances): GridFit | null {
   const usable: Vec3 = [
@@ -49,13 +64,7 @@ function bestGrid(unit: PackBox, carton: Vec3, clearances: Clearances): GridFit 
   let best: GridFit | null = null
   for (const option of unit.orientations) {
     const [ex, ey, ez] = option.extent
-    // Degenerate-extent bar, RELATIVE to the part's own scale: float32
-    // quantization leaves ~(size × 6e-8) of residual thickness on a rotated
-    // flat part — a 30 mm sheet came back 1.4e-6 mm "thick" and dividing by it
-    // produced a 1.8e8 count that OOMed the process (verify finding). 1e-5 of
-    // the largest extent sits well above that noise and well below any real
-    // feature (a 1000 mm sheet 0.1 mm thick is 1e-4 of its size).
-    const degenerate = Math.max(EPS, Math.max(ex, ey, ez) * 1e-5)
+    const degenerate = degenerateExtentBar(option.extent)
     const counts: [number, number, number] = [
       countAlong(usable[0], ex, clearances.betweenParts, degenerate),
       countAlong(usable[1], ey, clearances.betweenParts, degenerate),
@@ -85,8 +94,12 @@ export function floorTolerant(ratio: number): number {
   return Math.floor(ratio * (1 + 1e-9))
 }
 
-/** Weight-limited copy count. A weightless unit is never weight-bound (Infinity). */
-function weightCapacity(unitWeightG: number, maxWeightG: number): number {
+/** Weight-limited copy count. A weightless unit is never weight-bound
+ *  (Infinity). Exported for quantityRefine, which must attribute binding by
+ *  the same arithmetic this engine uses — two floors that differ in the last
+ *  ulp would let the refined result flip 'weight' to 'geometry' on the same
+ *  numbers. */
+export function weightCapacity(unitWeightG: number, maxWeightG: number): number {
   if (unitWeightG <= 0) return Infinity
   return floorTolerant(maxWeightG / unitWeightG)
 }

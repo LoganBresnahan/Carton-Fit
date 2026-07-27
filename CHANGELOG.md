@@ -23,6 +23,17 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   nothing about the screen changes.
   ([ADR-0022](doc/adr/0022-extreme-point-placement-shelf-stays-as-incumbent.md))
 
+- **Max quantity can now mix orientations, so the count goes up.** The instant
+  grid answer still appears first and is never made worse, but the app then
+  tries rearranging copies in different orientations to use the space a
+  one-orientation grid leaves over — standing the last row of parts on end, for
+  example. Where the shapes allow it the improvement is real: 1×1×2 blocks in a
+  3×3×3 box go from 9 to 13, which is the most that can physically fit. The
+  extra search stays within the same responsiveness budget as fit check (about
+  two seconds at worst, usually far less), and the result states, as always,
+  whether space or the weight limit was the cap.
+  ([ADR-0022](doc/adr/0022-extreme-point-placement-shelf-stays-as-incumbent.md))
+
 ## [1.0.0] — 2026-07-27
 
 The first release meant to be installed and used. Everything below landed after
