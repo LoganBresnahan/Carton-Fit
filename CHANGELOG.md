@@ -56,6 +56,10 @@ installing over an older build.
 - Presets and saved estimates are stacked sections in the inputs column rather
   than columns of their own, and the vocabulary is now explicit: **presets** are
   reusable carton setups with no part attached; **saved estimates** are answers.
+- **The app takes about 46 MB less disk once installed**, and the installer is
+  roughly 8 MB smaller to download. Nothing was removed that the app uses — it
+  was compiler output and duplicate copies of libraries already built into the
+  app.
 - **Storage problems are now reported in the header** rather than above the
   inputs, and can be dismissed. The message reappears if it happens again, so
   dismissing one report never hides the next. Moving it also gives the drop zone

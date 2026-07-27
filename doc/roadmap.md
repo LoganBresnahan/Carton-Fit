@@ -414,11 +414,18 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 
 ## Later
 
-- [ ] 14. Slim the packaged app, second pass — **~40 MB of the 59 MB
-      `resources/` is dead weight on the platform that ships.** Item 9 did this
-      pass and measured it on LINUX; what survives is Windows-specific, so it
-      slipped through on the only build anyone installs. Measured 2026-07-25 by
-      unpacking the CI artifact for `698a968`:
+- [x] 14. Slim the packaged app, second pass — **shipped 2026-07-26: Windows
+      `resources/` 59 MB → 13 MB, a 46 MB (78%) cut**, confirmed by unpacking
+      the CI artifact rather than by trusting the config. `app.asar` 25 → 4 MB,
+      the unpacked tree 34 → 10 MB, and the whole installed app dir 406 → 360 MB
+      (the remainder is Electron and Chromium themselves).
+      **The download win is a seventh of that**, exactly the asymmetry item 9
+      warned about: `Setup.exe` 106.5 → 98.9 MiB and `win.zip` 148.1 → 137.5 MiB,
+      about 7% each. What was removed compresses well — minified JS and compiler
+      binaries — while the 7.25 MiB OCCT wasm that dominates the archive does
+      not compress at all.
+      Original scoping, measured 2026-07-25 by unpacking the CI artifact for
+      `698a968` — its "~40 MB" headline undercounted; the true figure was ~49 MB:
       - MSVC build intermediates left in `better-sqlite3/build/`, none of which
         any runtime path opens: `better_sqlite3.iobj` (14 MB),
         `sqlite3.lib` (6.9 MB — a build *input*), `better_sqlite3.ipdb`
@@ -475,15 +482,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       confirming the archive kept only `better_sqlite3.node`. That tests the
       pattern rather than the platform, which is the half that was actually in
       doubt — `*.{iobj,ipdb,lib,exp}` is a glob question, not a Windows one.
-      - [ ] **confirm on Windows**: `workflow_dispatch` `release.yml`, then
-        re-measure the artifact and run the packaged e2e plus both compliance
-        checks there. Projection to check against, not to trust:
-        `resources/` 59 MB → ~12 MB. Download delta must be reported
-        SEPARATELY — the pruned bytes are compiler binaries and minified JS,
-        which compress differently, and item 9 found a 27 MB install win worth
-        only 7.6 MB of download.
-      - [ ] **CHANGELOG entry deferred until those numbers exist**, so it can
-        state a measured install and download delta rather than a projected one.
+      - [x] **confirmed on Windows** (`workflow_dispatch` run 30232612301,
+        2026-07-26): 65 packaged e2e green on the pruned bytes, plus the ASAR
+        integrity fuse self-test and the LGPL substitution suite. `draft-release`
+        skipped itself, so the `v1.0.0` draft was untouched — a dispatch builds
+        and verifies but never publishes (ADR-0012). The artifact then measured
+        13 MB against a 12 MB projection.
+        The unpacked tree is now exactly what runtime needs and nothing else:
+        the OCCT wasm (7.25 MiB, LGPL relink seam), `better_sqlite3.node`
+        (1.85 MiB), and better-sqlite3's `lib/` + `LICENSE`.
+      - [x] **CHANGELOG entry** written against those measured numbers rather
+        than the projection.
       — not done, deliberately: the 36-package `prebuild-install` dependency
       tree still in the archive (1.26 MB). `bindings` and `file-uri-to-path`
       live in that same tree and ARE required at runtime by
