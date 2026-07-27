@@ -438,6 +438,58 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       rather than trusting the config. Report the download delta separately
       from the install delta: item 9 found C++ sources compress to nearly
       nothing, so a big install win can be a small download win.
+      - [x] **exclusions written and locally verified** (2026-07-26). Both
+        halves are in `electron-builder.yml` as removals.
+        **`resources/` on Linux: 35 MB → 13 MB**, `app.asar` 25 MB → 3.2 MB,
+        its `node_modules` 28 MB → 4.3 MB. 65 packaged e2e green, plus the
+        LGPL substitution compliance suite.
+      — **two corrections to this item's own text, both found by measuring.**
+      First, "what survives is Windows-specific" is only half true: `three` and
+      `react-dom` sit in `app.asar`, which is platform-neutral, so they were in
+      the LINUX build too at exactly the sizes quoted above — 24 MB of the win
+      needed no Windows runner at all. Only the MSVC output is Windows-only.
+      Second, the real total is ~49 MB rather than "~40 MB" (the item's own
+      bullets already summed to ~48).
+      — **the obvious implementation would have been a licence violation.**
+      "three and react-dom are unreachable, exclude them" deletes
+      `node_modules/three/LICENSE` and `node_modules/react-dom/LICENSE` — and
+      THIRD-PARTY-NOTICES.md, which ships INSIDE the app, states "Each
+      component's full notice ships with it inside the application archive".
+      Pruning does not retire the MIT obligation either, because the code still
+      ships, bundled into `out/renderer` by vite. So the exclusions name the
+      code directories only (`three/{build,src}`, `react-dom/cjs`) and every
+      `LICENSE` stays. Item 9 wrote this rule down for the LGPL texts; it turns
+      out to bind the permissive ones just as hard.
+      — **`e2e/licence-notices.spec.ts` is the standing guard**, because nothing
+      else could catch this: deleting a licence text breaks no feature and
+      fails no other spec. It parses the components out of the notices table
+      itself — so a package added there starts being checked without anyone
+      remembering — and asserts each ships a non-empty licence file, plus the
+      three occt paths ADR-0011 cites by name rather than by URL. It reads
+      app.asar's index directly (four uint32s, then the JSON directory, which
+      carries each file's size) rather than using `@electron/asar`, which is
+      only a transitive dependency of electron-builder: a licence guard should
+      not stop working because an unrelated package reshuffled its tree.
+      — **the MSVC globs were proven WITHOUT a Windows runner** by creating
+      files with MSVC's exact names in `build/Release/`, packaging, and
+      confirming the archive kept only `better_sqlite3.node`. That tests the
+      pattern rather than the platform, which is the half that was actually in
+      doubt — `*.{iobj,ipdb,lib,exp}` is a glob question, not a Windows one.
+      - [ ] **confirm on Windows**: `workflow_dispatch` `release.yml`, then
+        re-measure the artifact and run the packaged e2e plus both compliance
+        checks there. Projection to check against, not to trust:
+        `resources/` 59 MB → ~12 MB. Download delta must be reported
+        SEPARATELY — the pruned bytes are compiler binaries and minified JS,
+        which compress differently, and item 9 found a 27 MB install win worth
+        only 7.6 MB of download.
+      - [ ] **CHANGELOG entry deferred until those numbers exist**, so it can
+        state a measured install and download delta rather than a projected one.
+      — not done, deliberately: the 36-package `prebuild-install` dependency
+      tree still in the archive (1.26 MB). `bindings` and `file-uri-to-path`
+      live in that same tree and ARE required at runtime by
+      `better-sqlite3/lib/database.js`, so the removal list would have to keep
+      distinguishing them correctly as the tree changes — a standing hazard
+      priced well above 1.26 MB. Revisit if that tree ever grows something big.
 - More import formats (OBJ, IGES — near-free via occt-import-js)
 - Tier-3 true nesting (experimental; see ADR-0003 revisit triggers)
 - Box tare weight; material density library (ADR-0004 revisit triggers)

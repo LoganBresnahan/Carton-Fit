@@ -87,6 +87,35 @@ files:
   - '!node_modules/better-sqlite3/build/*.mk'
   - '!node_modules/better-sqlite3/build/Release/{obj,obj.target,.deps}'
   - '!node_modules/better-sqlite3/build/Release/test_extension.node'
+
+  # MSVC's intermediates (roadmap item 14). The rules above name gcc's output —
+  # `obj`, `obj.target`, `.deps`, `*.mk` — and simply do not match what the
+  # Windows compiler leaves behind, so this survived item 9's pass on the only
+  # build anyone installs.
+  #
+  # MEASURED 2026-07-26 by unpacking the CI artifact for 69aabd8: .iobj 14.0 MiB,
+  # sqlite3.lib 6.8 MiB (a build INPUT), .ipdb 3.3 MiB, plus the test extension's
+  # own set — 25 MB, none of which any runtime path opens. `better_sqlite3.node`
+  # (1.85 MiB) is the only file here that is ever loaded.
+  - '!node_modules/better-sqlite3/build/Release/*.{iobj,ipdb,lib,exp}'
+  - '!node_modules/better-sqlite3/build/*.vcxproj'
+  - '!node_modules/better-sqlite3/build/*.vcxproj.filters'
+
+  # three and react-dom are bundled into out/renderer by vite, so these
+  # node_modules copies are unreachable — PROVEN, not assumed: the only bare
+  # `require()` anywhere in the shipped `out/` tree is better-sqlite3, plus
+  # electron and node builtins.
+  #
+  # ONLY THE CODE GOES. `LICENSE` and `package.json` stay at each package root,
+  # and that is not tidiness — THIRD-PARTY-NOTICES.md says "Each component's
+  # full notice ships with it inside the application archive", and these files
+  # are what makes that sentence true. The bundled code still ships inside the
+  # vite output, so the MIT obligation survives the pruning even though the
+  # package does not. Excluding either directory wholesale would leave the app
+  # asserting something false about itself — a licence violation, not a size win,
+  # which is the same reason the occt exclusions above are written this way.
+  - '!node_modules/three/{build,src}'
+  - '!node_modules/react-dom/cjs'
   # Fetches prebuilt binaries at INSTALL time; ADR-0013 compiles from source, so
   # it never runs in the packaged app.
   - '!node_modules/prebuild-install'
