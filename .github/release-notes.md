@@ -12,7 +12,16 @@ Known limitations:
 
 - **The Windows build is unsigned**, so SmartScreen warns on first run
   (More info → Run anyway). Code signing is not set up yet.
-- No auto-update.
+- **No auto-update, by design.** At start-up the app asks GitHub whether a newer
+  release has been published and, if so, shows a one-line message with a link
+  back to this page — but it never downloads or installs anything by itself.
+  Installing an update is the same manual step as installing this one. Silent
+  install is worth reconsidering once the installer is signed; until then it
+  would only move the SmartScreen warning to a moment you did not initiate.
+  That check is a single unauthenticated request to `api.github.com` per launch,
+  the kind a browser makes. There is no telemetry payload — but it does disclose
+  your IP address and that you run Carton Fit. It is off entirely if the machine
+  is offline, and any failure is silent.
 
 Licensing: this app is MIT. It bundles LGPL-2.1 `occt-import-js`; see
 `THIRD-PARTY-NOTICES.md` in the installed folder for the notices, and for how to

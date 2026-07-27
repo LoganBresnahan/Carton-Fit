@@ -18,6 +18,13 @@ installing over an older build.
 
 ### Added
 
+- **The app tells you when a newer version is out.** On start-up it asks GitHub
+  whether a newer release has been published and, if so, shows a one-line
+  message in the header with a Download link that opens the release page in your
+  browser. It never downloads or installs anything by itself, and it never
+  interrupts what you are doing. If you are offline — or anything else goes
+  wrong — it says nothing at all.
+  ([ADR-0021](doc/adr/0021-update-check-and-the-header-status-area.md))
 - **Per-kind weight overrides.** In a mixed assembly, set the weight of any
   *kind* of part individually — one entry covers all six instances of a bolt.
   The computed weight shows as a dimmed placeholder, so the default is visible
@@ -49,6 +56,11 @@ installing over an older build.
 - Presets and saved estimates are stacked sections in the inputs column rather
   than columns of their own, and the vocabulary is now explicit: **presets** are
   reusable carton setups with no part attached; **saved estimates** are answers.
+- **Storage problems are now reported in the header** rather than above the
+  inputs, and can be dismissed. The message reappears if it happens again, so
+  dismissing one report never hides the next. Moving it also gives the drop zone
+  back the space the message used to take.
+  ([ADR-0021](doc/adr/0021-update-check-and-the-header-status-area.md))
 - New app icon.
 
 ### Fixed

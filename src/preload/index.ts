@@ -14,6 +14,7 @@ import {
   type ExportSaveRequest,
   type ExportSaveResult
 } from '../shared/exportFile'
+import { UPDATE_CHANNELS, type UpdateApi, type UpdateInfo } from '../shared/update'
 
 // The renderer's only route to the main process (ADR-0007 storage; ADR-0006
 // keeps the renderer declarative).
@@ -56,10 +57,18 @@ const exportFile: ExportApi = {
     ipcRenderer.invoke(EXPORT_CHANNELS.save, request) as Promise<ExportSaveResult>
 }
 
+// Both calls are argument-free (ADR-0021): the renderer can ask what main
+// found and ask it to open that page, but cannot name a URL for either.
+const update: UpdateApi = {
+  check: () => ipcRenderer.invoke(UPDATE_CHANNELS.check) as Promise<UpdateInfo | null>,
+  openReleasePage: () => ipcRenderer.invoke(UPDATE_CHANNELS.openRelease) as Promise<void>
+}
+
 const api = {
   platform: process.platform,
   storage,
-  exportFile
+  exportFile,
+  update
 }
 
 contextBridge.exposeInMainWorld('api', api)

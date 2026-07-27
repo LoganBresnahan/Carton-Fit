@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { startAutoPack } from './packing/service'
 import { installUndoKeyboard, startUndoHistory } from './history/undo'
+import { checkForUpdate } from './update/service'
 import './styles.css'
 
 // The estimate follows the inputs: this subscription re-packs whenever the
@@ -14,6 +15,10 @@ startAutoPack()
 // scoped — under auto-run, undoing an input is undoing the estimate.
 startUndoHistory()
 installUndoKeyboard(window)
+
+// Ask main what its launch check found (ADR-0021). Fire-and-forget: it resolves
+// to null for "current" and for every failure alike, and nothing waits on it.
+void checkForUpdate()
 
 // Estimates are NOT recorded automatically. ADR-0009 removed the compute
 // button, so "every estimate" would mean every debounced keystroke; ADR-0016

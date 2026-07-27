@@ -29,14 +29,40 @@ body {
   height: 100vh;
 }
 
+/* The app-scope status area (ADR-0021 §5-§7). The header holds the title and,
+   pushed to the right, whichever status chips are showing.
+
+   The HEIGHT IS FIXED and must stay that way. The update banner arrives
+   asynchronously — a second or two after launch, whenever the network answers —
+   and a header that grew when it appeared would shift the entire window
+   downward under a cursor that may already be moving toward a control. Zero
+   layout cost at any moment is the requirement; this is how it is met. */
 .app-header {
-  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 3rem;
+  flex-shrink: 0;
+  padding: 0 1.25rem;
   border-bottom: 1px solid var(--border);
 }
 
 .app-header h1 {
   font-size: 1.1rem;
   font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* `min-width: 0` on both this and the message is what lets the chips ellipsize
+   instead of overflowing — a flex item's default `min-width: auto` refuses to
+   shrink below its content. */
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .app-main {
@@ -489,26 +515,83 @@ body {
 /* Storage trouble, pinned above the scrolling inputs so it cannot be missed.
    Amber rather than red: the estimate on screen is still correct — what failed
    is remembering it. */
-.storage-banner {
+/* Status chips (ADR-0021). They keep a colour treatment rather than flattening
+   into header text: against an otherwise empty header a tinted chip reads as
+   conspicuous, which is what item 9 requires of a storage failure. */
+.status-chip {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  border-left: 3px solid var(--warn);
-  background: rgba(217, 164, 65, 0.1);
+  min-width: 0;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 3px;
   font-size: 0.8rem;
-  line-height: 1.35;
+  line-height: 1.4;
 }
-.storage-banner-label {
-  color: var(--warn);
+.status-chip-warn {
+  border-left-color: var(--warn);
+  background: rgba(217, 164, 65, 0.1);
+}
+/* The news chip does NOT shrink; the storage chip absorbs all the truncation.
+   Letting them shrink proportionally read fine in the abstract and was wrong on
+   screen: at an ordinary 1280px window "Version 1.4.0 is available" collapsed to
+   "Versi…" while the storage sentence beside it kept every character, and at
+   720px the chip was clipped mid-word with its dismiss button off-screen
+   entirely. The two messages degrade differently — storage is prose whose
+   signal survives in the amber and the STORAGE label (ADR-0021 §7), while the
+   version number IS the update chip's entire content, so a truncated one says
+   nothing the user can act on. */
+.status-chip-info {
+  border-left-color: var(--accent);
+  background: rgba(91, 157, 217, 0.1);
+  flex-shrink: 0;
+}
+.status-chip-label {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 0.7rem;
   flex-shrink: 0;
 }
-.storage-banner-message {
+.status-chip-warn .status-chip-label {
+  color: var(--warn);
+}
+.status-chip-info .status-chip-label {
+  color: var(--accent);
+}
+/* Truncate, never wrap: wrapping would change the header's height, which the
+   rule above forbids. The full text stays reachable through the `title`
+   tooltip, and the label plus the tint survive any truncation. */
+.status-chip-message {
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status-chip-action {
+  flex-shrink: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.status-chip-dismiss {
+  flex-shrink: 0;
+  padding: 0 0.15rem;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.status-chip-dismiss:hover {
   color: var(--text);
 }
 

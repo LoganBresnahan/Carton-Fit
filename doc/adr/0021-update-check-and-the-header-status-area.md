@@ -97,6 +97,21 @@ downloads, nothing installs, nothing blocks.
    width the whole sentence fits. The chip keeps its colour treatment rather
    than flattening into header text — against an empty header that reads as
    conspicuous, which is what item 9 requires.
+
+   **Amended 2026-07-26, during implementation.** "Messages truncate" turns out
+   to be true only of the STORAGE message. Letting both chips shrink
+   proportionally — the obvious reading, and what was built first — was wrong
+   the moment it was looked at: at an ordinary 1280px window "Version 1.4.0 is
+   available" collapsed to "Versi…" while the storage sentence beside it kept
+   every character, and at 720px the update chip was clipped mid-word with its
+   dismiss button off-screen and unclickable. The justification above does not
+   transfer between the two messages: storage is prose whose signal survives in
+   the tint and the label, whereas **the version number is the update chip's
+   entire actionable content**, so a truncated one says nothing that can be
+   acted on. The news chip therefore does not shrink and the storage chip
+   absorbs all of the truncation. Decision 8 is unaffected — storage is still
+   leftmost and still the first thing seen; only which chip loses characters
+   changed.
 8. **When both are present, storage comes first.** A malfunction outranks
    news.
 

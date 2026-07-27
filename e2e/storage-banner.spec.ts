@@ -80,6 +80,52 @@ test.describe('storage failures are visible', () => {
     }
   })
 
+  test('dismissing hides the message, and the next failure brings it back', async () => {
+    // ADR-0021 §10, and the load-bearing half of making the banner dismissable
+    // at all. Item 9's finding was that storage failures had only ever reached
+    // `console.warn`, so "every estimate is recorded" could quietly stop being
+    // true — silence read as success. A plain dismiss button recreates that bug
+    // one click later.
+    //
+    // The subtlety this pins: the second failure produces the IDENTICAL message
+    // string as the first, because it is the same broken database. Dismissal
+    // keyed on the text would swallow it — precisely the case where the user
+    // has retried and most needs to be told. It is keyed on an occurrence
+    // counter instead, and this spec is what proves that.
+    const dir = mkdtempSync(join(tmpdir(), 'pe-e2e-banner3-'))
+    const args = [`--user-data-dir=${dir}`]
+
+    const first = await launchApp(args)
+    try {
+      await first.page.waitForSelector('[data-testid="configurations-panel"]')
+    } finally {
+      await first.app.close()
+    }
+    stampFutureSchema(dir)
+
+    const { app, page } = await launchApp(args)
+    try {
+      const banner = page.locator('[data-testid="storage-error"]')
+      await expect(banner).toBeVisible({ timeout: 10_000 })
+      const firstMessage = (await banner.innerText()).trim()
+
+      await page.click('[data-testid="storage-error-dismiss"]')
+      await expect(banner).toHaveCount(0)
+
+      // Retry the kind of thing that failed — a save the user chose to make.
+      await page.fill('[data-testid="config-name"]', 'after dismiss')
+      await page.click('[data-testid="config-save"]')
+
+      await expect(banner).toBeVisible({ timeout: 10_000 })
+      // Same words as before. That is the point: nothing about the TEXT tells
+      // these two failures apart, so nothing about the text can be what decides
+      // whether the second one is shown.
+      expect((await banner.innerText()).trim()).toBe(firstMessage)
+    } finally {
+      await app.close()
+    }
+  })
+
   test('an estimate still works while storage is broken', async () => {
     // Storage is optional by design (ADR-0007): the answer must not depend on
     // it. The banner says what is degraded; it does not stop the app working.

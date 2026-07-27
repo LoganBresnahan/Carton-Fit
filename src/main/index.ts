@@ -2,6 +2,7 @@ import { app, BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { registerStorageIpc, closeStorage } from './storage'
 import { registerExportIpc } from './exportFile'
+import { registerUpdateIpc, startUpdateCheck } from './updateCheck'
 import {
   attachWindowState,
   placeWindow,
@@ -47,7 +48,13 @@ function createWindow(): void {
       : undefined
   })
 
-  win.on('ready-to-show', () => win.show())
+  win.on('ready-to-show', () => {
+    win.show()
+    // AFTER the window is up, never before it (ADR-0021 §2). The check is
+    // entirely optional — the app is fully usable without it — so it must not
+    // sit between launch and a visible window on a slow network.
+    startUpdateCheck()
+  })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -63,6 +70,8 @@ app.whenReady().then(() => {
   // No lazy resource behind it — the dialog and the write are per-call
   // (ADR-0017), so registering costs nothing.
   registerExportIpc()
+  // Handlers only; the request itself starts from `ready-to-show` below.
+  registerUpdateIpc()
   createWindow()
 
   app.on('activate', () => {

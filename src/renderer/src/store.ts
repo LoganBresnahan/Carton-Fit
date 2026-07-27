@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { ImportedPart } from './workers/import-protocol'
 import type { ImportSink, ImportStats, ImportStatus, LoadedFile } from './import/types'
 import type { ConfigurationSummary, EstimateRow } from '../../shared/storage'
+import type { UpdateInfo } from '../../shared/update'
 import type { PackMode, PackRequest, PackResult, QualityTier, Vec3 } from './core/packing/types'
 import type { PackSink, PackStatus } from './packing/types'
 import type { PartWeightOverrides } from './packing/kinds'
@@ -160,6 +161,35 @@ interface AppState {
   setSavedEstimates: (savedEstimates: EstimateRow[]) => void
   setStorageError: (storageError: string | null) => void
 
+  // --- header status area slice (ADR-0021) ---
+  /**
+   * How many storage failures have been REPORTED this session.
+   *
+   * Dismissal is keyed on this counter and never on the message text, and that
+   * is the subtle half of ADR-0021 §10. Item 9's finding was that storage
+   * failures had only ever reached `console.warn`, so "every estimate is
+   * recorded" could quietly stop being true — silence read as success. A plain
+   * dismiss button recreates that bug one click later. Worse, two consecutive
+   * failed saves usually produce the IDENTICAL string, so keying on the message
+   * would swallow the second one: precisely the case where the user has retried
+   * and most needs to be told.
+   */
+  storageErrorSeq: number
+  /** The occurrence the user dismissed; the banner shows past it. */
+  dismissedStorageSeq: number
+  dismissStorageError: () => void
+
+  /** A newer published release, or null — see `shared/update.ts`. */
+  updateAvailable: UpdateInfo | null
+  setUpdateAvailable: (updateAvailable: UpdateInfo | null) => void
+  /**
+   * Session-scoped on purpose (ADR-0021 §9): the banner returns next launch.
+   * Persisting it would grow the versioned localStorage surface ADR-0020
+   * defined, to suppress a statement that is true.
+   */
+  updateDismissed: boolean
+  dismissUpdate: () => void
+
   packBegan: () => void
   packSucceeded: (result: PackResult, request: PackRequest, elapsedMs: number) => void
   packFailed: (error: string) => void
@@ -250,7 +280,23 @@ export const useAppStore = create<AppState>((set) => ({
   storageError: null,
   setConfigurations: (configurations) => set({ configurations, storageError: null }),
   setSavedEstimates: (savedEstimates) => set({ savedEstimates, storageError: null }),
-  setStorageError: (storageError) => set({ storageError }),
+  // Bumped only when a failure is REPORTED. Clearing is not an occurrence, so
+  // a success between two failures cannot silently re-arm a dismissed banner —
+  // only the next real failure does that.
+  setStorageError: (storageError) =>
+    set((s) => ({
+      storageError,
+      storageErrorSeq: storageError === null ? s.storageErrorSeq : s.storageErrorSeq + 1
+    })),
+
+  storageErrorSeq: 0,
+  dismissedStorageSeq: 0,
+  dismissStorageError: () => set((s) => ({ dismissedStorageSeq: s.storageErrorSeq })),
+
+  updateAvailable: null,
+  setUpdateAvailable: (updateAvailable) => set({ updateAvailable }),
+  updateDismissed: false,
+  dismissUpdate: () => set({ updateDismissed: true }),
 
   packBegan: () => set({ packStatus: 'packing', packError: null }),
   packSucceeded: (packResult, packRequest, packElapsedMs) =>

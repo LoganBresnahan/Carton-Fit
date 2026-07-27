@@ -318,7 +318,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       number. Worth revisiting when a second reason for a mixed-material
       fixture appears.
 
-- [ ] 15. Update check + the header status area — **ADR-0021**, accepted
+- [x] 15. Update check + the header status area — **ADR-0021**, shipped
       2026-07-26. Two things the same decision, because adding a second banner
       is what exposed the first one's home as wrong.
       **Ordering constraint: this must land in 1.0.0 itself, before the draft is
@@ -371,6 +371,46 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       (`gh release edit v1.0.0 --notes-file …`). The `api.github.com` contact is
       a user-visible behaviour change, so it belongs in CHANGELOG **under
       `[1.0.0]`, not `[Unreleased]`** — it ships inside that release.
+      — **the specs are PACKAGED-ONLY, and finding out why was the one real
+      surprise.** In a dev run `app.getVersion()` returns **`"0.0"`** — Electron
+      falls back to that when the main script has no adjacent `package.json`,
+      which is exactly the shape of `out/main/index.js`. Two components do not
+      parse, so the check correctly says nothing, and every one of the five
+      specs passed VACUOUSLY against `out/` — the silence ones included, since
+      they assert an absence that dev produces for the wrong reason. This is
+      ADR-0005's rule arriving in a new disguise: not a packaged-only *failure*
+      but a packaged-only *capability*, where dev green means nothing at all.
+      Marked `test.skip(!PACKAGED_APP)` with that written down, like the storage
+      specs.
+      — both guards mutation-tested, each failing exactly one spec and no
+      others: making dismissal permanent (`dismissedStorageSeq` pinned to
+      MAX_SAFE_INTEGER — a plain dismiss button, which is the alternative
+      ADR-0021 §9 rejects) fails only the re-arm spec, and making
+      `isNewerVersion` always true fails only "the current version is not
+      announced". The second matters because a banner that never consulted the
+      compare would still have passed the found-an-update spec.
+      — the renderer never learns the URL. `openReleasePage()` takes no
+      argument, so it can ask main to open the page main fetched but cannot
+      nominate one; a renderer-supplied URL would make `shell.openExternal` an
+      open-anything launcher reachable from page content. The e2e stubs
+      `shell.openExternal` in main and asserts the app's own window never
+      navigated.
+      — **looking at it found what every functional spec missed**, the same
+      shape as item 11's 24px overhang. Both chips shrank proportionally, so at
+      an ordinary 1280px window "Version 1.4.0 is available" collapsed to
+      "Versi…" — losing the version number, the update chip's entire actionable
+      content — while the storage sentence beside it kept every character; at
+      720px the chip was clipped mid-word with its dismiss button off-screen and
+      unclickable. The news chip no longer shrinks and storage absorbs all the
+      truncation. **ADR-0021 §7 amended**, because its justification for
+      truncating ("the tint and the label survive") is true of prose and simply
+      does not transfer to a message that is one number. Guarded by relationship
+      at 720px: the version readable, both controls in the viewport, dismiss
+      actually clicked.
+      — one network request per LAUNCH, not per renderer load: main memoizes the
+      promise. The e2e harness reloads the page on every launch, so a per-request
+      check would have quietly doubled the traffic and made the 60/hour limit a
+      function of how often a window reloads.
 
 ## Later
 
