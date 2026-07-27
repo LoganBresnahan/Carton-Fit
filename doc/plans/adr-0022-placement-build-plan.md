@@ -31,13 +31,40 @@
 ## Phases (dependency-ordered, model-batched)
 
 ### 1. Independent validator — **opus** (land alone; the oracle's teeth)
-- [ ] `overlap-check-validator` · medium — pure module in `core/packing/`: pairwise
+- [x] `overlap-check-validator` · medium — pure module in `core/packing/`: pairwise
       AABB overlap + carton containment over `Placement.boxMin/boxMax`, written
       independently of any placer so it can judge EP output in the crash barrier and
       in tests. Zero dependencies; lands FIRST so its two semantic decisions — the
       face-touching epsilon, and whether clearances are part of "valid" — are
       documented before the engine exists to bias them. Stated in the module doc;
       the crash barrier and fuzz inherit them.
+      *Done: `core/packing/validate.ts`, 22 tests. Both semantics resolved in the
+      module doc.* **(1) Touching is not overlapping** — interpenetration must
+      exceed `tolerance` (default EPS, the engines' existing mm-scale epsilon).
+      Exactly-equal face coordinates never needed it; the tolerance exists for the
+      float noise in two separately-computed coordinates, and the margin is not
+      close — ~1e-13 mm of noise at carton scale against millimetres for a real bug.
+      **(2) Clearances are checked but graded apart from physics.** Five kinds, split
+      by `isPhysicallyImpossible`: `overlap` / `outside-carton` / `degenerate-box`
+      mean the arrangement cannot exist; `clearance-parts` / `clearance-wall` mean it
+      falls short of a requested gap. So the crash barrier can be strict about
+      reality without adopting an opinion about dunnage, while the fuzz fails on
+      either. Clearances are opt-in per call.
+      *Three things the slice added beyond its brief, each because the alternative
+      was worse:* violations carry `shortfallMm` (penetration depth, gap shortfall,
+      escape distance), so a failure says how badly rather than just that it failed;
+      a `limit` option, since the crash barrier only needs existence and shouldn't
+      pay for a full survey; and a sweep along the most-spread axis rather than plain
+      O(n²), because quantity mode materializes up to `MAX_GRID_PLACEMENTS` (50 000)
+      and the barrier runs on every pack. A zero-extent box is deliberately NOT
+      flagged — a flat part rotated into an axis plane is legal.
+      *The load-bearing test is the positive control:* real `greedyShelfFit` and
+      `gridFillQuantity` output validates clean, with and without clearances. Both
+      engines are overlap-free by construction and contain no collision test, so a
+      validator that disagreed with them would be useless as a judge of EP.
+      *Mutation-tested,* each failing loudly: dropping the tolerance, unsorting the
+      sweep (which breaks the early exit's soundness — and took the determinism test
+      down with it), and taking the least- instead of most-separated axis.
 
 ### 2. Fable batch A: the reasoning core — **fable, adversarial verify both**
 - [ ] `extreme-point-engine` · xhigh — new `core/packing` module implementing EP
