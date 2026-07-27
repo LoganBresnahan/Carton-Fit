@@ -1,3 +1,11 @@
+Drag a STEP or STL file in, enter your carton and constraints, and get the best
+packing orientation, the part count, and a 3D view of the packed box. The
+estimate follows the inputs — there is no compute button — and it always states
+which constraint bound the answer, geometry or weight.
+
+Full list of what is in this version:
+[CHANGELOG.md](https://github.com/LoganBresnahan/Carton-Fit/blob/main/CHANGELOG.md).
+
 Built by CI on each platform natively (ADR-0010).
 
 **Windows** — `Carton-Fit-Setup-<version>.exe` is the installer; the
