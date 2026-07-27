@@ -500,7 +500,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       distinguishing them correctly as the tree changes — a standing hazard
       priced well above 1.26 MB. Revisit if that tree ever grows something big.
 - More import formats (OBJ, IGES — near-free via occt-import-js)
-- Tier-3 true nesting (experimental; see ADR-0003 revisit triggers)
+- Placement upgrade: extreme-point placement + EMS reporting inside tiers 1–2 AND
+  quantity mode, shelf/grid kept as incumbents, oracle, and crash barrier —
+  **ADR-0022 (Accepted 2026-07-26)**, ahead of ADR-0003's dogfood trigger on
+  purpose; build plan at `doc/plans/adr-0022-placement-build-plan.md`, build not
+  yet scheduled
+- Tier-3 nesting, redefined as drop-in packing (voxelized geometry, insertion-order
+  constraint, warm-started from tier 2; witness = packing instructions) — design
+  recorded as **ADR-0023 (Proposed)**, refining ADR-0003's "interlocking" framing;
+  funded by ADR-0003's tier-3 trigger
 - Box tare weight; material density library (ADR-0004 revisit triggers)
 - ~~Auto-update via electron-updater~~ — **superseded by ADR-0021 / item 15**,
   not deferred by it. The app now notifies and links; it deliberately never
