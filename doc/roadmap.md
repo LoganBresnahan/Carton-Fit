@@ -72,7 +72,26 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       signing is the open piece, deferred until a certificate exists.
       — carry-in: **mac dmg still undocumented and unbuilt.** ADR-0012 declines a
       macOS runner on purpose — a dmg nobody can dogfood is an untested artifact
-      wearing a ship label. Revisit when a Mac is available.
+      wearing a ship label.
+      **Re-examined 2026-07-27 with a Mac now available, and deferred again for a
+      different and stronger reason: an unsigned mac build is not distributable.**
+      On Windows, unsigned means SmartScreen warns and the user clicks through
+      (item 10's carry-in). macOS has no equivalent click-through: Gatekeeper
+      refuses an unsigned downloaded app outright and says *"Carton Fit is damaged
+      and can't be opened"* — which reads as a corrupt download, not a signing
+      gap — and the reliable fix is `xattr -cr` in Terminal, narrowed further in
+      Sequoia. Shipping a dmg whose install instructions begin with a shell
+      command is worse than shipping no dmg. Notarization needs a paid Apple
+      Developer account ($99/yr) with no cheaper tier, so unlike the Windows
+      certificate this cannot be half-done.
+      So the blocker moved from *verification* to *funding*, and the build itself
+      was never the hard part — `electron-builder.yml` already carries a
+      `mac: target: dmg` block; what is missing is a `macos-latest` job in
+      `release.yml`, which is an afternoon whenever the certificate exists.
+      Revisit when an Apple Developer account is funded — the same trigger as the
+      Windows signing carry-in, and worth doing together. Separate dmgs per
+      architecture was the preferred shape if it ever happens (arm64 is what
+      `macos-latest` builds; an arm64-only dmg will not launch on an Intel Mac).
 - [x] 9. Polish — error states, app icon, window state persistence (ADR-0014)
       (All six slices shipped 2026-07-25; README.md written at close, with the
       recovered icon as its hero.)
