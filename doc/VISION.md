@@ -68,6 +68,17 @@ product decisions:
 
 - Fit verdict or max count, and whether geometry or weight was the limiting factor.
 - Best orientation per part, volume utilization %, total package weight.
+- **Why a non-fit stopped where it did** (ADR-0022): the largest usable gap left in
+  the carton, against what the smallest leftover part needs — both already
+  accounting for the requested clearances, so the two figures compare directly and
+  usually answer "would the next carton size up do it?". Stated as two
+  measurements, never as a conclusion: a verdict of "doesn't fit" remains a best
+  effort, not a proof.
+- **How many could possibly fit**, beside how many were placed (ADR-0022): max
+  quantity shows a rigorous upper bound — the one packing figure in the product
+  that is not a heuristic, since no arrangement can exceed it. The gap between
+  count and bound is the honest measure of what a better arrangement could still
+  recover; equal numbers mean the answer is provably the most that fits.
 - 3D view: the carton as a **wireframe** with parts placed in their computed
   positions and orientations; toggle between model view and packed view.
   (Translucent walls were specified here originally and tried in 2026-07;

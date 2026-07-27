@@ -205,8 +205,11 @@ so they re-run rather than rot.
 
 - Accepted 2026-07-26 ahead of ADR-0003's dogfood trigger, as a deliberate call —
   the design resolved faster than the evidence would have arrived, and the upgrade
-  benefits two shipped tiers regardless. Amend ADR-0003's fit-check placement
-  description when this ships.
+  benefits two shipped tiers regardless. ~~Amend ADR-0003's fit-check placement
+  description when this ships.~~ **Done 2026-07-27** (shipped in six phases,
+  roadmap item 16): ADR-0003's tier-1 description is amended, its
+  placement-upgrade trigger discharged, and VISION's Output section now carries
+  the two new user-visible facts. The heuristic label is deliberately unchanged.
 - If EMS bookkeeping proves heavier than the explanation feature justifies, ship EP
   alone and record the cut here.
 - If dogfooding shows quantity-mode refinement rarely beating the grid on real

@@ -443,10 +443,27 @@
       dropping the panel line.*
 
 ### 6. Ship: docs — **opus** (the shipping commit)
-- [ ] `adr-0003-amendment-and-docs` · low — amend ADR-0003's fit-check placement
+- [x] `adr-0003-amendment-and-docs` · low — amend ADR-0003's fit-check placement
       description (keep the heuristic label — EP is still not a proof of non-fit),
       check off the roadmap's Later bullet, CHANGELOG entry under `[Unreleased]`
       linking ADR-0022. Lands last, with everything green under `/shipshape`.
+      *Done: ADR-0003's tier-1 description amended in place (dated, not
+      rewritten — the tier structure did not change, only what runs inside it),
+      its "greedy verdicts" consequence annotated with the measured effect, and
+      its placement-upgrade revisit trigger struck through as DISCHARGED with the
+      reason it fired early. The amendment says explicitly which of its three
+      claims changed and which did not: **the heuristic label stays, wording
+      untouched** — the better of two heuristics is still a heuristic — while
+      quantity mode gained the one figure in the product that may be stated
+      flatly. Roadmap bullet becomes checked item 16 with a phase-by-phase
+      record; the CHANGELOG entries landed in the phases that made them
+      user-visible (3 and 5) rather than being saved up for here.*
+      *One thing this slice added beyond its brief:* **VISION's Output section**
+      now carries the free-space explanation and the upper bound. VISION is the
+      source of truth for what the app tells the user, and these are two new
+      things it tells them — leaving them only in an ADR would make the product
+      doc quietly incomplete. Its tiers section already named ADR-0022 from
+      phase 3.
 
 ## Critical path
 

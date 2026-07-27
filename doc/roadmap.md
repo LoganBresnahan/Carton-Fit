@@ -500,21 +500,62 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       distinguishing them correctly as the tree changes — a standing hazard
       priced well above 1.26 MB. Revisit if that tree ever grows something big.
 - More import formats (OBJ, IGES — near-free via occt-import-js)
-- Placement upgrade: extreme-point placement + EMS reporting inside tiers 1–2 AND
-  quantity mode, shelf/grid kept as incumbents, oracle, and crash barrier —
-  **ADR-0022 (Accepted 2026-07-26)**, ahead of ADR-0003's dogfood trigger on
-  purpose; build plan at `doc/plans/adr-0022-placement-build-plan.md` — phases
-  1–4 of 6 landed (validator; EP engine + quantity upper bound; backstop +
-  incumbent race + differential fuzz; then EMS bookkeeping + quantity
-  refinement, both adversarially verified — three executed refutations fixed
-  and pinned, plus shelf's missing clearance sanitization).
-  **The engine is WIRED as of phase 3**: fit check runs both engines and returns
-  the better, so the answer can only improve. Both of the ADR's open measurement
-  questions are closed with numbers — scoring rule deepest-bottom-left, backstop
-  2e8 operations. **As of phase 4 quantity mode participates too** (grid stands
-  as the floor; dominoes in a 3-cube answer 13, the bound, not the grid's 9),
-  and non-fit results carry `largestFreeSpace` data awaiting phase 5's wording.
-  Remaining: crash barrier + determinism + wording (5), docs (6)
+- [x] 16. Placement upgrade: extreme-point placement + EMS reporting inside tiers
+      1–2 AND quantity mode, shelf/grid kept as incumbents, oracle, and crash
+      barrier — **ADR-0022, shipped 2026-07-27** in the six phases of
+      `doc/plans/adr-0022-placement-build-plan.md`. Accepted 2026-07-26 ahead of
+      ADR-0003's dogfood trigger on purpose, and **that trigger is now
+      discharged** in ADR-0003 itself.
+      What the user gets: **fit check finds arrangements it used to miss** (both
+      engines race, the better answer wins, so it cannot regress — improved a
+      third of a 240-case generated sweep and worsened none), **max quantity
+      mixes orientations** (1×1×2 blocks in a 3×3×3 carton: 9 → 13, which is the
+      proven maximum), **a non-fit explains its stopping point**, and **a count
+      now carries a rigorous upper bound** — the only packing figure in the
+      product stated without a hedge.
+      - [x] **phase 1** — the independent validator: an overlap/containment/
+        clearance judge that shares no reasoning with any placer, because EP is
+        the first placement code here that *can* be geometrically wrong.
+      - [x] **phase 2** — the EP engine, plus a quantity upper bound proved
+        rigorous against that judge.
+      - [x] **phase 3** — the engine goes LIVE (fit check runs both and returns
+        the better), the operation backstop, and the first generative suite in
+        the repo. Both of the ADR's open measurement questions closed with
+        numbers rather than argument: scoring rule deepest-bottom-left, backstop
+        2e8 operations. The fuzz also **refuted the ADR's own "EP never places
+        fewer" premise** (~1 in 300 inputs), which is why the invariant is
+        asserted against the raced result — §2 amended accordingly.
+      - [x] **phase 4** — EMS bookkeeping and quantity refinement, both
+        adversarially verified: three executed refutations fixed and pinned, plus
+        a fourth found outside the slice (`greedyShelfFit` was the last engine
+        consuming clearances raw, and the phase-3 race was shipping the
+        impossible arrangement that produced).
+      - [x] **phase 5** — the crash barrier (throw / validator-rejected /
+        backstop trip → the incumbent stands), the determinism suite, and §7's
+        wording on screen and in both exports. Four decisions the ADR had left
+        implicit were amended into it here, the subtlest being that a backstop
+        trip discards in fit check but NOT in quantity mode, where §4 makes the
+        same budget the bound on refinement cost.
+      - [x] **phase 6** — docs: ADR-0003's placement description amended and its
+        revisit trigger discharged, VISION's Output section carrying the two new
+        user-visible facts, this check-off.
+      — the two amendments worth remembering, because both were found by BUILDING
+      rather than by reviewing: the fuzz refuted a premise the ADR stated as
+      obvious (phase 3), and writing §7's sentence exposed a case its wording
+      does not survive — on a weight-bound non-fit the leftovers usually fit the
+      free space fine, so printing both triples under "Did not fit" reads as an
+      app that cannot do arithmetic. The comparison is now gated on the part
+      actually not fitting.
+      — carry-in: **the barrier and the backstop are both dormant by design.**
+      Either firing on a realistic carton is a defect, not a mode (§2), and only
+      the differential fuzz can notice that they have started firing — a standing
+      spec asserts the barrier keeps healthy EP output, because a barrier that
+      discarded everything would satisfy every other test while deleting the
+      whole ADR. If a dogfooded load ever reads as a hang, `DEFAULT_MAX_EP_OPS`
+      is the tuning knob (§5), not a spinner.
+      — deliberately NOT built: EMS as a second *placer*. It is carried for its
+      reporting value alone and is the pre-declared cut if that stops paying
+      (§3, and the ADR's revisit triggers).
 - Tier-3 nesting, redefined as drop-in packing (voxelized geometry, insertion-order
   constraint, warm-started from tier 2; witness = packing instructions) — design
   recorded as **ADR-0023 (Proposed)**, refining ADR-0003's "interlocking" framing;
