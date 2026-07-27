@@ -43,7 +43,11 @@ import type {
 // the same object twice would let memoization hide a real instability.
 
 const NO_CLEARANCE: Clearances = { betweenParts: 0, wall: 0 }
-const RUNS = 5
+/** Three, not more. An unstable ordering is not a rare event — it is a property of
+ *  the input, so it shows on the second run; the third is margin. Five bought
+ *  nothing except the CPU contention that pushed two neighbouring suites past the
+ *  old 5 s test timeout on CI (see vitest.config.ts). */
+const RUNS = 3
 
 function boxPart(name: string, size: Vec3, weightG = 0): PackPart {
   const pts: number[][] = []
