@@ -8,7 +8,7 @@ Entries say what changed and what it means for you. The reasoning behind each
 change lives in its decision record under [`doc/adr/`](doc/adr/), linked inline;
 build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
-## [Unreleased]
+## [1.1.0] — 2026-07-27
 
 ### Added
 

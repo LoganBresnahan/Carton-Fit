@@ -3,6 +3,18 @@ packing orientation, the part count, and a 3D view of the packed box. The
 estimate follows the inputs — there is no compute button — and it always states
 which constraint bound the answer, geometry or weight.
 
+**New in 1.1.0 — the packing itself got better, and it now shows its reasoning.**
+Fit check tries a second arrangement strategy alongside the original one and keeps
+whichever fits more, so assemblies of mixed shapes and heights that used to come
+back "couldn't find a fit" now pack: across a 240-case test sweep it improved a
+third of them and made none worse. Max quantity mixes orientations for the same
+reason — 1×1×2 blocks in a 3×3×3 box went from 9 to 13, which is the most that
+physically fit. Two new things on screen: a "doesn't fit" now says how much usable
+room was left and what the smallest leftover part needed, and a count now carries
+a rigorous upper bound beside it, so you can see how much a better arrangement
+could still recover. Counts only ever move up; a verdict is still a best effort,
+never a proof.
+
 Full list of what is in this version:
 [CHANGELOG.md](https://github.com/LoganBresnahan/Carton-Fit/blob/main/CHANGELOG.md).
 
