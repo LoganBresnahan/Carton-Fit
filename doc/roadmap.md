@@ -585,6 +585,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       the same way the panel does: per-part columns in the per-part unit,
       packed-vs-cap in the cap's unit. Spinner buttons hidden app-wide by CSS;
       keyboard arrows (which the ADR-0016 undo e2e drives) untouched.
+- [ ] 18. Theme: light / dark / system — **ADR-0025 (Accepted 2026-08-26,
+      unbuilt)**. Main owns `nativeTheme.themeSource` from a `theme` field in the
+      ADR-0014 window-state file (read before the window exists, so the
+      `backgroundColor` matches and nothing flashes); the stylesheet keys on
+      `prefers-color-scheme` only; the viewport's four hex constants become a
+      `viewportPalette(dark)` the island re-applies on change; control is a
+      three-way select in the header status area. Build plan:
+      `doc/plans/adr-0025-theme-build-plan.md` (11 slices, 5 phases, no
+      adversarial verify needed).
 - Tier-3 nesting, redefined as drop-in packing (voxelized geometry, insertion-order
   constraint, warm-started from tier 2; witness = packing instructions) — design
   recorded as **ADR-0023 (Proposed)**, refining ADR-0003's "interlocking" framing;
