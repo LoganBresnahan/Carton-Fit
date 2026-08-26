@@ -636,6 +636,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       preference not persisted. The flash guard checks BOTH themes deliberately:
       pinning the opposite of the machine's resolved scheme is what keeps it
       non-vacuous under `xvfb`.
+- [ ] 19. Resizable control panel — **ADR-0026 (Accepted 2026-08-26, unbuilt)**.
+      Drag handle on the panel's right edge (double-click resets), `<` / `>`
+      keyboard steps routed by ADR-0016 §2's rule extended to every editable
+      element, no header buttons. Width becomes `--panel-width` so the three
+      historical 360px bugs' number is a parameter; clamped in one pure
+      function on every window resize; persisted in its own localStorage key
+      outside `settings` (read synchronously so the first frame is right — the
+      reason it is NOT the ADR-0025 window-state route). Decompose with
+      `adr-plan` before building.
 - Box tare weight; material density library (ADR-0004 revisit triggers)
 - ~~Auto-update via electron-updater~~ — **superseded by ADR-0021 / item 15**,
   not deferred by it. The app now notifies and links; it deliberately never
