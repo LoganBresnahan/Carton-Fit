@@ -137,10 +137,15 @@ body {
   align-items: stretch;
 }
 
-/* Left control panel: fixed width, viewport fills the rest. Two rows — the
-   inputs scroll, the estimate is pinned as a footer (see .results). */
+/* Left control panel: user-set width, viewport fills the rest. Two rows — the
+   inputs scroll, the estimate is pinned as a footer (see .results).
+
+   The width is `--panel-width`, written onto this element from the store
+   (ADR-0026 §5). The 360px here is the fallback only — the number that three
+   shipped bugs were about is now a parameter, and every rule that needs the
+   column's width reads the variable rather than repeating the literal. */
 .panel {
-  width: 360px;
+  width: var(--panel-width, 360px);
   flex-shrink: 0;
   min-height: 0;
   display: flex;

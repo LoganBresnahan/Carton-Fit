@@ -8,6 +8,7 @@ import type { PackSink, PackStatus } from './packing/types'
 import type { PartWeightOverrides } from './packing/kinds'
 import type { UnitSystem, WeightUnit } from './core/units'
 import { DEFAULT_MAX_WEIGHT_G, inToMm, legacyWeightUnit } from './core/units'
+import { clampPanelWidth, DEFAULT_PANEL_WIDTH } from './layout/panel-width'
 
 // The app's data spine (ADR-0006). Three slices: the import outcome (worker/
 // pipeline writes it), the packing settings (the inputs panel writes them,
@@ -102,6 +103,59 @@ function saveSettings(settings: PackingSettings): void {
   }
 }
 
+/** Layout preferences, in their OWN key outside `settings` (ADR-0026 §6).
+ *  Presets and saved estimates serialize `settings` whole, so a width in
+ *  there would be restored with a carton. A separate key needs no exclusion
+ *  logic anywhere — it is simply not in the blob. Versioned surface per
+ *  ADR-0020. */
+const LAYOUT_KEY = 'carton-fit:layout'
+
+/** The window width to clamp against, or NaN outside a DOM (unit tests) —
+ *  clampPanelWidth reads that as "no window constraint". */
+function currentWindowWidth(): number {
+  return typeof window === 'undefined' ? NaN : window.innerWidth
+}
+
+/** Interpret a persisted layout blob. Split out from the storage read the way
+ *  `settingsFromStored` is, so the rule that matters — what a missing, corrupt
+ *  or wrong-typed width means — is testable without a DOM.
+ *
+ *  Anything that is not a number is the default, and a stale value from a wider
+ *  monitor is clamped HERE rather than on the first resize event, so the width
+ *  is never briefly wrong. */
+export function panelWidthFromStored(raw: string | null, windowWidth: number): number {
+  let stored: number = DEFAULT_PANEL_WIDTH
+  if (raw !== null) {
+    try {
+      const parsed = JSON.parse(raw) as { panelWidth?: unknown }
+      stored = typeof parsed?.panelWidth === 'number' ? parsed.panelWidth : DEFAULT_PANEL_WIDTH
+    } catch {
+      // Corrupt JSON — hand-edited, or a half-written value.
+      stored = DEFAULT_PANEL_WIDTH
+    }
+  }
+  return clampPanelWidth(stored, windowWidth)
+}
+
+/** Read the persisted width synchronously, so the FIRST frame is already the
+ *  right width instead of painting 360 and jumping (ADR-0026 §6). */
+function loadPanelWidth(): number {
+  try {
+    return panelWidthFromStored(localStorage.getItem(LAYOUT_KEY), currentWindowWidth())
+  } catch {
+    // localStorage unavailable (tests).
+    return clampPanelWidth(DEFAULT_PANEL_WIDTH, currentWindowWidth())
+  }
+}
+
+function savePanelWidth(panelWidth: number): void {
+  try {
+    localStorage.setItem(LAYOUT_KEY, JSON.stringify({ panelWidth }))
+  } catch {
+    // ignore: nothing to do if storage is unavailable
+  }
+}
+
 /** Derived inner carton dimensions (mm), applying wall thickness when entering outer. */
 export function innerCartonMm(s: PackingSettings): Vec3 {
   if (!s.enterOuter) return s.boxDimsMm
@@ -163,6 +217,16 @@ interface AppState {
    *  undone by the next re-pack. */
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
+
+  // --- layout slice (ADR-0026) ---
+  /** The control panel's width in px, driven onto `--panel-width`. Layout, not
+   *  an input: outside `settings`, so presets never carry it, and off the undo
+   *  stack (ADR-0026 §7) — ADR-0016's snapshot covers settings and overrides,
+   *  and this is in neither. */
+  panelWidth: number
+  /** Set the width, clamped by the caller (drag, keys, reset, resize all go
+   *  through `clampPanelWidth` first — this setter stores what they agreed). */
+  setPanelWidth: (width: number) => void
 
   // --- pack slice ---
   packStatus: PackStatus
@@ -323,12 +387,16 @@ export const useAppStore = create<AppState>((set) => ({
   packSucceeded: (packResult, packRequest, packElapsedMs) =>
     set({ packStatus: 'done', packResult, packRequest, packElapsedMs, packError: null }),
   packFailed: (packError) =>
-    set({ ...NO_PACK, packStatus: 'failed', packError })
+    set({ ...NO_PACK, packStatus: 'failed', packError }),
+
+  panelWidth: loadPanelWidth(),
+  setPanelWidth: (panelWidth) => set({ panelWidth })
 }))
 
 // Persist settings whenever they change (the object identity changes on updateSettings).
 useAppStore.subscribe((state, prev) => {
   if (state.settings !== prev.settings) saveSettings(state.settings)
+  if (state.panelWidth !== prev.panelWidth) savePanelWidth(state.panelWidth)
 })
 
 /** Adapt the store's actions to the pipeline's ImportSink. */

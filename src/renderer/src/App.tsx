@@ -12,8 +12,14 @@ import { ConfigurationsPanel } from './components/ConfigurationsPanel'
 import SavedEstimatesPanel from './components/SavedEstimatesPanel'
 import ViewToggle from './components/ViewToggle'
 import Viewport from './viewport/Viewport'
+import { useAppStore } from './store'
 
 export default function App() {
+  // Layout, so it lives here rather than in any input component (ADR-0026 §5).
+  // Read synchronously at store init, so the first paint is already the user's
+  // width instead of 360 followed by a jump.
+  const panelWidth = useAppStore((s) => s.panelWidth)
+
   return (
     <div className="app">
       {/* The app-scope status area (ADR-0021 §5): the only region that is
@@ -33,7 +39,10 @@ export default function App() {
       <main className="app-main">
         {/* Inputs scroll; the estimate is pinned below them as a footer, so the
             answer stays on screen while the carton and weight fields are edited. */}
-        <div className="panel">
+        <div
+          className="panel"
+          style={{ '--panel-width': `${panelWidth}px` } as React.CSSProperties}
+        >
           <div className="panel-scroll">
             <DropZone />
             <ImportResult />
