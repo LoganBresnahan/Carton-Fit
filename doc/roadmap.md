@@ -643,8 +643,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       historical 360px bugs' number is a parameter; clamped in one pure
       function on every window resize; persisted in its own localStorage key
       outside `settings` (read synchronously so the first frame is right — the
-      reason it is NOT the ADR-0025 window-state route). Decompose with
-      `adr-plan` before building.
+      reason it is NOT the ADR-0025 window-state route). Build plan:
+      `doc/plans/adr-0026-panel-build-plan.md` (11 slices, 4 phases, three
+      commits, no adversarial verify needed).
 - Box tare weight; material density library (ADR-0004 revisit triggers)
 - ~~Auto-update via electron-updater~~ — **superseded by ADR-0021 / item 15**,
   not deferred by it. The app now notifies and links; it deliberately never
