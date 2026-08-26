@@ -83,9 +83,13 @@ product decisions:
   positions and orientations; toggle between model view and packed view.
   (Translucent walls were specified here originally and tried in 2026-07;
   rejected. Depth already comes from the shaded parts occluding each other, and
-  against the dark theme a wall can only tint toward slightly-lighter grey —
-  visible enough to help means opaque enough to haze the results it sits in
-  front of. Twelve crisp lines mark the boundary better.)
+  a wall can only tint toward the background it sits on — visible enough to help
+  means opaque enough to haze the results it sits in front of. Twelve crisp
+  lines mark the boundary better. The argument was first written against the
+  dark theme, which was then the only one; the light theme added by ADR-0025
+  weakens that half of it but does not reopen the decision, since the dense
+  cartons that settled it were pixel-identical for a reason unrelated to
+  colour.)
 - **Presets & saved estimates**: box/constraint setups can be saved as named
   presets and reloaded; estimates the user **chooses to keep** are saved
   (file, settings, result) as a browsable history, and restoring one loads its

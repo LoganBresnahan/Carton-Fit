@@ -6,7 +6,8 @@ import {
   type LineBasicMaterial,
   type LineSegments,
   type Material,
-  type Mesh
+  type Mesh,
+  type MeshStandardMaterial
 } from 'three'
 import {
   boundsOfCarton,
@@ -146,6 +147,26 @@ describe('buildPackedScene', () => {
     a.getMatrixAt(1, read)
     const moved = new Vector3(0, 0, 0).applyMatrix4(read)
     expect([moved.x, moved.y, moved.z]).toEqual([10, 0, 0])
+  })
+
+  // The wireframe test above covers buildCartonWireframe directly; this covers
+  // the OTHER half of the scheme threading, where buildPackedScene hands `dark`
+  // on to defaultPartMaterial. Without it, hardcoding the argument there would
+  // pass every test in the file.
+  it('tints the placed parts from the palette for the given scheme', () => {
+    for (const dark of [true, false]) {
+      const scene = buildPackedScene(
+        [part('a')],
+        [placement(ROT_Z90, [0, 0, 0], 'a')],
+        [100, 100, 100],
+        dark
+      )
+      const instanced = scene.children.find(
+        (c) => (c as InstancedMesh).isInstancedMesh
+      ) as InstancedMesh
+      const material = instanced.material as MeshStandardMaterial
+      expect(material.color.getHex()).toBe(viewportPalette(dark).part)
+    }
   })
 
   it('always includes the carton, even with nothing placed', () => {
