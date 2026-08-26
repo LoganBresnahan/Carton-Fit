@@ -3,6 +3,7 @@ import { join } from 'path'
 import { registerStorageIpc, closeStorage } from './storage'
 import { registerExportIpc } from './exportFile'
 import { registerUpdateIpc, startUpdateCheck } from './updateCheck'
+import { applyTheme, currentTheme, registerThemeIpc, windowBackgroundColor } from './theme'
 import {
   attachWindowState,
   placeWindow,
@@ -27,11 +28,19 @@ function createWindow(): void {
     screen.getAllDisplays().map((display) => display.workArea)
   )
 
+  // Before the window exists, for two reasons that are really one (ADR-0025):
+  // `themeSource` is what points the renderer's `prefers-color-scheme` at a
+  // PINNED choice, and `backgroundColor` — fixed at construction — has to
+  // resolve through it, or every launch shows the other theme's background
+  // until the page paints.
+  applyTheme(state.theme)
+
   const win = new BrowserWindow({
     width: state.width,
     height: state.height,
     x: state.x,
     y: state.y,
+    backgroundColor: windowBackgroundColor(),
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
@@ -45,7 +54,11 @@ function createWindow(): void {
   attachWindowState(win, stateFile, {
     requestedPosition: state.x !== undefined && state.y !== undefined
       ? { x: state.x, y: state.y }
-      : undefined
+      : undefined,
+    // A getter, not a value: every save rewrites the whole file, and the
+    // preference can change any moment the user touches the header select, so
+    // a value read here would undo their choice on the next resize.
+    currentTheme
   })
 
   win.on('ready-to-show', () => {
@@ -72,6 +85,9 @@ app.whenReady().then(() => {
   registerExportIpc()
   // Handlers only; the request itself starts from `ready-to-show` below.
   registerUpdateIpc()
+  // Handlers only as well — `createWindow` applies the saved preference itself,
+  // since it needs it before the window is constructed.
+  registerThemeIpc()
   createWindow()
 
   app.on('activate', () => {

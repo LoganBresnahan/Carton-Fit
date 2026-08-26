@@ -15,6 +15,12 @@ import {
   type ExportSaveResult
 } from '../shared/exportFile'
 import { UPDATE_CHANNELS, type UpdateApi, type UpdateInfo } from '../shared/update'
+import {
+  THEME_CHANNELS,
+  type ThemeApi,
+  type ThemePreference,
+  type ThemeState
+} from '../shared/theme'
 
 // The renderer's only route to the main process (ADR-0007 storage; ADR-0006
 // keeps the renderer declarative).
@@ -64,11 +70,21 @@ const update: UpdateApi = {
   openReleasePage: () => ipcRenderer.invoke(UPDATE_CHANNELS.openRelease) as Promise<void>
 }
 
+// The preference goes main-ward as a plain string and is validated there
+// against the three-member union (ADR-0025 §4) — the renderer names a theme, it
+// does not reach `nativeTheme`.
+const theme: ThemeApi = {
+  get: () => ipcRenderer.invoke(THEME_CHANNELS.get) as Promise<ThemeState>,
+  set: (preference: ThemePreference) =>
+    ipcRenderer.invoke(THEME_CHANNELS.set, preference) as Promise<ThemeState>
+}
+
 const api = {
   platform: process.platform,
   storage,
   exportFile,
-  update
+  update,
+  theme
 }
 
 contextBridge.exposeInMainWorld('api', api)

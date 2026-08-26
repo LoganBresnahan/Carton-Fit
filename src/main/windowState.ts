@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { BrowserWindow, Rectangle } from 'electron'
+import { THEME_PREFERENCES, type ThemePreference } from '../shared/theme'
 
 // Window size/position across restarts (ADR-0014). A JSON file in userData, NOT
 // SQLite: bounds are needed when the BrowserWindow is CONSTRUCTED, and the
@@ -11,10 +12,11 @@ import type { BrowserWindow, Rectangle } from 'electron'
 // passes the window and the display list in — so the placement rules can be
 // unit-tested against plain data. The type-only import erases at compile time.
 
-/** ADR-0025. `system` follows the OS; the other two pin it. Unknown values in
- *  the file (an older build's absence, a newer build's addition, a hand edit)
- *  all resolve to `system`. */
-export type ThemePreference = 'system' | 'light' | 'dark'
+/** ADR-0025. Defined in `shared/theme.ts` because the renderer's select speaks
+ *  the same three words; re-exported here because this file is where the
+ *  preference is READ FROM DISK. Unknown values in the file (an older build's
+ *  absence, a newer build's addition, a hand edit) all resolve to `system`. */
+export type { ThemePreference }
 
 export interface WindowState {
   width: number
@@ -53,8 +55,10 @@ function isFiniteNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v)
 }
 
-function isThemePreference(v: unknown): v is ThemePreference {
-  return v === 'system' || v === 'light' || v === 'dark'
+/** Exported so the IPC handler validates an incoming preference the same way
+ *  the file is validated — one membership test, not two that can drift. */
+export function isThemePreference(v: unknown): v is ThemePreference {
+  return THEME_PREFERENCES.includes(v as ThemePreference)
 }
 
 /**
