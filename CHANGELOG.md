@@ -10,6 +10,19 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
+### Added
+
+- **The app has a light theme, and a System · Light · Dark control in the
+  header.** It starts on **System**, so it follows whatever your OS is set to
+  and changes with it — no restart, and no white flash on launch, because the
+  window frame is painted in the right colour before the page loads. Your
+  choice is remembered with the window's size and position, not with your
+  carton settings, so loading a preset or restoring a saved estimate never
+  changes how the app looks. **The packed-view PNG export follows the theme**:
+  export from the light theme and the image has a white background, which is
+  usually what you want in a quote.
+  ([ADR-0025](doc/adr/0025-theme-light-dark-system.md))
+
 ### Changed
 
 - **Every weight field now picks its own unit — g, kg, or lb.** The single

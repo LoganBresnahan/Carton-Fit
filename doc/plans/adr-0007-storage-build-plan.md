@@ -4,7 +4,7 @@
 > 6 phases — **all Opus, zero adversarial verifies**: every failure mode here is loud
 > (SQL errors, build failures, packaged-smoke failures), the opposite of the
 > silent-geometry class that earns Fable + verify passes. Check slices off as they
-> land; move to `doc/plans/completed/` when done.
+> land.
 >
 > ## Maintainer adjudications
 > 1. **The workflow missed an ADR-0011 obligation — added as slice 0b.** Adding

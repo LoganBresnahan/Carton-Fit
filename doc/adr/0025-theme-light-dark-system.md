@@ -1,6 +1,6 @@
 # 0025 — Theme: light, dark, and system, owned by the main process
 
-Status: Accepted (2026-08-26) — not yet built; see roadmap item 18
+Status: Accepted (2026-08-26) — built; see roadmap item 18
 
 ## Context
 

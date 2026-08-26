@@ -431,6 +431,33 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       check would have quietly doubled the traffic and made the 60/hour limit a
       function of how often a window reloads.
 
+- [ ] 19. Tier 3: drop-in packing — **ADR-0023, still Proposed**. Voxelized
+      geometry dilated by clearance, an insertion-order constraint (each part must
+      drop into place past the parts already there), warm-started from tier 2 so
+      it is monotone and anytime; the witness is packing *instructions* — an
+      ordered (part, orientation, position) sequence the viewport can animate.
+      That witness is the product payoff, and it survives even when the fill gain
+      over tier 2 is small.
+      **This is the frontier, but it is gated twice and neither gate is ours to
+      wave through:**
+      - the ADR is Proposed, not Accepted — its five **open details** (voxel
+        resolution + memory bounds, the insertability model, the move set, where
+        the ratchet cache lives, and WASM/Rust vs. worker-side TypeScript, which
+        ADR-0011's lean-dependency rule makes a real decision) must be resolved
+        first. `adr-plan` runs *after* the flip to Accepted, not before.
+      - ADR-0003's tier-3 trigger is what funds it: **users routinely packing
+        concave parts where nesting would change the answer.** Dogfooding
+        supplies that evidence or it does not. ADR-0023's own second revisit
+        trigger points the other way — if typical clearances run at or above
+        ~10 mm, dilated parts converge back to their boxes and the better move is
+        promoting the packing-instructions animation to tiers 1–2, whose
+        placements are already sequences.
+      So the next action here is **evidence, not code**: dogfood real concave
+      parts at real clearances and see which trigger fires. On acceptance this
+      also amends VISION's tier list and ADR-0003's tier-3 line, and grows the
+      result schema with sequence data — a contract change for storage, export
+      and the viewport.
+
 ## Later
 
 - [x] 14. Slim the packaged app, second pass — **shipped 2026-07-26: Windows
@@ -585,19 +612,30 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       the same way the panel does: per-part columns in the per-part unit,
       packed-vs-cap in the cap's unit. Spinner buttons hidden app-wide by CSS;
       keyboard arrows (which the ADR-0016 undo e2e drives) untouched.
-- [ ] 18. Theme: light / dark / system — **ADR-0025 (Accepted 2026-08-26,
-      unbuilt)**. Main owns `nativeTheme.themeSource` from a `theme` field in the
-      ADR-0014 window-state file (read before the window exists, so the
+- [x] 18. Theme: light / dark / system — **ADR-0025, shipped 2026-08-26** in the
+      plan's 5 phases. Main owns `nativeTheme.themeSource` from a `theme` field in
+      the ADR-0014 window-state file (read before the window exists, so the
       `backgroundColor` matches and nothing flashes); the stylesheet keys on
-      `prefers-color-scheme` only; the viewport's four hex constants become a
-      `viewportPalette(dark)` the island re-applies on change; control is a
-      three-way select in the header status area. Build plan:
-      `doc/plans/adr-0025-theme-build-plan.md` (11 slices, 5 phases, no
-      adversarial verify needed).
-- Tier-3 nesting, redefined as drop-in packing (voxelized geometry, insertion-order
-  constraint, warm-started from tier 2; witness = packing instructions) — design
-  recorded as **ADR-0023 (Proposed)**, refining ADR-0003's "interlocking" framing;
-  funded by ADR-0003's tier-3 trigger
+      `prefers-color-scheme` only; the viewport's four hex constants became a
+      `viewportPalette(dark)` the island re-applies on change; the control is a
+      three-way select in the header status area, held outside `settings` so
+      presets and Restore never carry it. PNG export follows the theme (§5).
+      Build plan: `doc/plans/adr-0025-theme-build-plan.md`.
+      — **the e2e harness was measuring itself, and only a colour assertion could
+      show it.** Playwright emulates `prefers-color-scheme: light` on every page,
+      and that override outranks `nativeTheme.themeSource` — so the first run of
+      the theme specs had main reporting `themeSource: 'dark'` while the renderer
+      stayed light, which reads exactly like the feature being broken. A
+      bare-Electron probe against our own built page proved the app right and the
+      harness wrong; `launchApp` now clears the emulation beside the SwiftShader
+      flags. This was never theme-specific — **any** future spec asserting a
+      colour would have measured Playwright — so it was written into ADR-0005's
+      harness-carries list rather than left as a code comment (bb874f8).
+      — the five specs are mutation-tested against light and dark `backgroundColor`
+      drift, `viewportPalette` drift, `themeSource` not applied, and the
+      preference not persisted. The flash guard checks BOTH themes deliberately:
+      pinning the opposite of the machine's resolved scheme is what keeps it
+      non-vacuous under `xvfb`.
 - Box tare weight; material density library (ADR-0004 revisit triggers)
 - ~~Auto-update via electron-updater~~ — **superseded by ADR-0021 / item 15**,
   not deferred by it. The app now notifies and links; it deliberately never
