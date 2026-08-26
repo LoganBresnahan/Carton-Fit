@@ -59,6 +59,14 @@ rollback, and hands the user a Windows-reachable installer path plus a dogfood s
     creation fails outright on WSL2 (observed: llvmpipe `BindToCurrentSequence
     failed`). These are **harness-only** — the app itself ships zero GL flags, because
     on the Windows target ANGLE→D3D11 works out of the box.
+  - **Always (amended 2026-08-26, found while building ADR-0025 phase 4):**
+    Playwright's own `prefers-color-scheme` emulation must be **cleared**
+    per launch (`page.emulateMedia({ colorScheme: null })`). It forces light by
+    default, and that override outranks `nativeTheme.themeSource` — so once the app
+    had a theme (ADR-0025), a pinned Dark moved `shouldUseDarkColors` in main while
+    the renderer stayed light, which reads as a broken feature rather than a broken
+    harness. Unlike the flags above this one is invisible until something asserts a
+    colour, and it applies to every spec that ever does, not just the theme specs.
 - CI-friendliness therefore costs one dependency (`xvfb`) rather than nothing; the three
   layers are otherwise CI-ready as written.
 

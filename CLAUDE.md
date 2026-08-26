@@ -85,7 +85,10 @@ when scope changes.
 
 E2E needs a display and software GL (ADR-0005): WSLg supplies the display locally,
 CI uses `xvfb-run`, and the SwiftShader flags live in `e2e/harness.ts` —
-harness-only, never in shipped code.
+harness-only, never in shipped code. The harness also **clears Playwright's
+`prefers-color-scheme` emulation** on every launch: it forces light by default and
+outranks `nativeTheme.themeSource`, so without that line a themed app tests as
+permanently light and any colour assertion measures Playwright (ADR-0025).
 
 ## CI (ADR-0012)
 
