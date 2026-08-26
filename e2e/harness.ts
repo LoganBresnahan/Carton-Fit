@@ -104,6 +104,17 @@ export async function launchApp(extraArgs: string[] = []): Promise<AppHandle> {
     env: childEnv
   })
   const page = await app.firstWindow()
+  // Let the app's OWN theme through (ADR-0025).
+  //
+  // Playwright emulates `prefers-color-scheme: light` on every page by default,
+  // and that override outranks whatever `nativeTheme.themeSource` resolves to.
+  // The app was fine; the harness was lying about it — pinning Dark moved
+  // `shouldUseDarkColors` in main while the renderer stayed obstinately light,
+  // so a theme spec could only ever have failed and a colour assertion in any
+  // other spec would have been measuring Playwright rather than the product.
+  // `null` clears the override and restores the real query. Same rule as the GL
+  // flags above: an environment quirk lives here and nowhere else.
+  await page.emulateMedia({ colorScheme: null })
   await page.waitForSelector('[data-testid="dropzone"]')
   // Settings persist to localStorage; start every spec from documented defaults
   // so one spec's carton cannot leak into the next.
