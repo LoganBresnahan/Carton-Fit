@@ -15,6 +15,7 @@ import { boundsOfCarton, buildPackedScene } from './sceneFromPlacements'
 import { boundsOfParts, frameBox } from './cameraFraming'
 import { swapContent } from './sceneContent'
 import { registerViewportCapture } from './capture'
+import { viewportPalette } from './palette'
 import { resolvedView, useAppStore } from '../store'
 
 // The viewport island (ADR-0008). Owns the imperative three lifecycle and syncs
@@ -23,8 +24,12 @@ import { resolvedView, useAppStore } from '../store'
 // and framed by pure math. What lives here is only wiring: renderer, subscription,
 // render-on-demand, teardown.
 
-const BACKGROUND = 0x1b1e24 // matches --bg
 const FOV = 50
+
+/** `#rrggbb`, for the container's `data-clear-color`. */
+function hex(color: number): string {
+  return `#${color.toString(16).padStart(6, '0')}`
+}
 
 export default function Viewport() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -48,9 +53,19 @@ export default function Viewport() {
     }
     renderer.setPixelRatio(window.devicePixelRatio)
 
+    // The RESOLVED scheme, and the only place the renderer learns it (ADR-0025
+    // §5). It is read from `prefers-color-scheme` rather than from the theme IPC
+    // because that media query IS the one mechanism: main points it at the
+    // preference through `nativeTheme.themeSource`, so this covers a pinned
+    // theme and an OS switch under `system` without having to tell them apart.
+    const scheme = window.matchMedia('(prefers-color-scheme: dark)')
+    let dark = scheme.matches
+    let palette = viewportPalette(dark)
+
     const scene = new Scene()
-    scene.background = new Color(BACKGROUND)
-    const hemi = new HemisphereLight(0xffffff, 0x333844, 1.1)
+    const background = new Color(palette.background)
+    scene.background = background
+    const hemi = new HemisphereLight(0xffffff, palette.ground, 1.1)
     const key = new DirectionalLight(0xffffff, 1.4)
     key.position.set(1, 1.5, 1)
     scene.add(hemi, key, new AmbientLight(0xffffff, 0.25))
@@ -104,10 +119,10 @@ export default function Viewport() {
         content = swapContent(
           scene,
           content,
-          buildPackedScene(parts, packResult.placements, packed)
+          buildPackedScene(parts, packResult.placements, packed, dark)
         )
       } else {
-        content = swapContent(scene, content, parts.length ? buildPartsScene(parts) : null)
+        content = swapContent(scene, content, parts.length ? buildPartsScene(parts, dark) : null)
       }
 
       const bounds = packed ? boundsOfCarton(packed) : parts.length ? boundsOfParts(parts) : null
@@ -128,6 +143,14 @@ export default function Viewport() {
       invalidate()
     }
 
+    // The e2e's window onto the clear colour. three stays private to this island
+    // (ADR-0008) and the drawing buffer is not preserved, so the spec compares
+    // this attribute against the stylesheet's resolved `--bg` instead of trying
+    // to sample the canvas.
+    const publishClearColor = (): void => {
+      container.dataset.clearColor = hex(palette.background)
+    }
+
     // Export's window onto the scene (ADR-0017): render and read back inside
     // one call, so the drawing buffer is still intact — no standing
     // preserveDrawingBuffer taxing every frame for a rare click.
@@ -135,6 +158,25 @@ export default function Viewport() {
       renderer.render(scene, camera)
       return renderer.domElement.toDataURL('image/png')
     })
+
+    // Re-tint on a scheme change. Two of the four colours belong to objects this
+    // component owns (background, hemisphere ground) and are set in place; the
+    // other two are baked into content by the PURE builders, so the content is
+    // rebuilt through the same choke point every other change uses rather than
+    // traversing materials — one path, one disposal contract (ADR-0008), and no
+    // second place that has to know which material is which. Rebuilding is
+    // affordable because it is rare: a theme switch is a deliberate click, not a
+    // keystroke. `framedKey` is untouched, so applyScene does not reframe and a
+    // camera the user has orbited stays where they left it.
+    const retint = (): void => {
+      dark = scheme.matches
+      palette = viewportPalette(dark)
+      background.set(palette.background)
+      hemi.groundColor.set(palette.ground)
+      publishClearColor()
+      applyScene(useAppStore.getState())
+    }
+    scheme.addEventListener('change', retint)
 
     controls.addEventListener('change', invalidate)
     const observer = new ResizeObserver(() => {
@@ -156,10 +198,12 @@ export default function Viewport() {
     })
 
     resize()
+    publishClearColor()
     applyScene(useAppStore.getState()) // render whatever is already loaded
 
     return () => {
       unsubscribe()
+      scheme.removeEventListener('change', retint)
       registerViewportCapture(null) // the context below is about to be lost
       if (rafId) cancelAnimationFrame(rafId)
       observer.disconnect()

@@ -3,6 +3,7 @@ import {
   Matrix4,
   Vector3,
   type InstancedMesh,
+  type LineBasicMaterial,
   type LineSegments,
   type Material,
   type Mesh
@@ -14,6 +15,7 @@ import {
   placementMatrix
 } from '../src/renderer/src/viewport/sceneFromPlacements'
 import { disposeObject } from '../src/renderer/src/viewport/sceneContent'
+import { viewportPalette } from '../src/renderer/src/viewport/palette'
 import { applyMat3 } from '../src/renderer/src/core/packing/orientations'
 import type { Mat3, Placement, Vec3 } from '../src/renderer/src/core/packing/types'
 import type { ImportedPart } from '../src/renderer/src/workers/import-protocol'
@@ -91,7 +93,7 @@ describe('placementMatrix', () => {
 
 describe('buildCartonWireframe', () => {
   it('spans the carton corner-to-corner from the origin', () => {
-    const lines = buildCartonWireframe([100, 200, 300])
+    const lines = buildCartonWireframe([100, 200, 300], true)
     lines.geometry.computeBoundingBox()
     const box = lines.geometry.boundingBox!.clone()
     box.applyMatrix4(new Matrix4().makeTranslation(lines.position.x, lines.position.y, lines.position.z))
@@ -100,7 +102,15 @@ describe('buildCartonWireframe', () => {
   })
 
   it('tolerates a degenerate carton without throwing', () => {
-    expect(() => buildCartonWireframe([-20, 0, 50])).not.toThrow()
+    expect(() => buildCartonWireframe([-20, 0, 50], true)).not.toThrow()
+  })
+
+  it('draws its lines in the palette colour for the given scheme', () => {
+    for (const dark of [true, false]) {
+      const lines = buildCartonWireframe([10, 10, 10], dark)
+      const material = lines.material as LineBasicMaterial
+      expect(material.color.getHex()).toBe(viewportPalette(dark).cartonLine)
+    }
   })
 })
 
@@ -121,7 +131,8 @@ describe('buildPackedScene', () => {
         placement(ROT_Z90, [10, 0, 0], 'a'),
         placement(R345, [0, 10, 0], 'b')
       ],
-      [100, 100, 100]
+      [100, 100, 100],
+      true
     )
     const instanced = scene.children.filter((c) => (c as InstancedMesh).isInstancedMesh)
     expect(instanced).toHaveLength(2)
@@ -138,7 +149,7 @@ describe('buildPackedScene', () => {
   })
 
   it('always includes the carton, even with nothing placed', () => {
-    const scene = buildPackedScene([part()], [], [100, 100, 100])
+    const scene = buildPackedScene([part()], [], [100, 100, 100], true)
     const carton = scene.children.find((c) => c.name === 'carton') as LineSegments
     expect(carton).toBeDefined()
     expect(scene.children.filter((c) => (c as InstancedMesh).isInstancedMesh)).toHaveLength(0)
@@ -148,7 +159,8 @@ describe('buildPackedScene', () => {
     const scene = buildPackedScene(
       [part('a')],
       [placement(ROT_Z90, [0, 0, 0], 'a'), placement(ROT_Z90, [0, 0, 0], 'ghost')],
-      [100, 100, 100]
+      [100, 100, 100],
+      true
     )
     const instanced = scene.children.filter((c) => (c as InstancedMesh).isInstancedMesh)
     expect(instanced).toHaveLength(1)
@@ -159,7 +171,8 @@ describe('buildPackedScene', () => {
     const scene = buildPackedScene(
       [part('a'), part('b')],
       [placement(ROT_Z90, [0, 0, 0], 'a'), placement(ROT_Z90, [0, 0, 0], 'b')],
-      [100, 100, 100]
+      [100, 100, 100],
+      true
     )
     const meshes = scene.children.filter((c) => (c as Mesh).isMesh) as Mesh[]
     expect(meshes[0].material).toBe(meshes[1].material) // one GPU program

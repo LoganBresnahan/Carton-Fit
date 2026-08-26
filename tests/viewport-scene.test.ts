@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { Box3, Mesh, Vector3 } from 'three'
-import { buildPartsScene } from '../src/renderer/src/viewport/sceneFromParts'
+import { Box3, Mesh, type MeshStandardMaterial, Vector3 } from 'three'
+import { buildPartsScene, defaultPartMaterial } from '../src/renderer/src/viewport/sceneFromParts'
+import { viewportPalette } from '../src/renderer/src/viewport/palette'
 import { boundsOfParts, frameBox } from '../src/renderer/src/viewport/cameraFraming'
 import type { ImportedPart } from '../src/renderer/src/workers/import-protocol'
 
@@ -17,7 +18,7 @@ function part(name: string, offset = 0): ImportedPart {
 describe('buildPartsScene', () => {
   it('creates one named mesh per part with geometry adopted from part buffers', () => {
     const parts = [part('bolt'), part('nut')]
-    const group = buildPartsScene(parts)
+    const group = buildPartsScene(parts, true)
     expect(group.children).toHaveLength(2)
     const meshes = group.children as Mesh[]
     expect(meshes.map((m) => m.name)).toEqual(['bolt', 'nut'])
@@ -26,13 +27,25 @@ describe('buildPartsScene', () => {
   })
 
   it('shares one material instance across the group (the disposal-dedup contract)', () => {
-    const group = buildPartsScene([part('a'), part('b'), part('c')])
+    const group = buildPartsScene([part('a'), part('b'), part('c')], true)
     const materials = (group.children as Mesh[]).map((m) => m.material)
     expect(new Set(materials).size).toBe(1)
   })
 
   it('returns an empty group for no parts', () => {
-    expect(buildPartsScene([]).children).toHaveLength(0)
+    expect(buildPartsScene([], true).children).toHaveLength(0)
+  })
+
+  // ADR-0025 §5: the theme reaches the parts through this argument and through
+  // nothing else, so a builder that ignored it would render a dark model inside
+  // a light app.
+  it('takes its material colour from the palette for the given scheme', () => {
+    for (const dark of [true, false]) {
+      expect(defaultPartMaterial(dark).color.getHex()).toBe(viewportPalette(dark).part)
+      const mesh = buildPartsScene([part('bolt')], dark).children[0] as Mesh
+      const material = mesh.material as MeshStandardMaterial
+      expect(material.color.getHex()).toBe(viewportPalette(dark).part)
+    }
   })
 })
 

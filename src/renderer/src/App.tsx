@@ -5,6 +5,7 @@ import InputsPanel from './components/InputsPanel'
 import PartWeightsPanel from './components/PartWeightsPanel'
 import ResultsPanel from './components/ResultsPanel'
 import StorageBanner from './components/StorageBanner'
+import ThemeSelect from './components/ThemeSelect'
 import UpdateBanner from './components/UpdateBanner'
 import UnitPicker from './components/UnitPicker'
 import { ConfigurationsPanel } from './components/ConfigurationsPanel'
@@ -21,6 +22,10 @@ export default function App() {
       <header className="app-header">
         <h1>Carton Fit</h1>
         <div className="header-status">
+          {/* Left of the chips, and it never shrinks: the chips are what absorb
+              truncation (ADR-0021 §7), and a half-width select is unusable
+              where a truncated sentence is merely shorter. */}
+          <ThemeSelect />
           <StorageBanner />
           <UpdateBanner />
         </div>

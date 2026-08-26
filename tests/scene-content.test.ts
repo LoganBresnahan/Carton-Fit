@@ -24,7 +24,7 @@ function watchDisposal(group: Group) {
 
 describe('disposeObject', () => {
   it('disposes every geometry and the shared material exactly once', () => {
-    const group = buildPartsScene([part('a'), part('b'), part('c')])
+    const group = buildPartsScene([part('a'), part('b'), part('c')], true)
     const { geomSpies, matSpy } = watchDisposal(group)
     disposeObject(group)
     for (const spy of geomSpies) expect(spy).toHaveBeenCalledTimes(1)
@@ -35,7 +35,7 @@ describe('disposeObject', () => {
 describe('swapContent', () => {
   it('attaches next under the parent and returns it as current', () => {
     const parent = new Group()
-    const a = buildPartsScene([part('a')])
+    const a = buildPartsScene([part('a')], true)
     const current = swapContent(parent, null, a)
     expect(current).toBe(a)
     expect(parent.children).toContain(a)
@@ -43,8 +43,8 @@ describe('swapContent', () => {
 
   it('disposes and detaches the replaced content on each swap', () => {
     const parent = new Group()
-    const a = buildPartsScene([part('a1'), part('a2')])
-    const b = buildPartsScene([part('b1')])
+    const a = buildPartsScene([part('a1'), part('a2')], true)
+    const b = buildPartsScene([part('b1')], true)
     const watchA = watchDisposal(a)
 
     let current = swapContent(parent, null, a)
@@ -59,7 +59,7 @@ describe('swapContent', () => {
 
   it('clears and disposes on swap to null (the unmount/reset path)', () => {
     const parent = new Group()
-    const b = buildPartsScene([part('b1')])
+    const b = buildPartsScene([part('b1')], true)
     const watchB = watchDisposal(b)
 
     let current = swapContent(parent, null, b)

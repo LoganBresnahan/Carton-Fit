@@ -11,6 +11,7 @@ import {
 } from 'three'
 import { partToBufferGeometry } from './partGeometry'
 import { defaultPartMaterial } from './sceneFromParts'
+import { viewportPalette } from './palette'
 import type { Placement, Vec3 } from '../core/packing/types'
 import type { ImportedPart } from '../workers/import-protocol'
 
@@ -29,8 +30,6 @@ import type { ImportedPart } from '../workers/import-protocol'
 // The test asserts three's transform equals applyMat3 + translation on
 // asymmetric rotations, where a transpose gives a different answer.
 
-const CARTON_LINE = 0x7c88a0
-
 /** The affine transform for one placement: world = rotation · v + translation. */
 export function placementMatrix(placement: Placement): Matrix4 {
   const m = placement.rotation
@@ -45,12 +44,13 @@ export function placementMatrix(placement: Placement): Matrix4 {
 
 /** Wireframe box spanning [0,0,0] → carton, matching the engine's carton space
  *  (placements are corner coordinates measured from the inner box origin). */
-export function buildCartonWireframe(carton: Vec3): LineSegments {
+export function buildCartonWireframe(carton: Vec3, dark: boolean): LineSegments {
   const [x, y, z] = carton
   const box = new BoxGeometry(Math.max(x, 0), Math.max(y, 0), Math.max(z, 0))
   const edges = new EdgesGeometry(box)
   box.dispose() // EdgesGeometry copies what it needs; the source box is scrap
-  const lines = new LineSegments(edges, new LineBasicMaterial({ color: CARTON_LINE }))
+  const color = viewportPalette(dark).cartonLine
+  const lines = new LineSegments(edges, new LineBasicMaterial({ color }))
   // BoxGeometry is origin-centered; the carton runs corner-to-corner from 0.
   lines.position.set(x / 2, y / 2, z / 2)
   lines.name = 'carton'
@@ -74,11 +74,12 @@ export function boundsOfCarton(carton: Vec3): Box3 {
 export function buildPackedScene(
   parts: readonly ImportedPart[],
   placements: readonly Placement[],
-  carton: Vec3
+  carton: Vec3,
+  dark: boolean
 ): Group {
   const group = new Group()
   group.name = 'packed'
-  group.add(buildCartonWireframe(carton))
+  group.add(buildCartonWireframe(carton, dark))
 
   const byName = new Map<string, ImportedPart>()
   for (const part of parts) byName.set(part.name, part)
@@ -95,7 +96,7 @@ export function buildPackedScene(
   }
 
   if (grouped.size > 0) {
-    const material = defaultPartMaterial() // shared; disposed once (sceneContent)
+    const material = defaultPartMaterial(dark) // shared; disposed once (sceneContent)
     for (const [name, group_] of grouped) {
       const part = byName.get(name)!
       const mesh = new InstancedMesh(partToBufferGeometry(part), material, group_.length)

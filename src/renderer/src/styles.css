@@ -109,6 +109,26 @@ body {
   overflow: hidden;
 }
 
+/* The theme control (ADR-0025 §6). Sized in rem and `flex-shrink: 0`, because
+   the header's stability rules are about layout, not just height: this is the
+   one item in the status area that must keep its full width, and it holds that
+   width across all three labels so choosing a theme cannot move the chips
+   beside it. Styled as quietly as the other selects — it is a setting the user
+   touches once, not a control competing with a storage warning. */
+.theme-select {
+  flex-shrink: 0;
+  width: 5.6rem;
+  padding: 0.25rem 0.3rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.theme-select:disabled {
+  opacity: 0.6;
+}
+
 .app-main {
   flex: 1;
   min-height: 0;
