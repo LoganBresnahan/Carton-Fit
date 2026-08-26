@@ -3,6 +3,15 @@
   margin: 0;
 }
 
+/* The theme (ADR-0025). Two token sets, one mechanism: the stylesheet keys on
+   `prefers-color-scheme` and NOTHING else, because the main process points that
+   media query at the user's preference via `nativeTheme.themeSource`. There is
+   deliberately no `data-theme` attribute to keep in step with it.
+
+   Every colour in this file goes through these tokens. A hard-coded hex here is
+   a colour that cannot follow the theme, and the 3D viewport already has to
+   hand-copy four of them (a WebGL scene cannot read a CSS variable) — one set
+   of copies is the most this design can carry. */
 :root {
   color-scheme: dark;
   --bg: #1b1e24;
@@ -15,6 +24,41 @@
   /* Distinct from --error: the estimate succeeded, but a number in it cannot
      be trusted. Amber, so it does not read as a failure. */
   --warn: #d9a441;
+  /* Ink on an --accent fill (the active segment). Near-black rather than white
+     against this blue: 6.7:1 versus 3.1:1. */
+  --on-accent: #0b0e13;
+}
+
+/* Light is RE-PICKED, not inverted (ADR-0025 §7). Inverting a palette tuned for
+   a dark panel gives washed-out amber and salmon on white; each of these was
+   chosen against --panel and checked for WCAG AA at body size, since --accent,
+   --warn, --error and --muted are all used as TEXT colours here, not just as
+   borders and fills.
+
+   Measured contrast on --panel (#fff): text 16.7, muted 6.1, accent 5.4,
+   warn 5.5, error 6.5 — and each stays above 4.5 on the slightly darker --bg. */
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    /* Not pure white: the panels are white, and the stage behind them needs to
+       read as a surface below them. Also the 3D viewport's background — this is
+       the hex `viewportPalette` and main's `backgroundColor` map both mirror. */
+    --bg: #f4f6f9;
+    --panel: #ffffff;
+    --border: #d3d9e3;
+    --text: #1b1e24;
+    --muted: #5a6273;
+    /* Darkened from the dark side's #5b9dd9 — the same blue in hue, so the
+       segmented controls read as one product, but legible as text on white. */
+    --accent: #2a6db0;
+    --error: #b3261e;
+    /* Amber at full brightness is invisible on white (2.3:1), so the light warn
+       is an ochre. It still reads as caution rather than failure beside
+       --error. */
+    --warn: #8a6100;
+    /* And here the ink flips: white on the darker blue, 5.4:1. */
+    --on-accent: #ffffff;
+  }
 }
 
 body {
@@ -257,7 +301,7 @@ body {
 }
 .segment.active {
   background: var(--accent);
-  color: #0b0e13;
+  color: var(--on-accent);
   font-weight: 600;
 }
 .segment:disabled {
@@ -393,7 +437,7 @@ input[type='number']::-webkit-outer-spin-button {
   line-height: 1.35;
   color: var(--warn);
   border-left: 3px solid var(--warn);
-  background: rgba(217, 164, 65, 0.08);
+  background: color-mix(in srgb, var(--warn) 8%, transparent);
   padding: 0.4rem 0.55rem;
   border-radius: 0 3px 3px 0;
 }
@@ -535,7 +579,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 
 .error {
-  color: #b3261e;
+  color: var(--error);
   font-size: 0.9em;
 }
 
@@ -559,7 +603,7 @@ input[type='number']::-webkit-outer-spin-button {
 }
 .status-chip-warn {
   border-left-color: var(--warn);
-  background: rgba(217, 164, 65, 0.1);
+  background: color-mix(in srgb, var(--warn) 10%, transparent);
 }
 /* The news chip does NOT shrink; the storage chip absorbs all the truncation.
    Letting them shrink proportionally read fine in the abstract and was wrong on
@@ -572,7 +616,7 @@ input[type='number']::-webkit-outer-spin-button {
    nothing the user can act on. */
 .status-chip-info {
   border-left-color: var(--accent);
-  background: rgba(91, 157, 217, 0.1);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
   flex-shrink: 0;
 }
 .status-chip-label {

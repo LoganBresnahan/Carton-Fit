@@ -4,11 +4,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   attachWindowState,
+  captureWindowState,
   DEFAULT_WINDOW_STATE,
   placeWindow,
   readWindowState,
   windowStateFile,
   writeWindowState,
+  type ThemePreference,
   type WindowState
 } from '../src/main/windowState'
 
@@ -26,6 +28,9 @@ afterEach(() => {
 
 const file = (): string => windowStateFile(dir)
 const screen = (w: number, h: number, x = 0, y = 0) => ({ x, y, width: w, height: h })
+/** A geometry-only state. placeWindow's rules are about screens, not themes, so
+ *  its cases say nothing about the theme and just carry the default. */
+const geom = (s: Omit<WindowState, 'theme'>): WindowState => ({ ...s, theme: 'system' })
 
 describe('readWindowState', () => {
   it('returns the defaults when there is no file', () => {
@@ -33,7 +38,14 @@ describe('readWindowState', () => {
   })
 
   it('round-trips a saved state', () => {
-    const state: WindowState = { width: 1000, height: 700, x: 40, y: 60, maximized: true }
+    const state: WindowState = {
+      width: 1000,
+      height: 700,
+      x: 40,
+      y: 60,
+      maximized: true,
+      theme: 'dark'
+    }
     writeWindowState(file(), state)
     expect(readWindowState(file())).toEqual(state)
   })
@@ -72,6 +84,38 @@ describe('readWindowState', () => {
     writeFileSync(file(), JSON.stringify({ width: 900, height: 700 }))
     expect(readWindowState(file()).maximized).toBe(false)
   })
+
+  // The theme preference lives here rather than in settings or SQLite because
+  // it is needed before the window exists (ADR-0025). Same field-by-field rule
+  // as the geometry: anything the file cannot vouch for becomes `system`, which
+  // is what every build before this one behaved as.
+  it('reads a pinned theme back', () => {
+    for (const theme of ['light', 'dark', 'system'] as ThemePreference[]) {
+      writeFileSync(file(), JSON.stringify({ width: 900, height: 700, theme }))
+      expect(readWindowState(file()).theme).toBe(theme)
+    }
+  })
+
+  it('falls back to system when the file predates the theme field', () => {
+    writeFileSync(file(), JSON.stringify({ width: 900, height: 700, maximized: false }))
+    expect(readWindowState(file()).theme).toBe('system')
+  })
+
+  it('falls back to system on a theme it does not recognise', () => {
+    // A newer build's value, or a hand edit. Neither may pin the app to a look
+    // it cannot render.
+    for (const bad of ['"solarized"', '"Dark"', '3', 'null', '{}']) {
+      writeFileSync(file(), `{"width": 900, "height": 700, "theme": ${bad}}`)
+      expect(readWindowState(file()).theme).toBe('system')
+    }
+  })
+
+  it('keeps a good theme when the geometry beside it is corrupt', () => {
+    writeFileSync(file(), JSON.stringify({ width: 'wide', height: 700, theme: 'light' }))
+    const state = readWindowState(file())
+    expect(state.width).toBe(DEFAULT_WINDOW_STATE.width)
+    expect(state.theme).toBe('light')
+  })
 })
 
 describe('writeWindowState', () => {
@@ -92,59 +136,76 @@ describe('placeWindow', () => {
   const primary = screen(1920, 1040)
 
   it('keeps a position that is on screen', () => {
-    const placed = placeWindow({ width: 1000, height: 700, x: 100, y: 50, maximized: false }, [primary])
-    expect(placed).toEqual({ width: 1000, height: 700, x: 100, y: 50, maximized: false })
+    const placed = placeWindow(
+      geom({ width: 1000, height: 700, x: 100, y: 50, maximized: false }),
+      [primary]
+    )
+    expect(placed).toEqual({
+      width: 1000,
+      height: 700,
+      x: 100,
+      y: 50,
+      maximized: false,
+      theme: 'system'
+    })
   })
 
   it('DROPS a position on a monitor that is no longer attached', () => {
     // The case this whole function exists for: the window was last closed on a
     // second monitor to the right. Restoring blindly puts it entirely
     // off-screen, and an app that appears not to launch reads as a crash.
-    const placed = placeWindow({ width: 1000, height: 700, x: 2400, y: 300, maximized: false }, [
-      primary
-    ])
+    const placed = placeWindow(
+      geom({ width: 1000, height: 700, x: 2400, y: 300, maximized: false }),
+      [primary]
+    )
     expect(placed.x).toBeUndefined()
     expect(placed.y).toBeUndefined()
     expect(placed.width).toBe(1000) // the SIZE is still worth keeping
   })
 
   it('keeps a position on a second monitor that IS still attached', () => {
-    const placed = placeWindow({ width: 1000, height: 700, x: 2400, y: 300, maximized: false }, [
-      primary,
-      screen(1920, 1040, 1920, 0)
-    ])
+    const placed = placeWindow(
+      geom({ width: 1000, height: 700, x: 2400, y: 300, maximized: false }),
+      [primary, screen(1920, 1040, 1920, 0)]
+    )
     expect(placed.x).toBe(2400)
   })
 
   it('keeps a window that hangs off an edge but is still grabbable', () => {
     // Partly off-screen is normal and deliberate; only unreachable is a problem.
-    const placed = placeWindow({ width: 1000, height: 700, x: 1700, y: 0, maximized: false }, [
-      primary
-    ])
+    const placed = placeWindow(
+      geom({ width: 1000, height: 700, x: 1700, y: 0, maximized: false }),
+      [primary]
+    )
     expect(placed.x).toBe(1700)
   })
 
   it('drops a position leaving only a sliver on screen', () => {
     // 20 px of window on screen is as lost as none — there is nothing to drag.
-    const placed = placeWindow({ width: 1000, height: 700, x: 1900, y: 0, maximized: false }, [
-      primary
-    ])
+    const placed = placeWindow(
+      geom({ width: 1000, height: 700, x: 1900, y: 0, maximized: false }),
+      [primary]
+    )
     expect(placed.x).toBeUndefined()
   })
 
   it('drops a position that is off screen vertically only', () => {
-    const placed = placeWindow({ width: 1000, height: 700, x: 100, y: -690, maximized: false }, [
-      primary
-    ])
+    const placed = placeWindow(
+      geom({ width: 1000, height: 700, x: 100, y: -690, maximized: false }),
+      [primary]
+    )
     expect(placed.x).toBeUndefined()
   })
 
   it('shrinks a window bigger than the screen it would open on', () => {
     // A resolution change between sessions, or a profile copied from a bigger
     // machine.
-    const placed = placeWindow({ width: 3000, height: 2000, x: 0, y: 0, maximized: false }, [
+    const placed = placeWindow(
+      geom({ width: 3000, height: 2000, x: 0, y: 0, maximized: false }),
+      [
       screen(1280, 720)
-    ])
+    ]
+    )
     expect(placed.width).toBe(1280)
     expect(placed.height).toBe(720)
   })
@@ -152,25 +213,43 @@ describe('placeWindow', () => {
   it('enforces a usable minimum over a tiny saved size', () => {
     // The layout is a wide inputs panel beside a 3D stage; below this it stops
     // working, and a 1x1 window is indistinguishable from a failed launch.
-    const placed = placeWindow({ width: 1, height: 1, maximized: false }, [primary])
+    const placed = placeWindow(
+      geom({ width: 1, height: 1, maximized: false }),
+      [primary]
+    )
     expect(placed.width).toBeGreaterThanOrEqual(800)
     expect(placed.height).toBeGreaterThanOrEqual(600)
   })
 
   it('prefers the minimum size over the screen bound when they conflict', () => {
     // A clipped-but-usable window beats a correctly-fitted unusable one.
-    const placed = placeWindow({ width: 1200, height: 900, maximized: false }, [screen(640, 480)])
+    const placed = placeWindow(
+      geom({ width: 1200, height: 900, maximized: false }),
+      [screen(640, 480)]
+    )
     expect(placed.width).toBe(800)
     expect(placed.height).toBe(600)
   })
 
   it('carries the maximized flag through untouched', () => {
-    expect(placeWindow({ width: 1000, height: 700, maximized: true }, [primary]).maximized).toBe(true)
+    expect(
+      placeWindow(geom({ width: 1000, height: 700, maximized: true }), [primary]).maximized
+    ).toBe(true)
+  })
+
+  it('carries the theme through untouched — it is not geometry', () => {
+    const state: WindowState = { width: 1000, height: 700, maximized: false, theme: 'light' }
+    expect(placeWindow(state, [primary]).theme).toBe('light')
+    // Including down the path that DROPS the position.
+    expect(placeWindow({ ...state, x: 9000, y: 9000 }, [primary]).theme).toBe('light')
   })
 
   it('survives having no displays at all', () => {
     // screen.getAllDisplays() returning nothing should not crash the launch.
-    const placed = placeWindow({ width: 1000, height: 700, x: 10, y: 10, maximized: false }, [])
+    const placed = placeWindow(
+      geom({ width: 1000, height: 700, x: 10, y: 10, maximized: false }),
+      []
+    )
     expect(placed.width).toBe(1000)
     expect(placed.x).toBeUndefined()
   })
@@ -208,7 +287,7 @@ describe('frame offset compensation', () => {
 
   it('does not drift across repeated launches — the whole point', () => {
     // Simulate five launches of a window manager that adds +6,+27 every time.
-    let state: WindowState = { width: 1024, height: 720, x: 300, y: 200, maximized: false }
+    let state: WindowState = geom({ width: 1024, height: 720, x: 300, y: 200, maximized: false })
     for (let launch = 0; launch < 5; launch++) {
       const win = fakeWindow({ x: state.x! + 6, y: state.y! + 27, width: 1024, height: 720 })
       attachWindowState(win as any, file(), { requestedPosition: { x: state.x!, y: state.y! } })
@@ -251,6 +330,33 @@ describe('frame offset compensation', () => {
     const saved = readWindowState(file())
     expect(saved.x).toBe(900)
     expect(saved.y).toBe(500)
+  })
+
+  // ADR-0025: the theme is not a property of the window, and every save here
+  // rewrites the whole file, so where the value comes from is the whole
+  // question. It is read at SAVE time, not captured when the window opened —
+  // otherwise choosing Light and then dragging the window would silently
+  // restore Dark.
+  it('saves whatever the theme is at the moment of the save, not at attach', () => {
+    const win = fakeWindow({ x: 100, y: 100, width: 1024, height: 720 })
+    let theme: ThemePreference = 'system'
+    attachWindowState(win as any, file(), { currentTheme: () => theme })
+    theme = 'light'
+    win.fire('close')
+    expect(readWindowState(file()).theme).toBe('light')
+  })
+
+  it('records system when no theme source was given', () => {
+    const win = fakeWindow({ x: 100, y: 100, width: 1024, height: 720 })
+    attachWindowState(win as any, file(), {})
+    win.fire('close')
+    expect(readWindowState(file()).theme).toBe('system')
+  })
+
+  it('captureWindowState reports the theme it was handed', () => {
+    const win = fakeWindow({ x: 10, y: 20, width: 900, height: 640 })
+    expect(captureWindowState(win as any, undefined, 'dark').theme).toBe('dark')
+    expect(captureWindowState(win as any).theme).toBe('system')
   })
 
   it('records the reported position when nothing was requested', () => {

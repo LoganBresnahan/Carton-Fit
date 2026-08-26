@@ -11,6 +11,11 @@ import type { BrowserWindow, Rectangle } from 'electron'
 // passes the window and the display list in — so the placement rules can be
 // unit-tested against plain data. The type-only import erases at compile time.
 
+/** ADR-0025. `system` follows the OS; the other two pin it. Unknown values in
+ *  the file (an older build's absence, a newer build's addition, a hand edit)
+ *  all resolve to `system`. */
+export type ThemePreference = 'system' | 'light' | 'dark'
+
 export interface WindowState {
   width: number
   height: number
@@ -19,9 +24,18 @@ export interface WindowState {
   x?: number
   y?: number
   maximized: boolean
+  /** Not geometry, but the same "needed before the window is CONSTRUCTED"
+   *  argument: `backgroundColor` has to match the resolved theme or every
+   *  launch flashes the other one (ADR-0025). */
+  theme: ThemePreference
 }
 
-export const DEFAULT_WINDOW_STATE: WindowState = { width: 1280, height: 800, maximized: false }
+export const DEFAULT_WINDOW_STATE: WindowState = {
+  width: 1280,
+  height: 800,
+  maximized: false,
+  theme: 'system'
+}
 
 /** Below this the layout (inputs panel beside the 3D stage) stops working. */
 const MIN_WIDTH = 800
@@ -37,6 +51,10 @@ export function windowStateFile(userDataPath: string): string {
 
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v)
+}
+
+function isThemePreference(v: unknown): v is ThemePreference {
+  return v === 'system' || v === 'light' || v === 'dark'
 }
 
 /**
@@ -60,7 +78,8 @@ export function readWindowState(file: string): WindowState {
   const state: WindowState = {
     width: isFiniteNumber(raw.width) ? raw.width : DEFAULT_WINDOW_STATE.width,
     height: isFiniteNumber(raw.height) ? raw.height : DEFAULT_WINDOW_STATE.height,
-    maximized: raw.maximized === true
+    maximized: raw.maximized === true,
+    theme: isThemePreference(raw.theme) ? raw.theme : DEFAULT_WINDOW_STATE.theme
   }
   if (isFiniteNumber(raw.x) && isFiniteNumber(raw.y)) {
     state.x = raw.x
@@ -105,7 +124,8 @@ export function placeWindow(state: WindowState, workAreas: readonly Rectangle[])
   const placed: WindowState = {
     width: Math.max(MIN_WIDTH, state.width),
     height: Math.max(MIN_HEIGHT, state.height),
-    maximized: state.maximized
+    maximized: state.maximized,
+    theme: state.theme
   }
   if (largest) {
     // Never restore a window bigger than the screen it lands on; the floor wins
@@ -133,10 +153,14 @@ export function placeWindow(state: WindowState, workAreas: readonly Rectangle[])
  *
  *  @param position overrides the reported position — see
  *  {@link WindowStateOptions.requestedPosition} for why the reported one cannot
- *  simply be trusted. */
+ *  simply be trusted.
+ *  @param theme passed IN rather than read off the window: the theme is not a
+ *  property of the BrowserWindow, and this function writes the whole file, so a
+ *  value it invented would clobber a preference set mid-session. */
 export function captureWindowState(
   win: BrowserWindow,
-  position?: { x: number; y: number }
+  position?: { x: number; y: number },
+  theme: ThemePreference = DEFAULT_WINDOW_STATE.theme
 ): WindowState {
   const bounds = win.getNormalBounds()
   return {
@@ -144,7 +168,8 @@ export function captureWindowState(
     height: bounds.height,
     x: position ? position.x : bounds.x,
     y: position ? position.y : bounds.y,
-    maximized: win.isMaximized()
+    maximized: win.isMaximized(),
+    theme
   }
 }
 
@@ -176,6 +201,16 @@ export interface WindowStateOptions {
    * differs by more than a frame could account for.
    */
   requestedPosition?: { x: number; y: number }
+  /**
+   * The theme preference to record, read at SAVE time rather than captured at
+   * attach time.
+   *
+   * Every save here writes the whole file, and the preference can change any
+   * moment the user touches the header select (ADR-0025). A value snapshotted
+   * when the window was created would therefore undo their choice on the next
+   * resize, move, or close.
+   */
+  currentTheme?: () => ThemePreference
 }
 
 /**
@@ -231,7 +266,7 @@ export function attachWindowState(
 
   const save = (): void => {
     timer = null
-    writeWindowState(file, captureWindowState(win, positionToSave()))
+    writeWindowState(file, captureWindowState(win, positionToSave(), options.currentTheme?.()))
   }
   const schedule = (): void => {
     if (timer) clearTimeout(timer)
