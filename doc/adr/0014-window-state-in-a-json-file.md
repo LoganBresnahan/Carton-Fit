@@ -2,7 +2,7 @@
 
 Date: 2026-07-25
 Status: Accepted
-Relates to: ADR-0007 (storage), ADR-0013 (native module reality)
+Relates to: ADR-0007 (storage), ADR-0013 (native module reality), ADR-0025 (theme)
 
 ## Context
 
