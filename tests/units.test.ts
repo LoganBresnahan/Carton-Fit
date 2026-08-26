@@ -5,6 +5,7 @@ import {
   gToWeight,
   inToMm,
   lbToG,
+  legacyWeightUnit,
   lengthToMm,
   mmToIn,
   mmToLength,
@@ -45,9 +46,22 @@ describe('weight conversions', () => {
     }
   })
 
-  it('kg is grams over 1000', () => {
-    expect(weightToG(1.5, 'metric')).toBe(1500)
-    expect(gToWeight(1500, 'metric')).toBe(1.5)
+  it('kg is grams over 1000, and g is the identity', () => {
+    expect(weightToG(1.5, 'kg')).toBe(1500)
+    expect(gToWeight(1500, 'kg')).toBe(1.5)
+    expect(weightToG(37, 'g')).toBe(37)
+    expect(gToWeight(37, 'g')).toBe(37)
+  })
+
+  it('lb converts through the exact avoirdupois constant', () => {
+    expect(weightToG(35, 'lb')).toBeCloseTo(15875.73295, 5)
+    expect(gToWeight(453.59237, 'lb')).toBeCloseTo(1, 10)
+  })
+
+  it('derives the legacy weight unit from the old coupled toggle', () => {
+    // ADR-0024: a pre-existing settings blob must keep showing what it showed.
+    expect(legacyWeightUnit('imperial')).toBe('lb')
+    expect(legacyWeightUnit('metric')).toBe('kg')
   })
 
   it('default max weight is 35 lb in grams', () => {

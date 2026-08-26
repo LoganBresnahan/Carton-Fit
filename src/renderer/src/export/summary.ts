@@ -1,4 +1,4 @@
-import { lengthUnitLabel, weightUnitLabel } from '../core/units'
+import { lengthUnitLabel } from '../core/units'
 import {
   bindingLabel,
   freeSpaceNote,
@@ -45,13 +45,15 @@ function cartonLines(input: EstimateExport): string[] {
 
 function weightLines(input: EstimateExport): string[] {
   const { settings, request, result } = input
-  const units = settings.unitSystem
-  const unit = weightUnitLabel(units)
-  const packed = weightText(packedWeightG(result, request), units)
-  const cap = Number.isFinite(request.maxWeightG) ? weightText(request.maxWeightG, units) : '∞'
+  // Packed-vs-cap shows in the cap's unit; per-part figures in the per-part
+  // unit — the same split the panel makes (ADR-0024, ADR-0017 parity).
+  const unit = settings.maxWeightUnit
+  const packed = weightText(packedWeightG(result, request), unit)
+  const cap = Number.isFinite(request.maxWeightG) ? weightText(request.maxWeightG, unit) : '∞'
   const source =
     settings.weightMode === 'direct'
-      ? `${weightText(settings.partWeightG, units)} ${unit} per part, entered directly`
+      ? `${weightText(settings.partWeightG, settings.partWeightUnit)} ` +
+        `${settings.partWeightUnit} per part, entered directly`
       : `density ${settings.densityGPerCm3} g/cm³ × part volume`
 
   // Naming the source alone would misdescribe a mixed assembly (ADR-0018): the
@@ -67,6 +69,7 @@ function weightLines(input: EstimateExport): string[] {
 
 function partLines(input: EstimateExport): string[] {
   const units = input.settings.unitSystem
+  const weightUnit = input.settings.partWeightUnit
   const rows = measurementRows(input.request, input.result)
   if (rows.length === 0) return []
 
@@ -75,7 +78,7 @@ function partLines(input: EstimateExport): string[] {
     lines.push(
       `  ${row.name} — ${row.quantity.toLocaleString()} × ` +
         `(${dimsText(row.extentMm, units)} ${lengthUnitLabel(units)}), ` +
-        `${weightText(row.unitWeightG, units)} ${weightUnitLabel(units)} each`
+        `${weightText(row.unitWeightG, weightUnit)} ${weightUnit} each`
     )
   }
   const rest = rows.length - PARTS_SHOWN

@@ -29,13 +29,24 @@ export const lengthToMm = (value: number, units: UnitSystem): number =>
   units === 'imperial' ? inToMm(value) : value
 export const mmToLength = (mm: number, units: UnitSystem): number =>
   units === 'imperial' ? mmToIn(mm) : mm
-export const weightToG = (value: number, units: UnitSystem): number =>
-  units === 'imperial' ? lbToG(value) : kgToG(value)
-export const gToWeight = (g: number, units: UnitSystem): number =>
-  units === 'imperial' ? gToLb(g) : gToKg(g)
 
 export const lengthUnitLabel = (units: UnitSystem): string => (units === 'imperial' ? 'in' : 'mm')
-export const weightUnitLabel = (units: UnitSystem): string => (units === 'imperial' ? 'lb' : 'kg')
+
+/** Weight display units are chosen per input, decoupled from the length
+ *  system (ADR-0024) — a carton measured in inches routinely holds parts
+ *  weighed in grams. The unit's name is its own label. */
+export type WeightUnit = 'g' | 'kg' | 'lb'
+export const WEIGHT_UNITS: readonly WeightUnit[] = ['g', 'kg', 'lb']
+
+export const weightToG = (value: number, unit: WeightUnit): number =>
+  unit === 'lb' ? lbToG(value) : unit === 'kg' ? kgToG(value) : value
+export const gToWeight = (g: number, unit: WeightUnit): number =>
+  unit === 'lb' ? gToLb(g) : unit === 'kg' ? gToKg(g) : g
+
+/** What a pre-ADR-0024 settings blob meant by its one toggle — the derivation
+ *  that keeps an existing user's display exactly where it was. */
+export const legacyWeightUnit = (units: UnitSystem): WeightUnit =>
+  units === 'imperial' ? 'lb' : 'kg'
 
 /** Volume for display (ADR-0017's CSV column). Cubing the length factor here
  *  rather than at the call site keeps ADR-0004's rule intact: every conversion

@@ -1,7 +1,9 @@
 import { useAppStore } from '../store'
 import { partKinds } from '../packing/kinds'
 import { partWeightG } from '../packing/request'
-import { gToWeight, weightToG, weightUnitLabel } from '../core/units'
+import { gToWeight, weightToG } from '../core/units'
+import { WeightUnitSelect } from './InputsPanel'
+import { selectAllOnFocus } from './select-on-focus'
 
 // Per-kind weight overrides (ADR-0018).
 //
@@ -22,17 +24,28 @@ export default function PartWeightsPanel(): React.JSX.Element | null {
   const settings = useAppStore((s) => s.settings)
   const overrides = useAppStore((s) => s.partWeightsG)
   const setPartWeight = useAppStore((s) => s.setPartWeight)
+  const updateSettings = useAppStore((s) => s.updateSettings)
 
   const kinds = partKinds(parts)
   // Nothing imported, or a single kind that the file-wide weight already
   // describes perfectly — in both cases this section would only add noise.
   if (kinds.length < 2) return null
 
-  const unit = weightUnitLabel(settings.unitSystem)
+  // Kinds in one file are weighed on one scale, so the panel shares the
+  // per-part unit rather than growing a dropdown per row (ADR-0024).
+  const unit = settings.partWeightUnit
 
   return (
     <section className="panel-section" data-testid="part-weights-panel">
-      <h2>Part weights</h2>
+      <div className="panel-section-header">
+        <h2>Part weights</h2>
+        <WeightUnitSelect
+          unit={unit}
+          onChange={(partWeightUnit) => updateSettings({ partWeightUnit })}
+          ariaLabel="Unit for part weight overrides"
+          testid="part-weights-unit"
+        />
+      </div>
       <p className="panel-hint">
         Per kind. Blank uses the weight above; type to override one kind.
       </p>
@@ -43,7 +56,7 @@ export default function PartWeightsPanel(): React.JSX.Element | null {
           const hasOverride = typeof override === 'number'
           // What this kind weighs if left alone — shown as the placeholder, so
           // the default is visible without being mistaken for an entered value.
-          const fallback = round4(gToWeight(partWeightG(sample, settings), settings.unitSystem))
+          const fallback = round4(gToWeight(partWeightG(sample, settings), unit))
           return (
             <li key={kind} data-testid="kind-item">
               <span className="kind-name" title={kind}>
@@ -58,8 +71,9 @@ export default function PartWeightsPanel(): React.JSX.Element | null {
                   className="kind-weight"
                   aria-label={`Weight for ${kind}`}
                   data-testid={`kind-weight-${kind}`}
+                  {...selectAllOnFocus}
                   placeholder={String(fallback)}
-                  value={hasOverride ? round4(gToWeight(override, settings.unitSystem)) : ''}
+                  value={hasOverride ? round4(gToWeight(override, unit)) : ''}
                   onChange={(e) => {
                     const raw = e.target.value
                     // An empty field means "no override" — the way to get the
@@ -68,7 +82,7 @@ export default function PartWeightsPanel(): React.JSX.Element | null {
                     if (raw.trim() === '') return setPartWeight(kind, null)
                     const value = parseFloat(raw)
                     if (Number.isNaN(value) || value < 0) return
-                    setPartWeight(kind, weightToG(value, settings.unitSystem))
+                    setPartWeight(kind, weightToG(value, unit))
                   }}
                 />
                 <span className="field-unit">{unit}</span>

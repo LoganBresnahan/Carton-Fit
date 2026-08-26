@@ -254,3 +254,36 @@ test('converts display units without changing the stored answer', async () => {
   await waitForEstimate(page)
   expect((await readEstimate(page)).headline).toBe(imperial.headline)
 })
+
+test('a weight unit selector converts its own display without changing the answer (ADR-0024)', async () => {
+  const { page } = handle
+  await importSample(page, CUBE_STL.file)
+  await page.click('[data-testid="mode-max-quantity"]')
+  await setCarton(page, [12, 12, 12])
+  await waitForEstimate(page)
+  const before = await readEstimate(page)
+
+  await page.selectOption('[data-testid="max-weight-unit"]', 'g')
+  // The default 35 lb cap re-displays as grams — same canonical value, never rescaled.
+  await expect(page.locator('[data-testid="max-weight"]')).toHaveValue('15875.733')
+  // The packed-weight line spends against the cap, so it follows the cap's unit…
+  await expect(page.locator('[data-testid="results-weight"]')).toContainText(' g')
+  // …and the estimate itself is untouched.
+  await waitForEstimate(page)
+  expect((await readEstimate(page)).headline).toBe(before.headline)
+
+  // The per-part unit is its own choice (ADR-0024) — switching the cap left it alone.
+  await expect(page.locator('[data-testid="part-weight-unit"]')).toHaveValue('lb')
+})
+
+test('clicking a number field selects its value, so typing replaces it (ADR-0024)', async () => {
+  // Selection state is unreadable on a number input (Chromium throws on
+  // selectionStart), so assert the behaviour instead: without select-on-focus
+  // this types 125 or 512, not 5.
+  const { page } = handle
+  await importSample(page, CUBE_STL.file)
+  await setCarton(page, [12, 12, 12])
+  await page.click('[data-testid="dim-0"]')
+  await page.keyboard.type('5')
+  await expect(page.locator('[data-testid="dim-0"]')).toHaveValue('5')
+})

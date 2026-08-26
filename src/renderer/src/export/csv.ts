@@ -1,4 +1,4 @@
-import { lengthUnitLabel, volumeUnitLabel, weightUnitLabel } from '../core/units'
+import { lengthUnitLabel, volumeUnitLabel } from '../core/units'
 import {
   bindingLabel,
   freeSpaceReport,
@@ -53,7 +53,10 @@ export function buildCsv(input: EstimateExport): string {
   const { settings, request, result, fileName } = input
   const units = settings.unitSystem
   const length = lengthUnitLabel(units)
-  const weight = weightUnitLabel(units)
+  // Per-part columns carry the per-part unit; the estimate-level packed/max
+  // rows carry the cap's unit — the same split as the panel (ADR-0024).
+  const weight = settings.partWeightUnit
+  const capUnit = settings.maxWeightUnit
 
   const lines: string[] = [
     row([
@@ -77,8 +80,8 @@ export function buildCsv(input: EstimateExport): string {
         lengthText(measurement.extentMm[1], units),
         lengthText(measurement.extentMm[2], units),
         volumeText(measurement.boxVolumeMm3, units),
-        weightText(measurement.unitWeightG, units),
-        weightText(measurement.totalWeightG, units)
+        weightText(measurement.unitWeightG, weight),
+        weightText(measurement.totalWeightG, weight)
       ])
     )
   }
@@ -97,11 +100,13 @@ export function buildCsv(input: EstimateExport): string {
     row([`Clearance between parts (${length})`, lengthText(request.clearances.betweenParts, units)])
   )
   lines.push(row([`Clearance to wall (${length})`, lengthText(request.clearances.wall, units)]))
-  lines.push(row([`Packed weight (${weight})`, weightText(packedWeightG(result, request), units)]))
+  lines.push(
+    row([`Packed weight (${capUnit})`, weightText(packedWeightG(result, request), capUnit)])
+  )
   lines.push(
     row([
-      `Max weight (${weight})`,
-      Number.isFinite(request.maxWeightG) ? weightText(request.maxWeightG, units) : ''
+      `Max weight (${capUnit})`,
+      Number.isFinite(request.maxWeightG) ? weightText(request.maxWeightG, capUnit) : ''
     ])
   )
   if (result.mode === 'max-quantity' && result.upperBound !== undefined) {

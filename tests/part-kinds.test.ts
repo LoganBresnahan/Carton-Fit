@@ -53,6 +53,8 @@ function settings(patch: Partial<PackingSettings> = {}): PackingSettings {
     mode: 'fit-check',
     tier: 'fast',
     unitSystem: 'imperial',
+    maxWeightUnit: 'lb',
+    partWeightUnit: 'lb',
     boxDimsMm: [inToMm(12), inToMm(12), inToMm(12)],
     enterOuter: false,
     wallMm: 0,

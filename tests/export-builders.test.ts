@@ -35,6 +35,8 @@ function settings(patch: Partial<PackingSettings> = {}): PackingSettings {
     mode: 'fit-check',
     tier: 'fast',
     unitSystem: 'imperial',
+    maxWeightUnit: 'lb',
+    partWeightUnit: 'lb',
     boxDimsMm: [inToMm(12), inToMm(12), inToMm(12)],
     enterOuter: false,
     wallMm: 0,
@@ -197,12 +199,18 @@ describe('buildCsv', () => {
     expect(row).toBe('bracket,1,1,2,4,8,2,2')
   })
 
-  it('switches the whole table to mm/kg with the unit system', () => {
-    const lines = buildCsv(input({ settings: settings({ unitSystem: 'metric' }) })).split('\n')
+  it('lengths follow the unit system; weights follow their own units (ADR-0024)', () => {
+    const lines = buildCsv(
+      input({
+        settings: settings({ unitSystem: 'metric', partWeightUnit: 'kg', maxWeightUnit: 'g' })
+      })
+    ).split('\n')
     expect(lines[0]).toContain('Length (mm)')
     expect(lines[0]).toContain('Unit weight (kg)')
     // 1 in = 25.4 mm; 2 lb = 0.907 kg.
     expect(lines[1]).toBe('bracket,1,25.4,50.8,101.6,131096.51,0.907,0.907')
+    // The estimate-level rows spend against the cap, so they carry ITS unit.
+    expect(lines.join('\n')).toContain('Packed weight (g)')
   })
 
   it('keeps every data row the same width as the header', () => {

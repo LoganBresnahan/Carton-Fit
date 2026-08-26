@@ -303,6 +303,33 @@ body {
   font-size: 0.8rem;
 }
 
+/* Spinner arrows off, everywhere (ADR-0024): users type these numbers, and a
+   click target that steps ±1 display-unit is a precision hazard beside a field
+   people paste into. Keyboard arrows and paste still work. */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* The per-input weight unit selector (ADR-0024). Sits where the static unit
+   label sat, styled to read as quiet as the label it replaced. */
+.weight-unit-select {
+  width: 3.1rem;
+  padding: 0.25rem 0.15rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.panel-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 /* Results panel (roadmap item 4). The estimate: verdict, binding constraint,
    fill, and the heuristic caption the ADR mandates.
 

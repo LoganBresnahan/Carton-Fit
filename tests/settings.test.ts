@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'vitest'
 import {
   innerCartonMm,
   resolvedView,
+  settingsFromStored,
   useAppStore,
   type PackingSettings
 } from '../src/renderer/src/store'
@@ -35,6 +36,23 @@ describe('settings slice', () => {
     expect(s.mode).toBe('fit-check')
     expect(s.tier).toBe('fast')
     expect(s.maxWeightG).toBeCloseTo(15875.7, 0) // 35 lb in grams
+  })
+
+  it('derives weight units for a pre-ADR-0024 blob from its own toggle', () => {
+    // The blob predates per-input weight units, so what it meant by 'metric'
+    // was kg — the display must stay exactly where that user left it.
+    const metric = settingsFromStored({ unitSystem: 'metric' })
+    expect(metric.maxWeightUnit).toBe('kg')
+    expect(metric.partWeightUnit).toBe('kg')
+    const imperial = settingsFromStored({ unitSystem: 'imperial' })
+    expect(imperial.maxWeightUnit).toBe('lb')
+    expect(imperial.partWeightUnit).toBe('lb')
+  })
+
+  it('keeps explicit weight units over the legacy derivation', () => {
+    const s = settingsFromStored({ unitSystem: 'metric', maxWeightUnit: 'g', partWeightUnit: 'lb' })
+    expect(s.maxWeightUnit).toBe('g')
+    expect(s.partWeightUnit).toBe('lb')
   })
 
   it('updateSettings merges a patch and swaps the settings object identity', () => {

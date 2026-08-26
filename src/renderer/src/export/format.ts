@@ -3,7 +3,8 @@ import {
   gToWeight,
   mm3ToVolume,
   mmToLength,
-  type UnitSystem
+  type UnitSystem,
+  type WeightUnit
 } from '../core/units'
 
 // Number formatting for exports (ADR-0017).
@@ -30,7 +31,7 @@ export function decimal(value: number, places = 3): string {
 export const lengthText = (mm: number, units: UnitSystem): string =>
   decimal(mmToLength(mm, units))
 
-export const weightText = (g: number, units: UnitSystem): string => decimal(gToWeight(g, units))
+export const weightText = (g: number, unit: WeightUnit): string => decimal(gToWeight(g, unit))
 
 /**
  * Two places, not three like lengths.

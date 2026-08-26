@@ -8,6 +8,26 @@ Entries say what changed and what it means for you. The reasoning behind each
 change lives in its decision record under [`doc/adr/`](doc/adr/), linked inline;
 build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
+## [Unreleased]
+
+### Changed
+
+- **Every weight field now picks its own unit — g, kg, or lb.** The single
+  `in / lb` toggle now switches lengths only, and each weight input (the max
+  package weight, the per-part weight, and the part-weights table) carries its
+  own unit dropdown, so you can measure the carton in inches while weighing
+  parts in grams. Switching a unit re-displays the same stored value — 35 lb
+  becomes 15875.7 g, never 35 g — and your current display is preserved on
+  upgrade. Exports follow suit: per-part columns use the per-part unit, and the
+  packed-weight lines use the cap's unit.
+  ([ADR-0024](doc/adr/0024-weight-units-decoupled-from-the-length-system.md))
+
+- **Number fields no longer show spinner arrows, and clicking one selects the
+  whole value.** Type or paste the number straight over what's there — no
+  clearing it first; the keyboard arrow keys still step the value if you want
+  them.
+  ([ADR-0024](doc/adr/0024-weight-units-decoupled-from-the-length-system.md))
+
 ## [1.1.0] — 2026-07-27
 
 ### Added

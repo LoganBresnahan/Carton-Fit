@@ -1,18 +1,21 @@
 import { useAppStore } from '../store'
 import {
+  WEIGHT_UNITS,
   gToWeight,
   lengthToMm,
   lengthUnitLabel,
   mmToLength,
   weightToG,
-  weightUnitLabel,
-  type UnitSystem
+  type UnitSystem,
+  type WeightUnit
 } from '../core/units'
 import type { Vec3 } from '../core/packing/types'
+import { selectAllOnFocus } from './select-on-focus'
 
 // The inputs panel (roadmap item 3 / ADR-0004). Storage is canonical mm/g; this
 // component is the ONLY place that converts — display via mmToLength/gToWeight,
-// commit via lengthToMm/weightToG. A mm⇄in toggle flips the display unit only.
+// commit via lengthToMm/weightToG. The mm⇄in toggle flips length display only;
+// each weight input carries its own unit selector (ADR-0024).
 
 const round4 = (x: number): number => Math.round(x * 1e4) / 1e4
 
@@ -20,13 +23,10 @@ function NumberField(props: {
   label: string
   canonical: number
   unitSystem: UnitSystem
-  kind: 'length' | 'weight'
   onCommit: (canonical: number) => void
   testid?: string
 }) {
-  const { label, canonical, unitSystem, kind, onCommit, testid } = props
-  const display = kind === 'length' ? mmToLength(canonical, unitSystem) : gToWeight(canonical, unitSystem)
-  const unit = kind === 'length' ? lengthUnitLabel(unitSystem) : weightUnitLabel(unitSystem)
+  const { label, canonical, unitSystem, onCommit, testid } = props
   return (
     <label className="field">
       <span className="field-label">{label}</span>
@@ -35,15 +35,78 @@ function NumberField(props: {
           type="number"
           min={0}
           step="any"
-          value={round4(display)}
+          value={round4(mmToLength(canonical, unitSystem))}
           data-testid={testid}
+          {...selectAllOnFocus}
           onChange={(e) => {
             const d = parseFloat(e.target.value)
             if (Number.isNaN(d)) return
-            onCommit(kind === 'length' ? lengthToMm(d, unitSystem) : weightToG(d, unitSystem))
+            onCommit(lengthToMm(d, unitSystem))
           }}
         />
-        <span className="field-unit">{unit}</span>
+        <span className="field-unit">{lengthUnitLabel(unitSystem)}</span>
+      </span>
+    </label>
+  )
+}
+
+/** Selecting a unit re-displays the same canonical grams — it never scales the
+ *  stored value (ADR-0024 §3). */
+export function WeightUnitSelect(props: {
+  unit: WeightUnit
+  onChange: (unit: WeightUnit) => void
+  ariaLabel: string
+  testid?: string
+}) {
+  return (
+    <select
+      className="weight-unit-select"
+      aria-label={props.ariaLabel}
+      data-testid={props.testid}
+      value={props.unit}
+      onChange={(e) => props.onChange(e.target.value as WeightUnit)}
+    >
+      {WEIGHT_UNITS.map((u) => (
+        <option key={u} value={u}>
+          {u}
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function WeightField(props: {
+  label: string
+  canonical: number
+  unit: WeightUnit
+  onCommit: (canonicalG: number) => void
+  onUnitChange: (unit: WeightUnit) => void
+  testid?: string
+}) {
+  const { label, canonical, unit, onCommit, onUnitChange, testid } = props
+  return (
+    <label className="field">
+      <span className="field-label">{label}</span>
+      <span className="field-input">
+        <input
+          type="number"
+          min={0}
+          step="any"
+          value={round4(gToWeight(canonical, unit))}
+          data-testid={testid}
+          {...selectAllOnFocus}
+          onChange={(e) => {
+            const d = parseFloat(e.target.value)
+            if (Number.isNaN(d)) return
+            onCommit(weightToG(d, unit))
+          }}
+        />
+        <WeightUnitSelect
+          unit={unit}
+          onChange={onUnitChange}
+          ariaLabel={`Unit for ${label.toLowerCase()} weight`}
+          testid={testid ? `${testid}-unit` : undefined}
+        />
       </span>
     </label>
   )
@@ -74,7 +137,7 @@ export default function InputsPanel() {
           data-testid="unit-toggle"
           onClick={() => update({ unitSystem: s.unitSystem === 'imperial' ? 'metric' : 'imperial' })}
         >
-          {lengthUnitLabel(s.unitSystem)} / {weightUnitLabel(s.unitSystem)}
+          {lengthUnitLabel(s.unitSystem)}
         </button>
       </div>
 
@@ -84,7 +147,6 @@ export default function InputsPanel() {
           label={dimLabels[i]}
           canonical={s.boxDimsMm[i]}
           unitSystem={s.unitSystem}
-          kind="length"
           onCommit={(mm) => setDim(i, mm)}
           testid={`dim-${i}`}
         />
@@ -104,7 +166,6 @@ export default function InputsPanel() {
           label="Wall"
           canonical={s.wallMm}
           unitSystem={s.unitSystem}
-          kind="length"
           onCommit={(mm) => update({ wallMm: mm })}
           testid="wall"
         />
@@ -115,7 +176,6 @@ export default function InputsPanel() {
         label="Between parts"
         canonical={s.clearancePartMm}
         unitSystem={s.unitSystem}
-        kind="length"
         onCommit={(mm) => update({ clearancePartMm: mm })}
         testid="clearance-part"
       />
@@ -123,18 +183,17 @@ export default function InputsPanel() {
         label="To wall"
         canonical={s.clearanceWallMm}
         unitSystem={s.unitSystem}
-        kind="length"
         onCommit={(mm) => update({ clearanceWallMm: mm })}
         testid="clearance-wall"
       />
 
       <h2>Weight</h2>
-      <NumberField
+      <WeightField
         label="Max package"
         canonical={s.maxWeightG}
-        unitSystem={s.unitSystem}
-        kind="weight"
+        unit={s.maxWeightUnit}
         onCommit={(g) => update({ maxWeightG: g })}
+        onUnitChange={(maxWeightUnit) => update({ maxWeightUnit })}
         testid="max-weight"
       />
       <div className="segmented small" role="radiogroup" aria-label="Part weight source">
@@ -160,12 +219,12 @@ export default function InputsPanel() {
         </button>
       </div>
       {s.weightMode === 'direct' ? (
-        <NumberField
+        <WeightField
           label="Per part"
           canonical={s.partWeightG}
-          unitSystem={s.unitSystem}
-          kind="weight"
+          unit={s.partWeightUnit}
           onCommit={(g) => update({ partWeightG: g })}
+          onUnitChange={(partWeightUnit) => update({ partWeightUnit })}
           testid="part-weight"
         />
       ) : (
@@ -178,6 +237,7 @@ export default function InputsPanel() {
               step="any"
               value={round4(s.densityGPerCm3)}
               data-testid="density"
+              {...selectAllOnFocus}
               onChange={(e) => {
                 const d = parseFloat(e.target.value)
                 if (!Number.isNaN(d)) update({ densityGPerCm3: d })

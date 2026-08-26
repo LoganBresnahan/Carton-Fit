@@ -6,8 +6,8 @@ import type { UpdateInfo } from '../../shared/update'
 import type { PackMode, PackRequest, PackResult, QualityTier, Vec3 } from './core/packing/types'
 import type { PackSink, PackStatus } from './packing/types'
 import type { PartWeightOverrides } from './packing/kinds'
-import type { UnitSystem } from './core/units'
-import { DEFAULT_MAX_WEIGHT_G, inToMm } from './core/units'
+import type { UnitSystem, WeightUnit } from './core/units'
+import { DEFAULT_MAX_WEIGHT_G, inToMm, legacyWeightUnit } from './core/units'
 
 // The app's data spine (ADR-0006). Three slices: the import outcome (worker/
 // pipeline writes it), the packing settings (the inputs panel writes them,
@@ -31,8 +31,14 @@ export function resolvedView(viewMode: ViewMode, hasResult: boolean): 'model' | 
 export interface PackingSettings {
   mode: PackMode
   tier: QualityTier
-  /** Display unit only; storage is always mm/g. */
+  /** Length display unit only; storage is always mm/g. Weights have their own
+   *  per-input units (ADR-0024). */
   unitSystem: UnitSystem
+  /** Display unit for the max-package weight and everything spent against it. */
+  maxWeightUnit: WeightUnit
+  /** Display unit for per-part weights: the Per part field, the per-kind
+   *  overrides panel, and the per-part export columns. */
+  partWeightUnit: WeightUnit
   /** Raw box dimensions the user typed (mm); interpreted as inner or outer per enterOuter. */
   boxDimsMm: Vec3
   /** When true, boxDimsMm are OUTER dims and inner = outer − 2×wall. */
@@ -50,6 +56,8 @@ const DEFAULT_SETTINGS: PackingSettings = {
   mode: 'fit-check',
   tier: 'fast',
   unitSystem: 'imperial', // ADR-0004: the likely audience works in inches/lb
+  maxWeightUnit: 'lb',
+  partWeightUnit: 'lb',
   boxDimsMm: [inToMm(12), inToMm(12), inToMm(12)],
   enterOuter: false,
   wallMm: 0,
@@ -63,10 +71,23 @@ const DEFAULT_SETTINGS: PackingSettings = {
 
 const SETTINGS_KEY = 'carton-fit:settings'
 
+/** Merge a persisted settings blob over the defaults. A blob written before
+ *  ADR-0024 has no weight units; they derive from its own toggle so the
+ *  display stays exactly where that user left it. */
+export function settingsFromStored(parsed: Partial<PackingSettings>): PackingSettings {
+  const legacy = legacyWeightUnit(parsed.unitSystem === 'metric' ? 'metric' : 'imperial')
+  return {
+    ...DEFAULT_SETTINGS,
+    maxWeightUnit: legacy,
+    partWeightUnit: legacy,
+    ...parsed
+  }
+}
+
 function loadSettings(): PackingSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY)
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+    if (raw) return settingsFromStored(JSON.parse(raw))
   } catch {
     // localStorage unavailable (tests) or corrupt JSON — fall back to defaults.
   }

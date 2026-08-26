@@ -14,7 +14,7 @@ import { openMeshParts } from '../packing/request'
 import SaveEstimateButton from './SaveEstimateButton'
 import CopySummaryButton from './CopySummaryButton'
 import ExportFileButtons from './ExportFileButtons'
-import { gToWeight, weightUnitLabel } from '../core/units'
+import { gToWeight } from '../core/units'
 
 // Thin declarative island (ADR-0006): reads the pack slice and renders the
 // estimate. No logic beyond formatting — the engine produced every number, and
@@ -29,6 +29,9 @@ export default function ResultsPanel() {
   const error = useAppStore((s) => s.packError)
   const elapsedMs = useAppStore((s) => s.packElapsedMs)
   const unitSystem = useAppStore((s) => s.settings.unitSystem)
+  // The running total is spent against the cap, so both show in the cap's
+  // unit (ADR-0024) — a comparison in two units is not a comparison.
+  const maxWeightUnit = useAppStore((s) => s.settings.maxWeightUnit)
   const parts = useAppStore((s) => s.parts)
   const settings = useAppStore((s) => s.settings)
   const unitPartName = useAppStore((s) => s.unitPartName)
@@ -136,13 +139,13 @@ export default function ResultsPanel() {
       {request && (
         <p className="results-weight" data-testid="results-weight">
           <span className="results-weight-value">
-            {round2(gToWeight(packedWeightG(result, request), unitSystem)).toLocaleString()}
+            {round2(gToWeight(packedWeightG(result, request), maxWeightUnit)).toLocaleString()}
           </span>
           {' of '}
           {Number.isFinite(request.maxWeightG)
-            ? round2(gToWeight(request.maxWeightG, unitSystem)).toLocaleString()
+            ? round2(gToWeight(request.maxWeightG, maxWeightUnit)).toLocaleString()
             : '∞'}{' '}
-          {weightUnitLabel(unitSystem)}
+          {maxWeightUnit}
         </p>
       )}
 

@@ -575,6 +575,16 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       — deliberately NOT built: EMS as a second *placer*. It is carried for its
       reporting value alone and is the pre-declared cut if that stops paying
       (§3, and the ADR's revisit triggers).
+- [x] 17. Weight units per input + typed number fields — **ADR-0024, shipped
+      2026-08-26** from direct user feedback: the coupled `in / lb` toggle could
+      not express "carton in inches, parts in grams", and the spinner arrows
+      were disliked outright. `unitSystem` now governs lengths only; two new
+      persisted fields (`maxWeightUnit`, `partWeightUnit`, each `g|kg|lb`) put
+      a selector beside every weight input, with old settings blobs deriving
+      them from their own toggle so no existing display jumps. Exports split
+      the same way the panel does: per-part columns in the per-part unit,
+      packed-vs-cap in the cap's unit. Spinner buttons hidden app-wide by CSS;
+      keyboard arrows (which the ADR-0016 undo e2e drives) untouched.
 - Tier-3 nesting, redefined as drop-in packing (voxelized geometry, insertion-order
   constraint, warm-started from tier 2; witness = packing instructions) — design
   recorded as **ADR-0023 (Proposed)**, refining ADR-0003's "interlocking" framing;
