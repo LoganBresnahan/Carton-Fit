@@ -218,3 +218,38 @@ export async function readEstimate(page: Page): Promise<{
     }
   })
 }
+
+/** The control panel's rendered width in px — the layout as the user has it.
+ *
+ *  Read from the computed style rather than the store or the inline custom
+ *  property: what these specs are about is the column the user sees, and a
+ *  variable that stopped reaching the rule would still read correctly from
+ *  either of the other two. */
+export async function panelWidth(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const panel = document.querySelector('.panel')
+    if (!panel) throw new Error('.panel not found')
+    return panel.getBoundingClientRect().width
+  })
+}
+
+/**
+ * Drive the panel width with the keyboard (ADR-0026 §2), one 40px step per
+ * press.
+ *
+ * Blurs first, deliberately: this is the "put the panel at a width" helper, and
+ * the keys are ignored inside any editable element — a spec that left focus in
+ * a field would silently do nothing. The specs that are ABOUT that routing
+ * press the keys themselves rather than calling this.
+ */
+export async function stepPanelWidth(
+  page: Page,
+  direction: 'narrower' | 'wider',
+  presses = 1
+): Promise<number> {
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+  for (let i = 0; i < presses; i++) {
+    await page.keyboard.press(direction === 'narrower' ? 'Shift+,' : 'Shift+.')
+  }
+  return panelWidth(page)
+}
