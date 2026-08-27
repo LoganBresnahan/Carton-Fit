@@ -1,6 +1,6 @@
 # 0026 — The control panel is resizable: a drag handle, keyboard steps, no buttons
 
-Status: Accepted (2026-08-26); built 2026-08-26 — see roadmap item 19
+Status: Accepted (2026-08-26); built 2026-08-26 — see roadmap item 20
 
 ## Context
 

@@ -636,8 +636,11 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       preference not persisted. The flash guard checks BOTH themes deliberately:
       pinning the opposite of the machine's resolved scheme is what keeps it
       non-vacuous under `xvfb`.
-- [x] 19. Resizable control panel — **ADR-0026**, shipped 2026-08-26 in the
+- [x] 20. Resizable control panel — **ADR-0026**, shipped 2026-08-26 in the
       build plan's four phases (`doc/plans/adr-0026-panel-build-plan.md`).
+      (Added as a second "19" while the tier-3 item above already held that
+      number; renumbered to 20 after it shipped, so the four commits that built
+      it say "item 19".)
       Drag handle on the panel's right edge (double-click resets), `<` / `>`
       keyboard steps routed by ADR-0016 §2's rule extended to every editable
       element, no header buttons. Width is `--panel-width`, so the three
