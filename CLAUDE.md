@@ -36,9 +36,14 @@ when scope changes.
   under `## [Unreleased]` until a version ships. It is not a second roadmap and not a
   commit log: a change nobody using the app would notice does not belong in it, and each
   entry links the ADR carrying the reasoning. Add to it in the same commit as the change.
-- **Releasing bumps the version in three places** — `package.json`, the `CHANGELOG.md`
-  heading, and the README banner. CI's gate only checks that the tag matches
-  `package.json`; the other two are on you. What the number promises is ADR-0020.
+- **Releasing bumps the version in six places** — `package.json` *and*
+  `package-lock.json`'s two project-level entries, the `CHANGELOG.md` heading
+  (plus its link refs at the bottom), the README banner, the two installer
+  filenames in the README's Install section, and `.github/release-notes.md`,
+  which `gh release create --notes-file` copies into the draft verbatim and
+  which nothing else points at. CI's gate only checks that the tag matches
+  `package.json`; the rest are on you. What the number promises is ADR-0020 —
+  and what an *unreleased* build's number promises is ADR-0027.
 - **Every decision gets an ADR** in `doc/adr/NNNN-slug.md` (Nygard style: Context /
   Decision / Consequences / Alternatives / Revisit triggers). New dependency, changed
   algorithm or contract, pattern adopted or rejected — that's a decision. Implementation
@@ -59,6 +64,9 @@ when scope changes.
 - `/shipshape` — pre-commit verification: tests green twice, docs current, conventions hold.
 - `/deploy` — build installers, Playwright-smoke the *packaged* build against `samples/`
   goldens, stage to `dist-live/` (previous kept for rollback), hand off for dogfooding.
+  A build that is not at its release tag is staged as `…+<sha>.exe` (ADR-0027):
+  electron-builder names output from `package.json`, so between releases every
+  build wears the last release's number.
 - `adr-plan` workflow (`.claude/workflows/adr-plan.js`) — decompose an accepted ADR into
   an effort-ranked, dependency-ordered build checklist before implementing it.
 

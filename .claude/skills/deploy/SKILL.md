@@ -104,10 +104,35 @@ are only ever machine-verified by CI.
 rm -rf dist-live.prev
 [ -d dist-live ] && mv dist-live dist-live.prev      # keep exactly one previous build
 mkdir dist-live
-cp /tmp/deploy-artifacts/*Setup*.exe dist-live/      # path A: the installer
-# cp release/*-win.zip dist-live/                    # path B: the zip
+
+SRC=/tmp/deploy-artifacts/windows-installer/Carton-Fit-Setup-*.exe   # path A
+# SRC=release/*-win.zip                                              # path B
+
+# Name it for what it IS (ADR-0027). electron-builder names its output from
+# package.json, which is bumped at RELEASE time — so between releases every
+# build reuses the last release's number and can impersonate it.
+NAME="$(basename $SRC)"
+VERSION="$(node -p "require('./package.json').version")"
+SHA="$(git rev-parse --short HEAD)"
+[ -n "$(git status --porcelain)" ] && SHA="$SHA-dirty"
+git tag --points-at HEAD | grep -qx "v$VERSION" || NAME="${NAME%.*}+$SHA.${NAME##*.}"
+
+cp $SRC "dist-live/$NAME"
 git rev-parse --short HEAD > dist-live/BUILD_SHA
 ```
+
+At a tag matching `package.json`, the staged file keeps the release's exact
+name — it *is* that artifact. Anywhere else it becomes
+`Carton-Fit-Setup-1.1.0+4f9f2f8.exe`, and the report calls it a **snapshot**
+rather than a release.
+
+This is not fussiness: `dist-live/BUILD_SHA` already recorded the sha and was
+not enough, because the installer gets copied out of WSL to run it and the
+sidecar does not travel with it. A build staged as `Carton-Fit-Setup-1.1.0.exe`
+from post-1.1.0 code was installed as "1.1.0", reinstalled later to compare
+against the real thing, and delivered the newer features both times — nothing
+malfunctioned, the file just answered "which build is this?" wrongly. Whatever
+identifies a build has to be on the build.
 
 Stage **one** runnable artifact, not everything available — `dist-live/` is what
 the user runs, not an archive. Then print the Windows-reachable path:
@@ -138,7 +163,8 @@ dogfood findings evaporate if they only live in chat.
 ```
 DEPLOYED — Carton-Fit @ <sha> → dist-live/
   ship bar     vitest <n>/<n> ×2 · typecheck clean
-  artifacts    <file, MB> — <CI run <id>, windows-latest | local build, wine-free>
+  artifacts    <file, MB> — <release | snapshot @ <sha>> — <CI run <id>,
+               windows-latest | local build, wine-free>
   verified     <n>/<n> e2e + ASAR fuse + LGPL substitution on Windows (CI run <id>)
                | <n>/<n> e2e vs the packaged LINUX build (local)
   run          \\wsl.localhost\<distro>\...\dist-live\<file>

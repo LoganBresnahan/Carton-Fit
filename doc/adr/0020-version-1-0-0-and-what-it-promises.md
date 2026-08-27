@@ -48,6 +48,11 @@ depend on:
 
 Breaking any of those is **2.0.0**.
 
+This says what a *released* number promises. What an unreleased build's number
+promises — nothing, since `package.json` is not bumped until release — is
+**ADR-0027**: `/deploy` names such a build after its sha so it cannot be
+mistaken for the release whose number it is still carrying.
+
 **Explicitly NOT covered — a changed count is not a breaking change.** Packing
 is heuristic by design (ADR-0003): *Fast* reports a bound, not a proof, and
 *Thorough* searches harder. A future engine that fits 344 where 343 fit before
