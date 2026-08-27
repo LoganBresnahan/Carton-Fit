@@ -2,6 +2,7 @@ import DropZone from './components/DropZone'
 import ImportResult from './components/ImportResult'
 import ModeTierSelectors from './components/ModeTierSelectors'
 import InputsPanel from './components/InputsPanel'
+import PanelResizeHandle from './components/PanelResizeHandle'
 import PartWeightsPanel from './components/PartWeightsPanel'
 import ResultsPanel from './components/ResultsPanel'
 import StorageBanner from './components/StorageBanner'
@@ -56,6 +57,10 @@ export default function App() {
             <SavedEstimatesPanel />
           </div>
           <ResultsPanel />
+          {/* Last child and absolutely positioned: it overlays the column's
+              right edge across BOTH rows, so the grab area does not stop where
+              the scroll region does. */}
+          <PanelResizeHandle />
         </div>
         <div className="stage">
           <Viewport />

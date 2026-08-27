@@ -151,6 +151,26 @@ body {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border);
+  /* The containing block for the resize handle below. */
+  position: relative;
+}
+
+/* The drag handle (ADR-0026 §1): invisible at rest, 6px of grab area laid over
+   the column's own right border. Kept fully INSIDE the panel rather than
+   straddling the border, so it cannot add a few pixels of horizontal overflow
+   to the page — the overhang class of bug this whole item is about.
+
+   `touch-action: none` is what lets a pen or touch drag it at all; without it
+   the browser claims the gesture for panning before the first pointermove. */
+.panel-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
 }
 
 .panel-scroll {
