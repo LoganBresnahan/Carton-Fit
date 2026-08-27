@@ -234,6 +234,20 @@ export async function panelWidth(page: Page): Promise<number> {
 }
 
 /**
+ * The widest the panel may be RIGHT NOW: `min(640, half the window)`
+ * (ADR-0026 §4).
+ *
+ * Computed rather than written down, because the two bounds trade places
+ * between machines. A 1280px window makes it the flat 640; the Windows CI
+ * runner opens at ~1008, where half the window is 504 and wins — which is how
+ * four specs that spelled `640` passed on WSL and failed on windows-latest.
+ * The half-window rule is the one under test either way.
+ */
+export async function maxPanelWidth(page: Page): Promise<number> {
+  return page.evaluate(() => Math.min(640, window.innerWidth / 2))
+}
+
+/**
  * Drive the panel width with the keyboard (ADR-0026 §2), one 40px step per
  * press.
  *

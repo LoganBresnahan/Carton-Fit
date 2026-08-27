@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { launchApp, stepPanelWidth, type AppHandle } from './harness'
+import { launchApp, maxPanelWidth, stepPanelWidth, type AppHandle } from './harness'
 
 // The inputs column's geometry, guarded because dogfooding caught it and no
 // other spec could have.
@@ -77,8 +77,11 @@ test('the column geometry holds at the minimum width', async () => {
 })
 
 test('the column geometry holds at the maximum width', async () => {
-  expect(await stepPanelWidth(handle.page, 'wider', 20)).toBe(640)
-  await expectColumnGeometryHolds(handle, 'the 640px maximum')
+  // The ceiling is whichever of 640 and half the window is tighter, so it is
+  // read from the window rather than written down — see `maxPanelWidth`.
+  const max = await maxPanelWidth(handle.page)
+  expect(await stepPanelWidth(handle.page, 'wider', 20)).toBeCloseTo(max, 1)
+  await expectColumnGeometryHolds(handle, `the ${max}px maximum`)
 })
 
 // The width itself is now a parameter, not a literal (ADR-0026 §5). The three

@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { launchApp, panelWidth, stepPanelWidth, type AppHandle } from './harness'
+import { launchApp, maxPanelWidth, panelWidth, stepPanelWidth, type AppHandle } from './harness'
 
 /**
  * The resizable control panel (ADR-0026), end to end.
@@ -19,11 +19,12 @@ import { launchApp, panelWidth, stepPanelWidth, type AppHandle } from './harness
  * make the two deliberately disagree.
  */
 
-/** ADR-0026 §4. At the default 1280px window the ceiling is the flat 640, not
- *  the half-window bound — every spec here that needs the max says so. */
+/** ADR-0026 §4's two flat bounds. The CEILING is deliberately not here: it is
+ *  `min(640, half the window)`, and which half of that wins changes with the
+ *  machine — 640 on a 1280px window, 504 on the ~1008px one windows-latest
+ *  opens. Specs read it from the window through `maxPanelWidth`. */
 const DEFAULT_WIDTH = 360
 const MIN_WIDTH = 280
-const MAX_WIDTH = 640
 
 function profile(): string[] {
   return [`--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-panel-'))}`]
@@ -122,10 +123,11 @@ test.describe('one launch', () => {
 
   test('the keys stop at both bounds', async () => {
     const { page } = handle
+    const max = await maxPanelWidth(page)
     // Well past either bound, so what stops the column is the clamp rather than
     // the count of presses.
     expect(await stepPanelWidth(page, 'narrower', 8)).toBe(MIN_WIDTH)
-    expect(await stepPanelWidth(page, 'wider', 20)).toBe(MAX_WIDTH)
+    expect(await stepPanelWidth(page, 'wider', 20)).toBeCloseTo(max, 1)
   })
 
   test('double-click on the handle resets to the default', async () => {
@@ -139,37 +141,47 @@ test.describe('one launch', () => {
 
   test('dragging the handle sets the width, clamped', async () => {
     const { page } = handle
-    expect(await dragHandleTo(handle, 500)).toBe(500)
+    const max = await maxPanelWidth(page)
+    // Comfortably inside the bounds on any window this suite runs on, so the
+    // clamp is not what this half is measuring.
+    const inside = Math.min(500, max - 40)
+    expect(await dragHandleTo(handle, inside)).toBeCloseTo(inside, 1)
     // Dragged past the ceiling, the column stops at it — the pointer and the
     // column disagree on purpose.
-    expect(await dragHandleTo(handle, 900)).toBe(MAX_WIDTH)
-    expect(await panelWidth(page)).toBe(MAX_WIDTH)
+    expect(await dragHandleTo(handle, max + 260)).toBeCloseTo(max, 1)
+    expect(await panelWidth(page)).toBeCloseTo(max, 1)
   })
 
   test('a window narrowed below twice the width re-clamps it', async () => {
     const { page, app } = handle
-    expect(await stepPanelWidth(page, 'wider', 20)).toBe(MAX_WIDTH)
+    const wide = await stepPanelWidth(page, 'wider', 20)
+    expect(wide).toBeCloseTo(await maxPanelWidth(page), 1)
+    const before = await page.evaluate(() => window.innerWidth)
 
     // The real thing rather than a viewport override: this is the case where a
     // width saved on a wide monitor would otherwise pin the viewport to a
     // sliver. Deleting `installPanelWidthResize` fails exactly this spec.
-    await app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows()[0].setBounds({ width: 900, height: 700 })
-    })
+    //
+    // Two thirds of whatever the window currently is, so the new half-window
+    // ceiling is below the width the panel is holding on ANY machine — asking
+    // for a fixed 900 only narrows a window that started wider than that.
+    await app.evaluate(({ BrowserWindow }, width) => {
+      BrowserWindow.getAllWindows()[0].setBounds({ width, height: 700 })
+    }, Math.round(before * 0.66))
     await page.waitForFunction(
-      (max) => {
+      (held) => {
         const panel = document.querySelector('.panel')
-        return panel !== null && panel.getBoundingClientRect().width < max
+        return panel !== null && panel.getBoundingClientRect().width < held
       },
-      MAX_WIDTH,
+      wide,
       { timeout: 10_000 }
     )
 
-    // Computed from the window the WM actually granted, which under xvfb need
-    // not be the 900 asked for.
+    // Computed from the window the WM actually granted, which need not be what
+    // was asked for.
     const inner = await page.evaluate(() => window.innerWidth)
-    expect(inner, 'the window did not narrow, so the re-clamp is untested').toBeLessThan(1280)
-    expect(await panelWidth(page)).toBe(Math.min(MAX_WIDTH, inner / 2))
+    expect(inner, 'the window did not narrow, so the re-clamp is untested').toBeLessThan(before)
+    expect(await panelWidth(page)).toBeCloseTo(Math.min(640, inner / 2), 1)
   })
 
   test('the viewport canvas tracks the stage after a drag', async () => {
