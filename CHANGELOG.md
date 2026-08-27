@@ -8,7 +8,7 @@ Entries say what changed and what it means for you. The reasoning behind each
 change lives in its decision record under [`doc/adr/`](doc/adr/), linked inline;
 build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
-## [Unreleased]
+## [1.2.0] — 2026-08-27
 
 ### Added
 
@@ -235,6 +235,8 @@ and the work above landed before anyone was handed the artifact.
   untested artifact wearing a ship label; it waits for a Mac to verify it on.
 - **No auto-update.**
 
-[Unreleased]: https://github.com/LoganBresnahan/Carton-Fit/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/LoganBresnahan/Carton-Fit/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/LoganBresnahan/Carton-Fit/releases/tag/v1.2.0
+[1.1.0]: https://github.com/LoganBresnahan/Carton-Fit/releases/tag/v1.1.0
 [1.0.0]: https://github.com/LoganBresnahan/Carton-Fit/releases/tag/v1.0.0
 [0.1.0]: https://github.com/LoganBresnahan/Carton-Fit/releases/tag/v0.1.0

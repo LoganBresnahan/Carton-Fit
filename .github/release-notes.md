@@ -3,17 +3,20 @@ packing orientation, the part count, and a 3D view of the packed box. The
 estimate follows the inputs — there is no compute button — and it always states
 which constraint bound the answer, geometry or weight.
 
-**New in 1.1.0 — the packing itself got better, and it now shows its reasoning.**
-Fit check tries a second arrangement strategy alongside the original one and keeps
-whichever fits more, so assemblies of mixed shapes and heights that used to come
-back "couldn't find a fit" now pack: across a 240-case test sweep it improved a
-third of them and made none worse. Max quantity mixes orientations for the same
-reason — 1×1×2 blocks in a 3×3×3 box went from 9 to 13, which is the most that
-physically fit. Two new things on screen: a "doesn't fit" now says how much usable
-room was left and what the smallest leftover part needed, and a count now carries
-a rigorous upper bound beside it, so you can see how much a better arrangement
-could still recover. Counts only ever move up; a verdict is still a best effort,
-never a proof.
+**New in 1.2.0 — the window is yours to arrange.** The app has a **light theme**
+and a System · Light · Dark control in the header; it starts on System, follows
+your OS, and paints the window frame in the right colour before the page loads,
+so there is no white flash on launch. The **control panel resizes** — drag its
+right edge, double-click to put it back, or step it with `<` and `>` — and it
+stays between 280px and half the window, so a width chosen on a big monitor
+cannot squeeze the 3D view to nothing on a laptop. Both are remembered between
+launches, and neither travels inside a preset or a saved estimate. **Every
+weight field now picks its own unit** — g, kg, or lb — so you can measure the
+carton in inches while weighing parts in grams; the `in / lb` toggle now switches
+lengths only, switching a unit re-displays the same weight rather than changing
+it, and your current display carries over from 1.1.0 untouched. Number fields
+lost their spinner arrows and select on click, so you can type straight over
+what is there.
 
 Full list of what is in this version:
 [CHANGELOG.md](https://github.com/LoganBresnahan/Carton-Fit/blob/main/CHANGELOG.md).
