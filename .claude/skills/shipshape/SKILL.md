@@ -143,9 +143,16 @@ pack worker and tests:
 ```bash
 grep -rn "occt-import-js" src
 # expect: workers/import.worker.ts only
-grep -rn "^import \{" src/renderer/src --include='*.ts' --include='*.tsx' | grep "core/packing"
-# expect: workers/pack.worker.ts (the engines) and components/ModeTierSelectors
-# (MODES/TIERS — domain constants from the contract, not engine code).
+grep -rn "^import \{" src/renderer/src --include='*.ts' --include='*.tsx' \
+  | grep "from '.*core/packing" | grep -v "^src/renderer/src/core/"
+# expect exactly three, and the second filter is why: `core/packing` also matches
+# the FILENAME of every engine file importing its own siblings, which buries the
+# three lines that matter under ~25 lines of core-internal noise.
+#   workers/pack.worker.ts    — the engine itself, on the worker side
+#   components/ModeTierSelectors, export/format.ts — MODES/TIERS, domain
+#     constants from the contract, not engine code. The exporter needs the same
+#     mode and tier names the selectors show (ADR-0017), which is the contract
+#     doing its job rather than a leak.
 #
 # Match on VALUE imports: `import type` is erased at build, so type-only
 # references to the contract from the store, the pack pipeline, the viewport and

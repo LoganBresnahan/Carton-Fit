@@ -54,3 +54,33 @@ test('every section in the column shares the inputs left edge', async () => {
   expect(edges.presets).toBeCloseTo(edges.inputs, 0)
   expect(edges.estimates).toBeCloseTo(edges.inputs, 0)
 })
+
+// The width itself is now a parameter, not a literal (ADR-0026 §5). Phase 3
+// drives it to both bounds and re-asserts the two relationships above; this
+// spec covers the wiring underneath that — the store's value reaching the
+// column at all. Without it, deleting the inline custom property would leave
+// every functional spec green and the panel stuck at the CSS fallback, which
+// is the exact shape of the bug this file exists for.
+test('the column width comes from --panel-width, not the CSS fallback', async () => {
+  const { page } = handle
+  const initial = await page.evaluate(() => {
+    const panel = document.querySelector('.panel')
+    if (!(panel instanceof HTMLElement)) throw new Error('.panel not found')
+    return {
+      inline: panel.style.getPropertyValue('--panel-width'),
+      width: getComputedStyle(panel).width
+    }
+  })
+  // The store writes the property, and the default width is what it holds.
+  expect(initial.inline).toBe('360px')
+  expect(initial.width).toBe('360px')
+
+  // ...and the property is LIVE: move it and the column follows. A fallback
+  // left in place would sit at 360 while this reads 520.
+  const moved = await page.evaluate(() => {
+    const panel = document.querySelector('.panel') as HTMLElement
+    panel.style.setProperty('--panel-width', '520px')
+    return getComputedStyle(panel).width
+  })
+  expect(moved).toBe('520px')
+})
