@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAppStore } from '../src/renderer/src/store'
 import {
+  defaultPanelWidth,
   handlePanelWidthKey,
   installPanelWidthKeyboard,
   installPanelWidthResize,
@@ -226,5 +227,20 @@ describe('installPanelWidthResize', () => {
 
     expect(target.count('resize')).toBe(0)
     expect(width()).toBe(DEFAULT_PANEL_WIDTH)
+  })
+})
+
+describe('defaultPanelWidth', () => {
+  it('is the default width on any ordinary window', () => {
+    expect(defaultPanelWidth(1280)).toBe(DEFAULT_PANEL_WIDTH)
+  })
+
+  it('is CLAMPED, so the reset cannot exceed half a narrow window', () => {
+    // The whole reason this is not just `DEFAULT_PANEL_WIDTH`: on a window too
+    // narrow to afford 360, double-clicking the handle must not hand the panel
+    // more than half the screen and leave the viewport a sliver. The e2e
+    // double-click spec runs at 1280, where the clamp is a no-op, so this
+    // branch has nowhere else to be pinned.
+    expect(defaultPanelWidth(600)).toBe(300)
   })
 })

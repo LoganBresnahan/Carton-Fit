@@ -29,9 +29,14 @@ Ship **1.0.0**, and define the versioned surface as the things a user can
 depend on:
 
 1. **On-disk data.** The SQLite schema (presets, saved estimates), the window
-   state JSON (ADR-0014), and the localStorage settings key. Within 1.x, a
-   newer build must open data written by an older one — that is what the
-   `PRAGMA user_version` migrations in ADR-0007 are for. Data written by a
+   state JSON (ADR-0014, which carries the theme too since ADR-0025), and the
+   localStorage keys — `carton-fit:settings`, and `carton-fit:layout` for the
+   control-panel width (ADR-0026). Each key is a surface in its own right, and
+   the split is deliberate: what keeps a preset from restoring someone else's
+   panel width is that the two live apart, so a new preference gets its own key
+   rather than a field inside `settings`. Within 1.x, a newer build must open
+   data written by an older one — that is what the `PRAGMA user_version`
+   migrations in ADR-0007 are for. Data written by a
    *newer* build is refused rather than quarantined, which is already the
    behaviour and stays that way.
 2. **User-visible behaviour.** Modes, tiers, units, the meaning of the binding

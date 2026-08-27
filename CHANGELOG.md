@@ -12,6 +12,15 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Added
 
+- **The control panel resizes.** Drag its right edge to give the inputs more
+  room or the 3D view more room; double-click that edge to put it back where it
+  started. `<` and `>` step it 40px at a time when you are not typing in a
+  field. The width is remembered between launches — it is not part of a preset
+  or a saved estimate, so loading either one never moves it — and it stays
+  between 280px and half the window, so a width chosen on a big monitor cannot
+  squeeze the 3D view to nothing on a small one.
+  ([ADR-0026](doc/adr/0026-resizable-control-panel.md))
+
 - **The app has a light theme, and a System · Light · Dark control in the
   header.** It starts on **System**, so it follows whatever your OS is set to
   and changes with it — no restart, and no white flash on launch, because the

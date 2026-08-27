@@ -636,16 +636,31 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       preference not persisted. The flash guard checks BOTH themes deliberately:
       pinning the opposite of the machine's resolved scheme is what keeps it
       non-vacuous under `xvfb`.
-- [ ] 19. Resizable control panel — **ADR-0026 (Accepted 2026-08-26, unbuilt)**.
+- [x] 19. Resizable control panel — **ADR-0026**, shipped 2026-08-26 in the
+      build plan's four phases (`doc/plans/adr-0026-panel-build-plan.md`).
       Drag handle on the panel's right edge (double-click resets), `<` / `>`
       keyboard steps routed by ADR-0016 §2's rule extended to every editable
-      element, no header buttons. Width becomes `--panel-width` so the three
+      element, no header buttons. Width is `--panel-width`, so the three
       historical 360px bugs' number is a parameter; clamped in one pure
-      function on every window resize; persisted in its own localStorage key
-      outside `settings` (read synchronously so the first frame is right — the
-      reason it is NOT the ADR-0025 window-state route). Build plan:
-      `doc/plans/adr-0026-panel-build-plan.md` (11 slices, 4 phases, three
-      commits, no adversarial verify needed).
+      function that the drag, the keys, the reset and the window-resize handler
+      all call; persisted in its own localStorage key outside `settings` (read
+      synchronously so the first frame is right — the reason it is NOT the
+      ADR-0025 window-state route), now named in ADR-0020's versioned surface.
+      Two things the build turned up:
+      — the routing predicate could NOT be `undo.ts`'s. Its near-twin
+      deliberately excludes `type=number` (ADR-0016 §2, or Ctrl+Z is dead in
+      the field it just changed) and ADR-0026 §2 needs the opposite, so reusing
+      it would have silently imported the exception — the panel would step from
+      inside a carton field and nowhere else. Duplicated on purpose, and the
+      e2e presses `>` in both a text and a number field to say so.
+      — the "canvas tracks the stage" line was vacuous as first written. The
+      canvas's CSS box follows the stage through flex layout whether or not the
+      ResizeObserver exists, so the spec passed with `observer.observe` commented
+      out; it now asserts the DRAWING BUFFER, which is what
+      `renderer.setSize(w, h, false)` actually sets. All seven panel specs were
+      mutation-tested (width never saved, double-click dead, drag dead, resize
+      handler removed, min bound moved, undo's predicate reused, observer not
+      observing).
 - Box tare weight; material density library (ADR-0004 revisit triggers)
 - ~~Auto-update via electron-updater~~ — **superseded by ADR-0021 / item 15**,
   not deferred by it. The app now notifies and links; it deliberately never
