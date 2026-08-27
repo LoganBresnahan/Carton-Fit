@@ -111,18 +111,32 @@ SRC=/tmp/deploy-artifacts/windows-installer/Carton-Fit-Setup-*.exe   # path A
 # Name it for what it IS (ADR-0027). electron-builder names its output from
 # package.json, which is bumped at RELEASE time — so between releases every
 # build reuses the last release's number and can impersonate it.
+#
+# Key on the commit the ARTIFACT was built from, which is not always HEAD:
+# path A's CI run has its own, and staging a published release while main has
+# moved on is the normal case right after a release.
+REF="$(git rev-parse --short HEAD)"                 # path B, or path A at HEAD
+# REF="$(gh run view <id> --json headSha --jq '.headSha[0:7]')"   # path A
+LABEL="$REF"
+[ -n "$(git status --porcelain)" ] && LABEL="$REF-dirty"
+
 NAME="$(basename $SRC)"
-VERSION="$(node -p "require('./package.json').version")"
-SHA="$(git rev-parse --short HEAD)"
-[ -n "$(git status --porcelain)" ] && SHA="$SHA-dirty"
-git tag --points-at HEAD | grep -qx "v$VERSION" || NAME="${NAME%.*}+$SHA.${NAME##*.}"
+VERSION="$(git show "$REF:package.json" | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")"
+# A release keeps its exact name — but only from a clean tree: dirty bytes at a
+# tag are not that release. Everything else is a snapshot.
+if [ "$LABEL" = "$REF" ] && git tag --points-at "$REF" | grep -qx "v$VERSION"; then
+  echo "release build → $NAME"
+else
+  NAME="${NAME%.*}+$LABEL.${NAME##*.}"
+  echo "snapshot → $NAME"
+fi
 
 cp $SRC "dist-live/$NAME"
-git rev-parse --short HEAD > dist-live/BUILD_SHA
+echo "$REF" > dist-live/BUILD_SHA
 ```
 
-At a tag matching `package.json`, the staged file keeps the release's exact
-name — it *is* that artifact. Anywhere else it becomes
+At a tag matching that build's `package.json`, the staged file keeps the
+release's exact name — it *is* that artifact. Anywhere else it becomes
 `Carton-Fit-Setup-1.1.0+4f9f2f8.exe`, and the report calls it a **snapshot**
 rather than a release.
 

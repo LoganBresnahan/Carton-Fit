@@ -32,14 +32,21 @@ development.
 
 ## Decision
 
-1. **`/deploy` stages the artifact under a name that says what it is.** If
-   `HEAD` carries the tag matching `package.json`'s version, the build *is*
-   that release and keeps the release's filename exactly. Otherwise the short
-   sha is appended before the extension:
-   `Carton-Fit-Setup-1.1.0+4f9f2f8.exe`.
-2. **A dirty tree adds `-dirty`** (`…+4f9f2f8-dirty.exe`). Deploying dirty is
-   already allowed with the user's okay and already recorded in the report;
-   this puts it on the file too.
+1. **`/deploy` stages the artifact under a name that says what it is.** If the
+   commit the artifact was **built from** carries the tag matching that
+   commit's `package.json` version, the build *is* that release and keeps the
+   release's filename exactly. Otherwise the short sha is appended before the
+   extension: `Carton-Fit-Setup-1.1.0+4f9f2f8.exe`.
+
+   *(Clarified 2026-08-27, on first application: the key is the artifact's own
+   build sha, not `HEAD`. Staging the published v1.2.0 installer while `main`
+   had already moved on to ADR-0027's own commit would otherwise have stamped
+   a released artifact as a snapshot of a commit that never built it — the
+   same category of lie, pointing the other way.)*
+2. **A dirty tree adds `-dirty`** (`…+4f9f2f8-dirty.exe`), and a dirty tree at
+   a release tag is a snapshot, not a release — those bytes are not what the
+   tag published. Deploying dirty is already allowed with the user's okay and
+   already recorded in the report; this puts it on the file too.
 3. **`+` is the separator**, borrowed from semver's build-metadata field,
    which is precisely this: identity that does not change ordering. It is
    legal in Windows filenames.
@@ -65,11 +72,12 @@ development.
   offers cannot drift apart in name either.
 - `/deploy`'s report gains one word per artifact — *release* or *snapshot* —
   because a rule nobody sees is a rule nobody trusts.
-- The two installers already in `dist-live/` and `dist-live.prev/` predate
-  this and keep their misleading names until the next `/deploy` overwrites
-  them. Renaming them retroactively would produce a file whose name and
-  internal version disagree in the *other* direction, which is not an
-  improvement; the next deploy is the fix.
+- The misnamed installers predating this rule are not renamed retroactively —
+  that would produce a file whose name and internal version disagree in the
+  *other* direction, which is not an improvement. Staging the published
+  v1.2.0 asset on 2026-08-27 replaced `dist-live/`'s copy; the one still in
+  `dist-live.prev/` keeps its `1.1.0` name (it is the 4f9f2f8 snapshot) until
+  the next deploy rotates it out.
 
 ## Alternatives considered
 
