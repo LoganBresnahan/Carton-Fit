@@ -107,12 +107,29 @@ product decisions:
   qualified on screen stays qualified in a quote. PDF reports are deliberately
   later; the text summary is their prototype.
 
+## AI client surface (ADR-0029)
+
+The app hosts an MCP stdio server so AI clients — Claude Desktop is the confirmed
+one — can inspect and drive it: the AI keeps the judgment layer (materials,
+handling risk, "should I"), Carton Fit supplies every number, qualified the same
+way the screen qualifies it (binding constraint, upper bound, warnings). Three
+tiers: inspect the engine (geometry report + stateless estimate), drive the live
+app (inputs under auto-run, the packed view returned as an image, undo covering
+the AI's edits like anyone's), then presets/history/export. Setup is a button in
+the app that writes Claude Desktop's config — the audience is non-technical.
+There is deliberately **no chat UI inside Carton Fit**: the conversation lives in
+the AI client, next to the user's other context.
+
 ## Non-goals for v1
 
 - True shape nesting (tier 3) — designed for, not implemented.
 - Mixing *different* parts to optimize a single carton's contents (fit check handles the
   parts a file contains; it does not search combinations).
 - Pallet/stack planning, box selection/recommendation, cost estimation — all future.
+- Bulk/random-dump quantity estimation — "how many fit if I pour them in loose."
+  There is no deterministic answer, only heuristics that a physical fill trial beats
+  in twenty minutes (ADR-0028). If it ever ships, it is a labeled estimate range plus
+  fill-trial guidance — never a computed fact.
 
 ## Technical direction
 

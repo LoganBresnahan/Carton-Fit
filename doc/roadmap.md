@@ -457,6 +457,46 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       also amends VISION's tier list and ADR-0003's tier-3 line, and grows the
       result schema with sequence data — a contract change for storage, export
       and the viewport.
+      — **evidence note (2026-09-01): first live specimen of the funding
+      trigger, from outside the app.** A shared claude.ai transcript (the one
+      that produced ADR-0028/0029): a real engineer's ⊥-shaped ribbed casting,
+      49.8% of its own footprint rectangle, where flipping alternate parts 180°
+      meshes the footprints and raises a layer from 80 to 120 parts — +50%,
+      found only on the third verification pass, and invisible in principle to
+      any bounding-box tier. Notably it survives the ADR-0023 counter-trigger:
+      the gain persists at handling clearance (~100–110/layer, features are
+      inch-scale), weight never bound, and the arrangement is trivially
+      top-down insertable — it is *in-plane* interlocking, exactly drop-in
+      packing's easy case. The transcript's own caveat ("an operator flips
+      every other part — price that labor") is the packing-instructions
+      witness's argument made for us. Still one data point against a trigger
+      that says "routinely"; the gate holds, but ADR-0029's surface would turn
+      conversations like this into a standing evidence channel.
+
+- [ ] 21. Claude can drive Carton Fit — **ADR-0029, Accepted 2026-09-01**.
+      The app hosts an MCP stdio server for Claude Desktop (confirmed
+      client); Claude keeps the judgment layer, the engine supplies every
+      number. Designed 2026-09-01 down to a three-tier tool surface: **v1**
+      inspect the engine (`inspect_model` + `estimate`, stateless, proven
+      against the goldens as their third consumer), **v2** drive the live app
+      through the store's own actions (`load_model`, `set_inputs` under
+      auto-run, `get_estimate`, `capture_view` returning the packed view as an
+      image Claude can see; Ctrl+Z steps back the AI's changes like anyone
+      else's), **v3** presets/saved estimates/exports. Resolved along the way:
+      bundled distribution via `ELECTRON_RUN_AS_NODE` (LGPL story unchanged —
+      same unpacked wasm, same notices, same compliance suite), occt proven
+      under plain Node by spike, paths not bytes, units explicit on the wire
+      both directions, window hidden until the first drive call, stdout
+      protocol-only. Bulk questions answer per ADR-0028: ceiling + fill-trial
+      guidance, never a count. Versioning: one number — tools/schemas join the
+      app's ADR-0020 surface (additive = minor, breaking = major, staged builds
+      say `+sha` per ADR-0027 in the server-info handshake). Launch-order
+      independence via `--mcp` shim + single-instance named pipe: connect to
+      the running app if one exists, else boot hidden; a manual launch while
+      the hidden server runs shows *that* instance's window. Build plan:
+      `doc/plans/adr-0029-mcp-build-plan.md` (14 slices, 6 phases — four opus
+      sittings, two fable; adversarial verify reserved for units, qualified
+      schema, the v2 settle protocol, and the shim).
 
 ## Later
 
