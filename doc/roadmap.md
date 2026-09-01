@@ -497,6 +497,23 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       `doc/plans/adr-0029-mcp-build-plan.md` (14 slices, 6 phases — four opus
       sittings, two fable; adversarial verify reserved for units, qualified
       schema, the v2 settle protocol, and the shim).
+      **Phase 1 landed 2026-09-01** (both foundation slices): the MCP SDK is a
+      runtime dependency with its notices row, and `src/main/occt/` reads STEP
+      files from disk in the main process — the same `extractParts` adapter, the
+      same protocol parts, the same goldens, and deliberately the *same shipped
+      wasm* the viewport loads, which turned out to be an ADR-0011 question
+      rather than a wiring one (addendum in ADR-0029). Proven on the packaged
+      build, and `electron-builder.yml` was not touched.
+      Two carry-ins for later phases, both about what packaging prunes:
+      - **the SDK's 61 transitive packages (26 MB) all ship, and a stdio server
+        loads 8 of them** — the rest are an express/hono HTTP stack. Compliant
+        today (every one permissive, every one shipping its licence text) but
+        26 MB of dead weight in a dogfooder's download. Prune at
+        `mcp-server-host`, the first slice that imports the SDK.
+      - **STL cannot be read from the main process**: the renderer parses it with
+        three's `STLLoader` and packaging prunes `node_modules/three`. Phase 2's
+        `inspect_model` decides whether to bundle a second three into out/main or
+        state STEP-only on the wire.
 
 ## Later
 

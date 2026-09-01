@@ -18,6 +18,7 @@ This file is shipped inside the application, next to `LICENSE.electron.txt`.
 | Upstream | Open CASCADE Technology — https://git.dev.opencascade.org/repos/occt.git |
 | Modified by us? | **No.** Used exactly as published on npm. |
 | Where it lives | `resources/app.asar.unpacked/out/renderer/assets/occt-import-js-<hash>.wasm` |
+| How many copies ship | **One.** Both the 3D view and the AI-client interface load that file. |
 
 occt-import-js is the OpenCascade STEP/IGES kernel compiled to WebAssembly. It
 is the only component here that is not permissively licensed. The bundled
@@ -45,6 +46,17 @@ deliberately invalid one makes the packaged application fail to import STEP,
 which is how we confirmed the shipped binary reads that path and no embedded
 copy. Verified on Linux; re-verify on Windows when CI starts producing the
 installer.
+
+Since ADR-0029 the application reads STEP files from a second place — the
+main process, for the MCP interface Claude talks to — and **that path was made
+to load the same single file rather than a private copy of its own.** A second
+copy would have been the easy build (the library is an npm package; nothing
+stops a `require`), and it would have made the paragraph above false in the
+worst way: a recipient could substitute their build, watch the 3D view honour
+it, and never learn that the other half of the app went on running the
+original. The same corruption test proves this path too — invalidate that one
+file and main-process STEP import fails with it (verified 2026-09-01 on the
+packaged Linux build, 18-solid AS1 golden).
 
 > **Do not enable ASAR integrity enforcement without revisiting this.** The
 > archive header records a SHA-256 for the unpacked `.wasm`; if enforcement is
@@ -94,10 +106,26 @@ mechanically against `package.json` (`/shipshape` does).
 | `three` (three.js) | 0.185.1 | MIT | https://github.com/mrdoob/three.js |
 | `zustand` | 5.0.14 | MIT | https://github.com/pmndrs/zustand |
 | `better-sqlite3` | 12.11.1 | MIT | https://github.com/WiseLibs/better-sqlite3 |
+| `@modelcontextprotocol/sdk` | 1.30.0 | MIT | https://github.com/modelcontextprotocol/typescript-sdk |
 
 `better-sqlite3` is a native module: it ships as a compiled `.node` binary outside
 `app.asar` rather than bundled into the JavaScript, and it embeds
 [SQLite](https://sqlite.org), which is in the **public domain**.
+
+`@modelcontextprotocol/sdk` (ADR-0029 — it is what Claude Desktop talks to)
+arrived with a dependency tree of 61 further packages, and **all of them ship
+today**, because electron-builder includes production dependencies whether or
+not the application reaches them. Every one is permissively licensed — MIT but
+for `json-schema-typed` (BSD-2-Clause), `qs` (BSD-3-Clause), and `setprototypeof`
+and `zod-to-json-schema` (ISC) — and every one carries its own `LICENSE` inside
+the archive, which is what the closing paragraph of this section asserts. That
+was checked against the packaged build's own archive index rather than assumed:
+61 directories, 61 licence texts, none empty (2026-09-01). They
+are not listed individually because most of them are not meant to be here: a
+server speaking MCP over stdio loads 8 of the 62, and the rest are an HTTP
+stack (express, hono, jose) for transports this application does not use.
+Pruning them is on the roadmap under item 21, at the slice that first imports
+the SDK; this table gets whatever survives that.
 
 > The MIT License grants permission free of charge to any person obtaining a
 > copy of the software to deal in it without restriction, provided the above

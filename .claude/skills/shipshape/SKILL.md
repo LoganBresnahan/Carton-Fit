@@ -136,13 +136,25 @@ grep -rn "25\.4\|453\.59\|0\.0393" src --include='*.ts' --include='*.tsx'
 # expect: core/units.ts only
 ```
 
-**Worker boundary** — heavy work never runs on the UI thread. The WASM parser
-is imported only by the import worker; packing engines are imported only by the
-pack worker and tests:
+**Worker boundary** — heavy work never runs on the UI thread. On the renderer
+side the WASM parser is reached only through the import worker; packing engines
+only through the pack worker and tests. The main process is not bound by this
+rule — it has no UI thread to block — but it IS bound by the one-shipped-wasm
+rule below:
 
 ```bash
 grep -rn "occt-import-js" src
-# expect: workers/import.worker.ts only
+# expect ONLY these, and read them as one rule rather than a file list:
+#   workers/occt/{loadOcct,occt-to-parts,occt-import-js.d}.ts — the renderer's
+#     parser, reached from import.worker.ts and nowhere else on that side
+#   main/occt/{ingest,wasmPath}.ts — the same parser from the main process, for
+#     the ADR-0029 MCP surface (no window, no UI thread to block)
+# THE INVARIANT IS ONE SHIPPED WASM, NOT ONE IMPORT SITE. Both sides load the
+# single asarUnpack'ed binary; a second copy would make ADR-0011's replace-the-
+# library guarantee true for the viewport and false for the AI surface, which is
+# worse than not offering it. So what fails this check is a NEW `locateFile`
+# pointing anywhere else, or a main-process import of `occt-import-js/dist/*`
+# (packaging deletes that copy — see the ADR-0029 phase-1 addendum).
 grep -rn "^import \{" src/renderer/src --include='*.ts' --include='*.tsx' \
   | grep "from '.*core/packing" | grep -v "^src/renderer/src/core/"
 # expect exactly three, and the second filter is why: `core/packing` also matches

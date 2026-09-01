@@ -40,7 +40,7 @@
 _Both have zero dependencies and everything else needs at least one of them. One
 batch, either order._
 
-- [ ] `mcp-sdk-dependency` · low — Pure adoption wiring: install the MCP TypeScript
+- [x] `mcp-sdk-dependency` · low — Pure adoption wiring: install the MCP TypeScript
       SDK, add its MIT notice row to THIRD-PARTY-NOTICES.md, extend CLAUDE.md's
       runtime-dependency list, confirm bundled-in-app means no new packaging path.
       ADR-0029 is itself the dependency ADR the convention requires;
@@ -48,7 +48,17 @@ batch, either order._
       citation fails an existing test. Care point: check the SDK's licence-file path
       in node_modules and eyeball its transitive deps.
       Depends on: none.
-- [ ] `node-occt-ingestion` · medium — Factor what already exists into a real
+      **Shipped 2026-09-01.** `@modelcontextprotocol/sdk` 1.30.0, MIT, `LICENSE` at
+      the package root. No new packaging path — it rides node_modules like
+      better-sqlite3. The care point paid off: the SDK pulls **61 further
+      packages, 26 MB**, and a stdio server loads **8 of them** — the rest are an
+      express/hono/jose HTTP stack for transports we do not use, and
+      electron-builder ships production dependencies whether reached or not. All
+      61 are permissive and all 61 ship their licence text (checked against the
+      packaged archive index, not assumed), so the notices file is true today;
+      pruning is a carry-in on `mcp-server-host`, the slice that first imports the
+      SDK and can therefore tell rollup what to keep.
+- [x] `node-occt-ingestion` · medium — Factor what already exists into a real
       main-process module (readFile → ReadStepFile → extractParts → core pipeline):
       `tests/golden-parse.test.ts` already instantiates occt under plain Node with
       the hand-computed AS1 oracle, and `occt-to-parts.ts` is pure TS reusable
@@ -58,6 +68,20 @@ batch, either order._
       dev-mode "no locateFile" story does not hold in the packaged main process —
       see sequencing risk 2.
       Depends on: none.
+      **Shipped 2026-09-01** as `src/main/occt/{ingest,wasmPath}.ts`, 13 vitest
+      cases in `tests/main-occt-ingest.test.ts` against the same hand-computed
+      goldens the renderer path uses. Risk 2 resolved **without touching
+      `electron-builder.yml`**, so the compliance suite did not need re-running:
+      the main build un-externalizes `occt-import-js` in `electron.vite.config.ts`
+      (bundling its glue into out/main, as vite already does for the renderer
+      worker) and resolves the single `asarUnpack`'ed `.wasm` at runtime. That is
+      a compliance *improvement* rather than a workaround — one shipped OCCT, so
+      ADR-0011's substitution right covers the MCP path too; see the ADR-0029
+      phase-1 addendum. Proven on the packaged Linux build: AS1 → 18 solids
+      through the main process, and corrupting that one wasm breaks it.
+      Carry-in: **STL is not readable from main** (the renderer uses three's
+      STLLoader; packaging prunes `node_modules/three`) — `readModel` says so
+      explicitly, and `inspect_model` in phase 2 must decide what it accepts.
 
 ### 2. v1 tool surface + wire contract, pinned by goldens — **opus**
 _Produces a finished, proven v1 contract before any fable work starts. Internal
@@ -74,6 +98,15 @@ no server host needed)._
       bound) without duplicating logic. Contract mistakes are netted by the goldens
       slice, by design.
       Depends on: `mcp-sdk-dependency`, `node-occt-ingestion`.
+      Carry-in from phase 1 (`/shipshape` 2026-09-01): **move the ambient
+      `occt-import-js.d.ts` out of `src/renderer/src/workers/occt/`.** It is a
+      `declare module` block, so it applies program-wide and already types
+      `src/main/occt/ingest.ts` — with no import connecting them. Nothing is
+      broken (types are erased; there is no runtime effect), but main's types come
+      from a renderer file invisibly, and reorganizing that folder would fail the
+      typecheck in `src/main/` while blaming a file nobody touched. This slice is
+      the moment because it is already deciding what main shares with the renderer
+      tree — settle the boundary once rather than nudging one file at a time.
 - [ ] `explicit-units-wire-contract` · medium · **verify** — Units required in every
       tool's input schema and tagged on every echoed value, both directions.
       Conversion math exists in `core/units.ts`; the design edge is ADR-0024's

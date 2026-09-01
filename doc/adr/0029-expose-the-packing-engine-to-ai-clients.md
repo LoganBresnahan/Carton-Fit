@@ -193,6 +193,35 @@ ship when their phase does, and additions beyond it need their own decision.
   between the engine's tier-2 answer and what engineers report from the floor is
   exactly the dogfood signal ADR-0023's tier-3 gate is waiting on.
 
+### Phase-1 addendum (2026-09-01) — the wasm the main process reads
+
+Building the Node-side STEP path turned up a compliance consequence the design
+did not anticipate, recorded here because it constrains every later slice.
+
+The main process needs OpenCascade, and the obvious way to give it some is to
+`require('occt-import-js')` — its own module, its own wasm, resolved out of
+node_modules. That build does not survive packaging (the exclusions in
+`electron-builder.yml` delete that copy, and those exclusions are ADR-0011
+compliance), and more importantly it *should* not: the app would then contain two
+OCCT libraries, while ADR-0011 tells a recipient that replacing one file replaces
+the library. They could substitute their build, watch the viewport honour it, and
+never learn the MCP surface was still answering from the original.
+
+So: the main build alone un-externalizes `occt-import-js` and bundles its glue
+into `out/main` — mirroring what vite already does for the renderer worker — and
+`src/main/occt/wasmPath.ts` resolves the single `asarUnpack`'ed `.wasm` that the
+renderer loads. When packaged it resolves that file *or fails*; the node_modules
+fallback is reachable only in a source tree, because a fallback in an installed
+app is precisely how the guarantee would go quietly false. Proven end to end on
+the packaged Linux build: the AS1 golden yields its 18 solids through the main
+process, and corrupting that one file breaks that path too.
+
+**The rule this sets for later slices**: anything the MCP surface needs from the
+renderer's bundled libraries has the same shape of problem. Known next instance —
+STL, which the renderer parses with three's `STLLoader` while packaging prunes
+`node_modules/three`; `readModel` turns STL away with a reason rather than
+pretending, and phase 2 decides whether `inspect_model` accepts it.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The
