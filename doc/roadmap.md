@@ -510,10 +510,29 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         today (every one permissive, every one shipping its licence text) but
         26 MB of dead weight in a dogfooder's download. Prune at
         `mcp-server-host`, the first slice that imports the SDK.
-      - **STL cannot be read from the main process**: the renderer parses it with
-        three's `STLLoader` and packaging prunes `node_modules/three`. Phase 2's
-        `inspect_model` decides whether to bundle a second three into out/main or
-        state STEP-only on the wire.
+      - ~~**STL cannot be read from the main process**~~ — **resolved in phase 2**:
+        it can, by bundling ~330 KB of three into out/main. Five of the six golden
+        packing scenarios are STL, so the fixture layer settled it.
+      **Phase 2 landed 2026-09-01** — the v1 tool surface exists and is proven.
+      `inspect_model` and `estimate` are thin adapters over seams that already
+      existed (no new packing or geometry logic), driven in tests through a real
+      MCP client over the SDK's in-memory transport, and asserted against the
+      hand-computed `samples/goldens.ts` — the tools are now those goldens' third
+      consumer alongside the unit math and the e2e specs (ADR-0005). Both
+      adversarial verify passes ran and both found something: the units pass
+      caught its own blind spot under mutation (a doubled output conversion it
+      could not see, because the only value it checked was a clamped zero), and
+      the qualifications pass proves structural requiredness three ways —
+      published schema, deletion mutation, and behaviour. 704 tests green.
+      Two contract decisions worth knowing about, both in ADR-0029's phase-2
+      addendum: a call carries no `units` field at all (every value is a
+      `{value, unit}` pair, so ADR-0024's decoupling is structural rather than
+      remembered), and an optional figure crosses as `{known:false, reason}`
+      rather than an absent key — so "there is no upper bound" and "this build
+      forgot it" stop looking the same.
+      Carry-in re-pinned to phase 3: the ambient `occt-import-js.d.ts` still sits
+      in the renderer tree while typing main's code. Phase 3's host is what will
+      show how much else main shares from over there.
 
 ## Later
 

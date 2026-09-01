@@ -222,6 +222,45 @@ STL, which the renderer parses with three's `STLLoader` while packaging prunes
 `node_modules/three`; `readModel` turns STL away with a reason rather than
 pretending, and phase 2 decides whether `inspect_model` accepts it.
 
+### Phase-2 addendum (2026-09-01) — three decisions the v1 surface forced
+
+**1. STL is readable from the main process, at the cost of ~330 KB.** The
+phase-1 carry-in said `inspect_model` would have to decide what it accepts; the
+goldens decided it. Five of the six `GOLDEN_PACKS` scenarios are STL, so a
+STEP-only surface could not be proven against the fixtures ADR-0005 makes the
+shared oracle — and an AI surface that reads half the formats the app reads is
+a seam a user would find in their first session. Main now reaches three's
+`STLLoader` through the same one-line adapter the import worker uses, which
+un-externalizes `three` for the main build and bundles ~330 KB of it into
+out/main (measured). The alternative — a second STL reader written for the main
+process — is the duplicate implementation this ADR forbids: it would eventually
+disagree with the renderer's, and the disagreement would surface as an AI client
+quoting a volume the app's own screen contradicts. No packaging change; no
+notices change (three is already cited, its `LICENSE` already ships, and its
+code was already bundled rather than loaded from node_modules).
+
+**2. The packing inputs moved out of the store.** `PackingSettings`,
+`DEFAULT_SETTINGS`, `settingsFromStored` and `innerCartonMm` now live in
+`src/renderer/src/packing/settings.ts`; `store.ts` re-exports them, so no
+existing importer changed. The forcing reason is that `estimate` builds the same
+settings object the inputs panel builds and hands it to the same
+`buildPackRequest`, but `store.ts` cannot be imported from the main process at
+all — it pulls zustand and reads `localStorage`. Keeping one definition of what
+a carton input *is* was worth the move: an AI client setting a carton and a user
+typing one must be able to disagree about nothing.
+
+**3. Absence is never how a qualification is expressed.** Core reports several
+figures as optional on purpose — `upperBound` is absent when no finite bound
+exists, free space when it cannot be described honestly (absence over
+misinformation). Passed straight to the wire that becomes indistinguishable from
+a build that forgot to send them, and this ADR says the second one is our bug.
+So every such value crosses as `{known: false, reason}` or `{known: true, …}`,
+and every qualification is REQUIRED in the published output schema — the SDK
+validates structured results against it, so a dropped hedge is a failed call
+rather than a confident answer. Both properties are mutation-tested: making a
+qualification optional, or skipping the open-mesh check, turns
+`tests/mcp-qualifications.test.ts` red.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

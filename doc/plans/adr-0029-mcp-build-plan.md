@@ -89,7 +89,7 @@ order: v1 tools first; units + qualified-response as one edit pass over the same
 schemas; then the goldens layer pins the whole surface (SDK in-memory transport —
 no server host needed)._
 
-- [ ] `v1-inspect-tools` · medium — `inspect_model` + stateless `estimate` as thin
+- [x] `v1-inspect-tools` · medium — `inspect_model` + stateless `estimate` as thin
       adapters; the ADR forbids new packing/geometry logic and the seams exist
       (PackRequest/PackResult, meshVolume/isClosedMesh, pure pack entry). The one
       subtlety: `packing/request.ts` is store-coupled, so the stateless estimate
@@ -107,14 +107,25 @@ no server host needed)._
       typecheck in `src/main/` while blaming a file nobody touched. This slice is
       the moment because it is already deciding what main shares with the renderer
       tree — settle the boundary once rather than nudging one file at a time.
-- [ ] `explicit-units-wire-contract` · medium · **verify** — Units required in every
+      **Shipped 2026-09-01.** `src/main/mcp/{inspect,estimate}.ts` are thin
+      adapters over seams that already existed; no packing or geometry logic was
+      added. The extraction the slice predicted was `PackingSettings` +
+      `innerCartonMm` out of `store.ts` into `packing/settings.ts` (re-exported,
+      so no importer changed) — `store.ts` cannot be reached from main at all.
+      Two things the slice did not predict: **STL had to come with it** (five of
+      six goldens are STL, so the fixture layer decided the phase-1 carry-in —
+      ~330 KB of three bundled into out/main), and the `.d.ts` carry-in above is
+      NOT done, because moving it is only worth doing once the phase-3 host shows
+      what else main shares with the renderer tree. Re-pinned to
+      `mcp-server-host-in-main`.
+- [x] `explicit-units-wire-contract` · medium · **verify** — Units required in every
       tool's input schema and tagged on every echoed value, both directions.
       Conversion math exists in `core/units.ts`; the design edge is ADR-0024's
       decoupling (weight units independent of the length system), so a single naive
       `units` field would be wrong by design. Verify pass: an imperial-units golden
       call through each tool.
       Depends on: `mcp-sdk-dependency`, `v1-inspect-tools`.
-- [ ] `qualified-response-schema` · medium · **verify** — Structured qualifications
+- [x] `qualified-response-schema` · medium · **verify** — Structured qualifications
       in every response (binding constraint, upper bound beside placed count,
       warnings) plus the ADR-0028 ceiling/fill-trial language in `estimate`'s
       description. Core's `upperBound` is optional (absence-over-misinformation),
@@ -122,7 +133,7 @@ no server host needed)._
       omits — the exact "never received them is our bug" failure. Verify that
       qualifications are structurally required.
       Depends on: `v1-inspect-tools`.
-- [ ] `goldens-third-consumer` · medium — The MCP tools become the goldens' third
+- [x] `goldens-third-consumer` · medium — The MCP tools become the goldens' third
       consumer (ADR-0005): load sample → call tool → assert `samples/goldens.ts`
       hand-computed expectations, on the template of `tests/golden-parse.test.ts`.
       The compliance half is confirm-only (the LGPL substitution spec already
@@ -131,6 +142,13 @@ no server host needed)._
       before phase 3 builds on those schemas.
       Depends on: `v1-inspect-tools`, `explicit-units-wire-contract`,
       `qualified-response-schema`.
+      **Shipped 2026-09-01.** `tests/mcp-goldens.test.ts` drives a real MCP
+      client over the SDK's in-memory transport — not the functions directly,
+      because the zod schemas, the SDK's output validation and the JSON round
+      trip are all contract surface and are exactly where a contract mistake
+      would hide. All six `GOLDEN_PACKS` scenarios pass through `estimate`, and
+      they are stated in INCHES, so every one is also an imperial wire call. The
+      compliance half was confirm-only as planned.
 
 ### 3. Fable batch A: server host + drive tier — **fable**
 _The two big architecture slices. Host first, then drive tools on top. v2's schemas

@@ -137,7 +137,8 @@ Electron + TypeScript + React with one Zustand store (lean-dependency rule: addi
 runtime dep requires an ADR), three.js viewport, `occt-import-js` (OpenCascade WASM)
 for STEP parsing — in a web worker for the app, and in the main process for the AI
 surface, both reading the one shipped `.wasm` so the LGPL right to replace it holds
-for the whole app (ADR-0011/0029) — packing math in a worker, `better-sqlite3` in the
+for the whole app (ADR-0011/0029) — three's STL reader on both sides for the same
+one-parser reason, packing math in a worker, `better-sqlite3` in the
 main process for configurations/history, `@modelcontextprotocol/sdk` for the MCP
 server, `electron-builder` for installers (Windows NSIS primary). Renderer code is
 plain web tech so the shell could move to Tauri later without rewriting the app.

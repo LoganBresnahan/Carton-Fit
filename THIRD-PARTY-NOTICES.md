@@ -107,10 +107,18 @@ mechanically against `package.json` (`/shipshape` does).
 | `zustand` | 5.0.14 | MIT | https://github.com/pmndrs/zustand |
 | `better-sqlite3` | 12.11.1 | MIT | https://github.com/WiseLibs/better-sqlite3 |
 | `@modelcontextprotocol/sdk` | 1.30.0 | MIT | https://github.com/modelcontextprotocol/typescript-sdk |
+| `zod` | 4.5.4 | MIT | https://github.com/colinhacks/zod |
 
 `better-sqlite3` is a native module: it ships as a compiled `.node` binary outside
 `app.asar` rather than bundled into the JavaScript, and it embeds
 [SQLite](https://sqlite.org), which is in the **public domain**.
+
+`zod` is listed on its own line rather than folded into the SDK's tree because
+we import it directly: it is the language the MCP tool schemas are written in
+(`src/main/mcp/schemas.ts`), and those schemas are what make a dropped
+qualification a failed call rather than a confident answer. It arrived with the
+SDK either way — declaring it is honesty about what the code reaches for, which
+is what ADR-0011's rule is for.
 
 `@modelcontextprotocol/sdk` (ADR-0029 — it is what Claude Desktop talks to)
 arrived with a dependency tree of 61 further packages, and **all of them ship

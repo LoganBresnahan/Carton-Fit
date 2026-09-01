@@ -15,7 +15,9 @@ when scope changes.
   *and* a line in `THIRD-PARTY-NOTICES.md` (ADR-0011 — that file ships inside the
   app, so an omission is a licence violation, not a doc gap). The complete runtime
   list is react, react-dom, zustand, three, occt-import-js, better-sqlite3,
-  `@modelcontextprotocol/sdk` (ADR-0029).
+  `@modelcontextprotocol/sdk` and `zod` (both ADR-0029 — zod is the language the
+  MCP tool schemas are written in, so it is a direct import, not just the SDK's
+  dependency).
 - The project is **MIT** (`LICENSE`). `occt-import-js` is **LGPL-2.1**, which is why
   `asarUnpack` in `electron-builder.yml` keeps the OCCT `.wasm` outside `app.asar`:
   it makes the LGPL's replace-the-library right real. That setting is compliance,

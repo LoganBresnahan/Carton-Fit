@@ -3,12 +3,20 @@ import type { ImportedPart } from './workers/import-protocol'
 import type { ImportSink, ImportStats, ImportStatus, LoadedFile } from './import/types'
 import type { ConfigurationSummary, EstimateRow } from '../../shared/storage'
 import type { UpdateInfo } from '../../shared/update'
-import type { PackMode, PackRequest, PackResult, QualityTier, Vec3 } from './core/packing/types'
+import type { PackRequest, PackResult } from './core/packing/types'
 import type { PackSink, PackStatus } from './packing/types'
 import type { PartWeightOverrides } from './packing/kinds'
-import type { UnitSystem, WeightUnit } from './core/units'
-import { DEFAULT_MAX_WEIGHT_G, inToMm, legacyWeightUnit } from './core/units'
 import { clampPanelWidth, DEFAULT_PANEL_WIDTH } from './layout/panel-width'
+// The packing inputs live in packing/settings.ts so the main process can share
+// them (ADR-0029 phase 2); re-exported here because this is where the app has
+// always imported them from.
+import { DEFAULT_SETTINGS, settingsFromStored, type PackingSettings } from './packing/settings'
+export {
+  DEFAULT_SETTINGS,
+  settingsFromStored,
+  innerCartonMm,
+  type PackingSettings
+} from './packing/settings'
 
 // The app's data spine (ADR-0006). Three slices: the import outcome (worker/
 // pipeline writes it), the packing settings (the inputs panel writes them,
@@ -28,62 +36,7 @@ export function resolvedView(viewMode: ViewMode, hasResult: boolean): 'model' | 
   return hasResult ? 'packed' : 'model'
 }
 
-/** All user-chosen packing inputs, in canonical units (mm, grams — ADR-0004). */
-export interface PackingSettings {
-  mode: PackMode
-  tier: QualityTier
-  /** Length display unit only; storage is always mm/g. Weights have their own
-   *  per-input units (ADR-0024). */
-  unitSystem: UnitSystem
-  /** Display unit for the max-package weight and everything spent against it. */
-  maxWeightUnit: WeightUnit
-  /** Display unit for per-part weights: the Per part field, the per-kind
-   *  overrides panel, and the per-part export columns. */
-  partWeightUnit: WeightUnit
-  /** Raw box dimensions the user typed (mm); interpreted as inner or outer per enterOuter. */
-  boxDimsMm: Vec3
-  /** When true, boxDimsMm are OUTER dims and inner = outer − 2×wall. */
-  enterOuter: boolean
-  wallMm: number
-  clearancePartMm: number
-  clearanceWallMm: number
-  maxWeightG: number
-  weightMode: 'direct' | 'density'
-  partWeightG: number
-  densityGPerCm3: number
-}
-
-const DEFAULT_SETTINGS: PackingSettings = {
-  mode: 'fit-check',
-  tier: 'fast',
-  unitSystem: 'imperial', // ADR-0004: the likely audience works in inches/lb
-  maxWeightUnit: 'lb',
-  partWeightUnit: 'lb',
-  boxDimsMm: [inToMm(12), inToMm(12), inToMm(12)],
-  enterOuter: false,
-  wallMm: 0,
-  clearancePartMm: 0,
-  clearanceWallMm: 0,
-  maxWeightG: DEFAULT_MAX_WEIGHT_G,
-  weightMode: 'direct',
-  partWeightG: 0,
-  densityGPerCm3: 1.0
-}
-
 const SETTINGS_KEY = 'carton-fit:settings'
-
-/** Merge a persisted settings blob over the defaults. A blob written before
- *  ADR-0024 has no weight units; they derive from its own toggle so the
- *  display stays exactly where that user left it. */
-export function settingsFromStored(parsed: Partial<PackingSettings>): PackingSettings {
-  const legacy = legacyWeightUnit(parsed.unitSystem === 'metric' ? 'metric' : 'imperial')
-  return {
-    ...DEFAULT_SETTINGS,
-    maxWeightUnit: legacy,
-    partWeightUnit: legacy,
-    ...parsed
-  }
-}
 
 function loadSettings(): PackingSettings {
   try {
@@ -154,13 +107,6 @@ function savePanelWidth(panelWidth: number): void {
   } catch {
     // ignore: nothing to do if storage is unavailable
   }
-}
-
-/** Derived inner carton dimensions (mm), applying wall thickness when entering outer. */
-export function innerCartonMm(s: PackingSettings): Vec3 {
-  if (!s.enterOuter) return s.boxDimsMm
-  const w = 2 * s.wallMm
-  return [s.boxDimsMm[0] - w, s.boxDimsMm[1] - w, s.boxDimsMm[2] - w]
 }
 
 interface AppState {

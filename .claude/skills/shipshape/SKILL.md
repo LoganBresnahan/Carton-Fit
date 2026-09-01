@@ -157,6 +157,10 @@ grep -rn "occt-import-js" src
 # (packaging deletes that copy — see the ADR-0029 phase-1 addendum).
 grep -rn "^import \{" src/renderer/src --include='*.ts' --include='*.tsx' \
   | grep "from '.*core/packing" | grep -v "^src/renderer/src/core/"
+# Renderer only. `src/main/` is NOT scanned by this one and must not be added to
+# it: the MCP tools (ADR-0029) call `pack()` directly from the main process,
+# which is correct — there is no UI thread there to block, and the alternative is
+# a second engine. The rule that binds main is the one-shipped-wasm rule above.
 # expect exactly three, and the second filter is why: `core/packing` also matches
 # the FILENAME of every engine file importing its own siblings, which buries the
 # three lines that matter under ~25 lines of core-internal noise.

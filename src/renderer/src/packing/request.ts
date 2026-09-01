@@ -1,7 +1,7 @@
 import { isClosedMesh, meshVolume } from '../core/geometry'
 import { densityWeightG } from '../core/units'
 import { overrideForPart, type PartWeightOverrides } from './kinds'
-import { innerCartonMm, type PackingSettings } from '../store'
+import { innerCartonMm, type PackingSettings } from './settings'
 import type { PackPart, PackRequest } from '../core/packing/types'
 import type { ImportedPart } from '../workers/import-protocol'
 

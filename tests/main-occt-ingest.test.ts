@@ -72,17 +72,25 @@ describe('readModel dispatch', () => {
     await expect(readModel(join(SAMPLES, 'cube-10x10.stp'), SOURCE_TREE)).resolves.toHaveLength(1)
   })
 
-  it('turns STL away with a reason, not a parse failure', async () => {
-    // Phase 2 decides whether main gets an STL reader (it needs three, which
-    // packaging prunes). Until then the answer must say what to do instead.
-    await expect(readModel(join(SAMPLES, 'cube-10x10.stl'), SOURCE_TREE)).rejects.toThrow(
-      /not readable from this interface yet/
+  it('reads STL too, through the same parser the app uses', async () => {
+    // Phase 2 closed the phase-1 gap: main gets three's STLLoader through the
+    // renderer's one-line adapter rather than a second STL reader of its own.
+    // The part is named for the file, as the import worker names it.
+    const parts = await readModel(join(SAMPLES, 'cube-10x10.stl'), SOURCE_TREE)
+    expect(parts).toHaveLength(1)
+    expect(parts[0].name).toBe('cube-10x10')
+    expect(meshVolume(parts[0].positions, parts[0].indices)).toBeCloseTo(1000, 3)
+  })
+
+  it('names an STL that holds no triangles rather than packing nothing', async () => {
+    await expect(readModel(join(SAMPLES, 'SOURCES.md'), SOURCE_TREE)).rejects.toThrow(
+      /not a model file/
     )
   })
 
   it('rejects a file it does not read at all', async () => {
     await expect(readModel(join(SAMPLES, 'goldens.ts'), SOURCE_TREE)).rejects.toThrow(
-      /not a model file/
+      /not a model file this app reads \(\.step, \.stp, \.stl\)/
     )
   })
 })

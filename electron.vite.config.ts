@@ -23,7 +23,7 @@ export default defineConfig({
   // out/main mirrors what the renderer already does with it and adds no
   // packaging path; the wasm stays the single shipped, replaceable file, found
   // at runtime by src/main/occt/wasmPath.ts.
-  main: { plugins: [externalizeDepsPlugin({ exclude: ['occt-import-js'] })] },
+  main: { plugins: [externalizeDepsPlugin({ exclude: ['occt-import-js', 'three'] })] },
   preload: { plugins: [externalizeDepsPlugin()] },
   renderer: {
     plugins: [react()],
