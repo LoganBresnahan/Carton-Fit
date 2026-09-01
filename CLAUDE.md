@@ -17,7 +17,14 @@ when scope changes.
   list is react, react-dom, zustand, three, occt-import-js, better-sqlite3,
   `@modelcontextprotocol/sdk` and `zod` (both ADR-0029 — zod is the language the
   MCP tool schemas are written in, so it is a direct import, not just the SDK's
-  dependency).
+  dependency). **The SDK sits in `devDependencies` on purpose** (ADR-0029
+  phase 3): it is runtime code, but rollup bundles its stdio subset into
+  `out/main`, and keeping it out of `dependencies` is what stops
+  electron-builder shipping its 61-package tree. The build records every
+  package bundled into main in `out/main/bundled-modules.json`;
+  `e2e/main-bundle-notices.spec.ts` fails if that list names a package the
+  notices file doesn't cover — bundled packages carry their licence texts
+  *inline* in THIRD-PARTY-NOTICES.md ("Notices carried in this file").
 - The project is **MIT** (`LICENSE`). `occt-import-js` is **LGPL-2.1**, which is why
   `asarUnpack` in `electron-builder.yml` keeps the OCCT `.wasm` outside `app.asar`:
   it makes the LGPL's replace-the-library right real. That setting is compliance,

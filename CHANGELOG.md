@@ -8,6 +8,33 @@ Entries say what changed and what it means for you. The reasoning behind each
 change lives in its decision record under [`doc/adr/`](doc/adr/), linked inline;
 build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
+## [Unreleased]
+
+### Added
+
+- **Carton Fit can now answer an AI assistant's questions directly.** The app
+  hosts an MCP server — the protocol Claude Desktop and other Claude clients
+  speak — with two tools so far: `inspect_model` (a CAD file's geometry, per
+  part kind, with open-mesh warnings) and `estimate` (the same packing answer
+  the app computes, with the same qualifications: binding constraint, upper
+  bound, warnings). Every value crosses the wire with its unit named, both
+  directions. Two ways to run it: launch the app with `--mcp-server`, or point
+  a client at the bundled headless entry
+  (`ELECTRON_RUN_AS_NODE=1 <app binary> resources/app.asar/out/main/mcp.js`) —
+  a one-click "Connect to Claude" setup is coming later in this item.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+### Changed
+
+- **A smaller install: 7.5 MB of never-used code no longer ships.** The MCP
+  SDK's dependency tree included a full HTTP server stack this app never
+  opens; the build now bundles only what the stdio server actually reaches.
+  Every third-party licence notice still ships — the texts for bundled
+  packages moved into `THIRD-PARTY-NOTICES.md` itself, and a new automated
+  check fails the build's test suite if a future upgrade bundles a package
+  whose notice is missing.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 ## [1.2.0] — 2026-08-27
 
 ### Added

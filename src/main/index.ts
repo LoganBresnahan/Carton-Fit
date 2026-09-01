@@ -1,5 +1,6 @@
 import { app, BrowserWindow, screen } from 'electron'
 import { join } from 'path'
+import { resolveServerOptions, serveStdio } from './mcp/host'
 import { registerStorageIpc, closeStorage } from './storage'
 import { registerExportIpc } from './exportFile'
 import { registerUpdateIpc, startUpdateCheck } from './updateCheck'
@@ -10,6 +11,15 @@ import {
   readWindowState,
   windowStateFile
 } from './windowState'
+
+// SERVER MODE (ADR-0029, slice `mcp-server-host-in-main`): launched with
+// --mcp-server, the app additionally serves MCP on its own stdin/stdout — the
+// same window, the same store, plus a protocol client attached. This is the
+// mode the drive tier (v2) runs in: the server has to live beside the window
+// it drives. In this mode stdout belongs to the protocol; anything printed
+// there corrupts the first handshake (the stdout guard and the hidden-launch
+// behaviour are phase 4's slices, so today the window still shows normally).
+const MCP_SERVER_MODE = process.argv.includes('--mcp-server')
 
 // The display name has a space; the userData directory must not (ADR-0019).
 // Electron derives that path from the app name, and `createWindow` reads
@@ -77,6 +87,19 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Before the window: the client is already waiting on the handshake, and
+  // nothing the server needs waits on the renderer — v1 tools answer from disk
+  // and core alone. Options come from the same __dirname derivation the
+  // headless entry uses, NOT from `app` — one rule, so the two server modes
+  // cannot disagree about the wasm path or the version (host.ts says why
+  // `app.getVersion()` is also just wrong in an e2e launch). A failure to
+  // serve is reported and NOT fatal: the person launched an app, and the app
+  // half still works.
+  if (MCP_SERVER_MODE) {
+    serveStdio(resolveServerOptions(__dirname)).catch((err: unknown) => {
+      console.error('carton-fit mcp server failed to start:', err)
+    })
+  }
   // Registers handlers only — the database itself opens on first use, so a
   // storage problem cannot delay or prevent the window appearing (ADR-0007).
   registerStorageIpc()

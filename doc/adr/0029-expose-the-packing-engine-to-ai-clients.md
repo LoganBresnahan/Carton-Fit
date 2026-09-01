@@ -261,6 +261,37 @@ rather than a confident answer. Both properties are mutation-tested: making a
 qualification optional, or skipping the open-mesh check, turns
 `tests/mcp-qualifications.test.ts` red.
 
+### Phase-3 addendum, part 1 (2026-09-01) — the host, and what pruning the SDK took
+
+The server now has somewhere to live — two somewheres, one seam.
+`src/main/mcp/host.ts` chooses the transport (`serveStdio`); the tools never
+learn which. The headless entry (`out/main/mcp.js`, executed via
+`ELECTRON_RUN_AS_NODE` from the shipped binary) serves the stateless v1 tools
+with Electron APIs absent, and is the file the phase-5 `--mcp` shim grows out
+of. The app launched with `--mcp-server` hosts the same server from the main
+process beside a live window — the arrangement the v2 drive tier requires.
+Electron's asar-aware fs patches hold in run-as-node mode, so the entry runs
+from *inside* `app.asar`; the e2e proves that against the packaged bytes,
+because it is exactly the dev-green/packaged-broken class ADR-0005 names.
+
+One rule the build forced: **neither mode asks Electron for its identity.**
+`app.getVersion()` under an e2e launch of `out/main/index.js` reports `"0.0"`
+(the ADR-0021 trap, third appearance), and `app.getAppPath()` in that launch
+points at `out/main` — so both modes derive app root and version from the
+entry file's own location, one derivation, and cannot disagree by construction.
+
+The phase-1 pruning carry-in is discharged, and the shape it took matters for
+future dependencies: the SDK moved to `devDependencies` and rollup bundles the
+stdio subset into `out/main` — the SDK plus six small schema/validation
+packages — so electron-builder ships none of its 61-package tree (app.asar
+17 → 9.5 MB). Bundled code carries no `LICENSE` file beside it, so those seven
+licence texts now ride verbatim in THIRD-PARTY-NOTICES.md, which itself ships
+in the app root. The part that keeps this true rather than merely true today:
+the build emits `out/main/bundled-modules.json` naming every node_modules
+package bundled into main, and a spec fails if that list ever names a package
+the notices file does not cover — an SDK upgrade that starts reaching one more
+package becomes a red spec naming it, not a silent licence violation.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

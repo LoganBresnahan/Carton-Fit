@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
-import { closeSync, openSync, readFileSync, readSync } from 'node:fs'
+import { closeSync, openSync, readSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { REPO_ROOT } from './harness'
+import { citedPackages, inlineNotice } from './notices'
 
 /**
  * THIRD-PARTY-NOTICES.md makes a checkable claim, so check it.
@@ -72,29 +72,34 @@ function packagedAsar(): string {
   return join(dirname(packaged), 'resources', 'app.asar')
 }
 
-/**
- * The components the notices file names in its table, read from the file itself
- * rather than restated here — a package added to that table starts being
- * checked without anyone remembering to update this spec.
- */
-function citedPackages(): string[] {
-  const notices = readFileSync(join(REPO_ROOT, 'THIRD-PARTY-NOTICES.md'), 'utf8')
-  const names = notices
-    .split('\n')
-    .map((line) => /^\|\s*`([^`]+)`/.exec(line)?.[1]?.trim())
-    .filter((name): name is string => name !== undefined)
-  if (names.length === 0) throw new Error('parsed no components out of THIRD-PARTY-NOTICES.md')
-  return names
-}
-
 test('every component the notices file cites ships its licence text', () => {
   const index = readAsarIndex(packagedAsar())
   const packages = citedPackages()
 
   for (const name of packages) {
     const dir = entryAt(index, `node_modules/${name}`)
-    expect(dir, `${name} is cited in THIRD-PARTY-NOTICES.md but ships no directory at all`)
-      .toBeDefined()
+
+    if (dir === undefined) {
+      // No package directory in the archive. That is legitimate for exactly one
+      // class of component — code BUNDLED into our own files (the MCP SDK and
+      // its runtime subset, ADR-0029 phase 3) — and only if the notices file
+      // itself carries the full licence text, since there is nowhere else for
+      // it to ride. Anything cited, unshipped and not carried inline is the
+      // careless-glob failure this spec exists to catch.
+      const inline = inlineNotice(name)
+      expect(
+        inline,
+        `${name} is cited in THIRD-PARTY-NOTICES.md but ships neither a package ` +
+          'directory nor an inline "### Notice:" section carrying its licence text'
+      ).not.toBeNull()
+      // Substantial text, not a stub heading: the shortest real licence in the
+      // set (ISC) runs ~750 characters.
+      expect(
+        (inline ?? '').trim().length,
+        `${name}'s inline notice is too short to be a licence text`
+      ).toBeGreaterThan(500)
+      continue
+    }
 
     const licences = Object.entries(dir?.files ?? {}).filter(([file]) =>
       /^(licen[cs]e|copying)/i.test(file)
@@ -110,6 +115,18 @@ test('every component the notices file cites ships its licence text', () => {
       expect(entry.size ?? 0, `${name}/${file} ships as an empty file`).toBeGreaterThan(100)
     }
   }
+})
+
+test('the notices file itself ships beside the binary', () => {
+  // The inline notices above are only worth anything if their carrier is in
+  // the distribution: THIRD-PARTY-NOTICES.md rides as an electron-builder
+  // `extraFiles` entry into the application root. Deleting that mapping would
+  // break no feature and fail no other spec — the exact failure shape that
+  // justified this file.
+  const packaged = process.env.PACKAGED_APP
+  if (packaged === undefined) throw new Error('PACKAGED_APP must point at the packaged binary')
+  const shipped = join(dirname(packaged), 'THIRD-PARTY-NOTICES.md')
+  expect(statSync(shipped).size, `${shipped} is missing or empty`).toBeGreaterThan(1000)
 })
 
 test('the LGPL notices cited by path are exactly where the notices say', () => {

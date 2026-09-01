@@ -155,7 +155,7 @@ _The two big architecture slices. Host first, then drive tools on top. v2's sche
 are already fixed by phase 2, so this pass solves lifecycle/async problems, not
 contract design._
 
-- [ ] `mcp-server-host-in-main` · high — The protocol is SDK-handled; the real
+- [x] `mcp-server-host-in-main` · high — The protocol is SDK-handled; the real
       difficulty is the packaged-runtime entry mode: a second electron-vite build
       entry executed via `ELECTRON_RUN_AS_NODE`, where Electron APIs are absent,
       module resolution must work from inside/around app.asar, and the asarUnpacked
@@ -164,6 +164,29 @@ contract design._
       tool tiers and the HTTP/CLI revisit trigger. Failures are loud;
       `e2e:packaged` is the net.
       Depends on: `mcp-sdk-dependency`.
+      **Shipped 2026-09-01.** `src/main/mcp/host.ts` is the transport seam
+      (`serveStdio` — the pipe and any HTTP revisit connect here, tools
+      untouched), serving TWO launch modes: `out/main/mcp.js`
+      (`src/main/mcpEntry.ts`, run via `ELECTRON_RUN_AS_NODE` — asar-aware fs
+      holds in run-as-node mode, proven by e2e against the packaged bytes) and
+      the app itself with `--mcp-server`, hosting the same server beside a live
+      window (v2's substrate; window still shows — hiding is phase 4). One
+      deliberate unification: BOTH modes derive appPath/version from
+      `__dirname` (`resolveServerOptions`), never from `app` —
+      `app.getVersion()` reports "0.0" under an e2e launch of out/main (the
+      ADR-0021 trap re-arriving), and one rule means the two modes cannot
+      disagree. The **SDK-pruning carry-in is discharged**: the SDK moved to
+      devDependencies and is rollup-bundled (stdio subset only — the SDK plus
+      ajv, ajv-formats, fast-deep-equal, fast-uri, json-schema-traverse,
+      zod-to-json-schema), so the 61-package tree no longer ships: app.asar
+      17 MB → 9.5 MB, resources 26 MB → 19 MB, measured on the packaged build.
+      Their licence texts now ride inline in THIRD-PARTY-NOTICES.md ("Notices
+      carried in this file"), and the build writes
+      `out/main/bundled-modules.json` so `e2e/main-bundle-notices.spec.ts`
+      fails on any future bundled-but-uncited package — that guard, the
+      inline-notice check, and the shipped-carrier check were each
+      mutation-tested. The phase-2 `.d.ts` carry-in is done:
+      `occt-import-js.d.ts` now lives in `src/types/`. 89 packaged e2e green.
 - [ ] `v2-drive-tools` · high · **verify** — Reads as thin adapters, but the store,
       undo stack, auto-pack subscription, and capture seam are renderer-side while
       the server is in main: this slice invents a main-to-renderer request/response
