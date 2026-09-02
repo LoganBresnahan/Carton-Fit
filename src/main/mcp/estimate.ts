@@ -283,14 +283,10 @@ function outcomeOf(
 }
 
 function qualificationsOf(
-  input: EstimateInput,
-  settings: PackingSettings,
-  request: PackRequest,
-  result: PackResult,
-  parts: readonly ImportedPart[],
-  overrides: PartWeightOverrides,
+  context: LiveEstimateContext,
   units: OutputUnits
 ): EstimateQualifications {
+  const { settings, request, result, parts, overrides } = context
   const requested = {
     betweenParts: settings.clearancePartMm,
     wall: settings.clearanceWallMm
@@ -299,10 +295,14 @@ function qualificationsOf(
   const clamped =
     honored.betweenParts !== requested.betweenParts || honored.wall !== requested.wall
 
-  const open = openMeshParts(parts, settings, input.unitPart ?? null, overrides)
+  const open = openMeshParts(parts, settings, context.unitPart, overrides)
   const openNote = openMeshWarning(open)
-  const weight = input.weight ?? {}
-  const supplied = weight.partWeight !== undefined || weight.densityGPerCm3 !== undefined
+  // Overrides count as a supplied weight on their own: an ADR-0018 override
+  // reaches the engine whatever the weight mode says, so a call carrying only
+  // overrides can be weight-BOUND — and a "no weight was given, the cap could
+  // not bind" note beside a weight-bound count would be a qualification that
+  // lies (found writing the v2 drive spec; the v1 path had the same hole).
+  const supplied = context.weightSupplied || Object.keys(overrides).length > 0
   const cap = fromG(request.maxWeightG, units.weight)
 
   return {
@@ -334,21 +334,34 @@ function qualificationsOf(
 }
 
 /**
- * Estimate a packing for parts already read off disk.
+ * Everything the report assembly needs, however the pack came to exist.
  *
- * Split from the file read so the goldens can drive it directly and so the tool
- * layer can report an unreadable file separately from an unanswerable question.
+ * Two producers fill this in: `estimateParts` (v1 — it just ran `pack()`
+ * itself) and the renderer's drive host (v2 — the LIVE result the auto-run
+ * subscription computed, read out of the store). One assembly for both is the
+ * point: an AI client asking the running app and an AI client asking the
+ * stateless tool must receive the same wording for the same answer, or the
+ * difference reads as a disagreement between the app and itself.
  */
-export function estimateParts(parts: readonly ImportedPart[], input: EstimateInput): EstimateReport {
-  const units = resolveOutputUnits(input.outputUnits)
-  const settings = settingsFrom(input, units)
-  const overrides = overridesFrom(input)
-  const request = buildPackRequest(parts, settings, input.unitPart ?? null, overrides)
-  if (request === null) {
-    throw new EstimateInputError('That file contains no parts to pack.')
-  }
+export interface LiveEstimateContext {
+  parts: readonly ImportedPart[]
+  settings: PackingSettings
+  unitPart: string | null
+  overrides: PartWeightOverrides
+  request: PackRequest
+  result: PackResult
+  /** Whether the caller supplied any part weight at all — the v1 call knows
+   *  this from its own arguments; the live app reads it off the settings. */
+  weightSupplied: boolean
+}
 
-  const result = pack(request)
+/** Assemble the qualified report for a pack that already ran. */
+export function buildEstimateReport(
+  context: LiveEstimateContext,
+  outputUnits?: Partial<OutputUnits>
+): EstimateReport {
+  const units = resolveOutputUnits(outputUnits)
+  const { request, result } = context
   const honored = sanitizeClearances(request.clearances)
 
   return {
@@ -375,7 +388,46 @@ export function estimateParts(parts: readonly ImportedPart[], input: EstimateInp
       fraction: result.utilization,
       percent: `${Math.round(result.utilization * 1000) / 10}%`
     },
-    qualifications: qualificationsOf(input, settings, request, result, parts, overrides, units),
+    qualifications: qualificationsOf(context, units),
     units
   }
+}
+
+/** Whether the LIVE app's settings amount to a supplied weight. The panel's
+ *  own semantics: a blank (zero) weight field is "no weight", so the cap
+ *  cannot bind and the answer is about space only. */
+export function liveWeightSupplied(settings: PackingSettings): boolean {
+  return settings.weightMode === 'density'
+    ? settings.densityGPerCm3 > 0
+    : settings.partWeightG > 0
+}
+
+/**
+ * Estimate a packing for parts already read off disk.
+ *
+ * Split from the file read so the goldens can drive it directly and so the tool
+ * layer can report an unreadable file separately from an unanswerable question.
+ */
+export function estimateParts(parts: readonly ImportedPart[], input: EstimateInput): EstimateReport {
+  const settings = settingsFrom(input, resolveOutputUnits(input.outputUnits))
+  const overrides = overridesFrom(input)
+  const unitPart = input.unitPart ?? null
+  const request = buildPackRequest(parts, settings, unitPart, overrides)
+  if (request === null) {
+    throw new EstimateInputError('That file contains no parts to pack.')
+  }
+
+  const weight = input.weight ?? {}
+  return buildEstimateReport(
+    {
+      parts,
+      settings,
+      unitPart,
+      overrides,
+      request,
+      result: pack(request),
+      weightSupplied: weight.partWeight !== undefined || weight.densityGPerCm3 !== undefined
+    },
+    input.outputUnits
+  )
 }

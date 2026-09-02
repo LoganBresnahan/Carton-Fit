@@ -187,7 +187,7 @@ contract design._
       inline-notice check, and the shipped-carrier check were each
       mutation-tested. The phase-2 `.d.ts` carry-in is done:
       `occt-import-js.d.ts` now lives in `src/types/`. 89 packaged e2e green.
-- [ ] `v2-drive-tools` · high · **verify** — Reads as thin adapters, but the store,
+- [x] `v2-drive-tools` · high · **verify** — Reads as thin adapters, but the store,
       undo stack, auto-pack subscription, and capture seam are renderer-side while
       the server is in main: this slice invents a main-to-renderer request/response
       bridge (a new IPC direction) plus an async **settle protocol** — after
@@ -198,6 +198,26 @@ contract design._
       integration comes free via restoreInputs-style actions.
       Depends on: `mcp-sdk-dependency`, `mcp-server-host-in-main`,
       `v1-inspect-tools`, `explicit-units-wire-contract`, `qualified-response-schema`.
+      **Shipped 2026-09-01.** Six tools (`load_model`, `set_inputs`,
+      `set_part_weight`, `get_estimate`, `get_app_state`, `capture_view`),
+      registered only when the server has a bridge — the headless entry stays
+      v1-only on purpose (a tool that shrugs is worse than absence). The settle
+      protocol is EVENT-ORDERED, not timed (`renderer/mcp/settle.ts`): a dirty
+      flag raised by any input write and lowered only by a pack BEGINNING,
+      because a dispatch cannot predate the write it consumed while a
+      completion can — the exact race the verify pass was reserved for, pinned
+      twice (unit: a stale 'done' landing while dirty does not settle; e2e: the
+      set_inputs reply itself must carry 343 after 27,000) and mutation-tested
+      end to end: disabling the dirty check flipped exactly the two count
+      specs. Mutating tools reply with the settled estimate INSIDE the same
+      response, so the racy set-then-get pattern is never needed; one call is
+      one undo step (whole patch in one `updateSettings`). The verify pass also
+      caught a v1 hole: an estimate driven by ADR-0018 overrides alone could be
+      weight-BOUND while `weightInput` said "no weight was given, the cap could
+      not bind" — a qualification that lied; overrides now count as supplied in
+      the shared report assembly. Report wording is shared by construction:
+      `buildEstimateReport` was extracted from `estimateParts`, and the live
+      path feeds it the store's own result. 92 packaged e2e, 721 vitest ×2.
 
 ### 4. Lifecycle polish + data tier + version handshake — **opus**
 _Four slices layering on phase 3's host and bridge; mutually independent — batch

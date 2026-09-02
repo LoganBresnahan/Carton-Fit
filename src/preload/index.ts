@@ -21,6 +21,12 @@ import {
   type ThemePreference,
   type ThemeState
 } from '../shared/theme'
+import {
+  MCP_DRIVE_CHANNELS,
+  type DriveEnvelope,
+  type DriveResponse,
+  type McpDriveApi
+} from '../shared/mcpDrive'
 
 // The renderer's only route to the main process (ADR-0007 storage; ADR-0006
 // keeps the renderer declarative).
@@ -79,12 +85,26 @@ const theme: ThemeApi = {
     ipcRenderer.invoke(THEME_CHANNELS.set, preference) as Promise<ThemeState>
 }
 
+// The drive bridge's renderer end (ADR-0029 v2) — the one channel pair where
+// MAIN asks and the renderer answers. The handler is installed by
+// mcp/driveHost.ts at startup; `ready` is what tells main it may start asking.
+const mcpDrive: McpDriveApi = {
+  onRequest: (handler: (envelope: DriveEnvelope) => void) => {
+    ipcRenderer.on(MCP_DRIVE_CHANNELS.request, (_event, envelope: DriveEnvelope) =>
+      handler(envelope)
+    )
+  },
+  respond: (response: DriveResponse) => ipcRenderer.send(MCP_DRIVE_CHANNELS.response, response),
+  ready: () => ipcRenderer.send(MCP_DRIVE_CHANNELS.ready)
+}
+
 const api = {
   platform: process.platform,
   storage,
   exportFile,
   update,
-  theme
+  theme,
+  mcpDrive
 }
 
 contextBridge.exposeInMainWorld('api', api)

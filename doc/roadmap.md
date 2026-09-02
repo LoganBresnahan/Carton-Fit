@@ -530,9 +530,34 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       remembered), and an optional figure crosses as `{known:false, reason}`
       rather than an absent key — so "there is no upper bound" and "this build
       forgot it" stop looking the same.
-      Carry-in re-pinned to phase 3: the ambient `occt-import-js.d.ts` still sits
-      in the renderer tree while typing main's code. Phase 3's host is what will
-      show how much else main shares from over there.
+      ~~Carry-in re-pinned to phase 3: the ambient `occt-import-js.d.ts` still sits
+      in the renderer tree while typing main's code.~~ — resolved in phase 3
+      (moved to `src/types/`).
+      **Phase 3 landed 2026-09-01** (both fable slices) — the server RUNS, two
+      ways, and Claude can drive the app:
+      - `mcp-server-host-in-main`: `out/main/mcp.js` serves v1 headless via
+        `ELECTRON_RUN_AS_NODE` (from inside app.asar — proven against the
+        packaged bytes), and `--mcp-server` hosts the same server in the app's
+        main process beside a live window. Both modes derive appPath/version
+        from `__dirname` through one rule, never from `app` (which reports
+        "0.0" under an e2e launch — the ADR-0021 trap again). The SDK-pruning
+        carry-in is discharged: SDK → devDependencies + rollup-bundled stdio
+        subset, app.asar 17 → 9.5 MB, licences inline in the notices file, and
+        a bundled-modules manifest + spec that turns a future
+        bundled-but-uncited package into a red test. All three licence guards
+        mutation-tested.
+      - `v2-drive-tools` (adversarial verify, as planned): six tools through a
+        new main→renderer bridge, everything via the store's own actions (one
+        AI edit = one undo step). The settle protocol is event-ordered — dirty
+        raised by input writes, lowered only by a pack BEGINNING — because a
+        completion can belong to old inputs while a dispatch cannot; the named
+        race (get_estimate returning the previous result) is pinned at unit
+        and e2e layers and was mutation-tested (naive settle flips exactly the
+        two count specs). The verify pass also caught a v1 qualification lying
+        (overrides-only estimates said "no weight given, cap could not bind"
+        while being weight-bound) — fixed in the shared report assembly.
+      92 packaged e2e, 721 vitest green twice. Next: phase 4 (opus batch —
+      stdout discipline, hidden launch, v3 data tools, version handshake).
 
 ## Later
 

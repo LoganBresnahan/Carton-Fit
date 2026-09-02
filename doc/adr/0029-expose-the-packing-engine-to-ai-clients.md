@@ -292,6 +292,42 @@ package bundled into main, and a spec fails if that list ever names a package
 the notices file does not cover — an SDK upgrade that starts reaching one more
 package becomes a red spec naming it, not a silent licence violation.
 
+### Phase-3 addendum, part 2 (2026-09-01) — the drive tier, and the settle protocol
+
+The v2 tools exist: `load_model`, `set_inputs`, `set_part_weight`,
+`get_estimate`, `get_app_state`, `capture_view` — registered only when the
+server hosts inside the app, because the drive tier without an app would be
+tools that shrug, and §"Deliberately not tools" already priced that. Everything
+goes through the store's own actions over a new main→renderer bridge
+(`shared/mcpDrive.ts`, one channel each way, calls serialized), so an AI edit
+re-packs through the same auto-run subscription and lands on the same undo
+stack as a human's — one call, one Ctrl+Z step.
+
+**The settle protocol is event-ordered, not timed.** Auto-run means "set
+inputs" is "run an estimate", but the run is debounced and worker-computed, so
+between a drive write and its pack finishing, the store still says `done` for
+the PREVIOUS inputs — and a pack already in flight when the write lands
+completes and says `done` again, still for the old inputs. The fix
+(`renderer/mcp/settle.ts`): a dirty flag any input write raises and only a pack
+*beginning* lowers — a dispatch cannot predate the write it consumed (autoPack
+builds its request when the timer fires, from the newest inputs), while a
+completion can. Settled = clean + terminal status. Mutating tools hold their
+reply until then and carry the fresh estimate in it, so the racy set-then-get
+pattern is unnecessary by design. Pinned at the unit layer (a stale `done`
+landing while dirty must not settle) and end to end (the `set_inputs` reply
+must say 343 immediately after saying 27,000), and mutation-tested: disabling
+the dirty check flipped exactly the two count assertions.
+
+**The verify pass caught a v1 qualification lying.** An estimate driven by
+ADR-0018 overrides alone — no file-wide weight, no density — reaches the
+engine weighted and can be weight-BOUND, yet `weightInput` said "no part
+weight was given, so the cap could not bind." Overrides now count as a
+supplied weight in the shared report assembly. That assembly
+(`buildEstimateReport`) was extracted from `estimateParts` so the live app's
+result and the stateless call produce identical wording from identical facts —
+the drive tier's answer can never disagree with the v1 tool's for the same
+question.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

@@ -18,7 +18,7 @@ export const SAMPLES = join(REPO_ROOT, 'samples')
  * vacuous rather than failing loudly. Observed on WSL2: llvmpipe dies with
  * `BindToCurrentSequence failed`.
  */
-const SOFTWARE_GL = [
+export const SOFTWARE_GL = [
   '--use-angle=swiftshader',
   '--enable-unsafe-swiftshader',
   '--ignore-gpu-blocklist'

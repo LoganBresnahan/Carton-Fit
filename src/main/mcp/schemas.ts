@@ -135,7 +135,7 @@ export const estimateInput = {
   outputUnits: outputUnitsInput
 }
 
-const heuristicQualification = z.object({ heuristic: z.boolean(), note: z.string() })
+export const heuristicQualification = z.object({ heuristic: z.boolean(), note: z.string() })
 
 export const estimateOutput = {
   request: z.object({
@@ -199,4 +199,125 @@ export const estimateOutput = {
     ])
   }),
   units: outputUnits
+}
+
+// --- the drive tier (v2 — slice `v2-drive-tools`) -------------------------
+//
+// These tools answer about THE RUNNING APP, so their replies carry the app's
+// state next to the estimate: a mis-set input must be visible beside a
+// surprising answer. The same requiredness rules as v1 hold — units on every
+// value, qualifications structural, absence always carrying its reason.
+
+const partialDimensions = dimensionsValue.describe(
+  'Carton dimensions in the carton’s own axes. The unit is required.'
+)
+
+export const appStateObject = z.object({
+  version: z.string().describe('The Carton Fit build answering — one version number for app and tools (ADR-0020).'),
+  file: z.union([
+    z.object({ loaded: z.literal(false) }),
+    z.object({
+      loaded: z.literal(true),
+      name: z.string(),
+      parts: z.number(),
+      kinds: z.number()
+    })
+  ]),
+  inputs: z.object({
+    mode: z.enum(['fit-check', 'max-quantity']),
+    tier: z.enum(['fast', 'thorough', 'nesting']),
+    carton: z.object({
+      dimensions: dimensionsValue,
+      measured: z.enum(['inner', 'outer']),
+      wallThickness: lengthValue
+    }),
+    clearances: z.object({ betweenParts: lengthValue, wall: lengthValue }),
+    maxWeight: weightValue,
+    weight: z.union([
+      z.object({ source: z.literal('direct'), partWeight: weightValue }),
+      z.object({ source: z.literal('density'), densityGPerCm3: z.number() })
+    ]),
+    overrides: z.array(z.object({ kind: z.string(), weight: weightValue })),
+    unitPart: z.union([z.string(), z.null()]),
+    displayUnits: z.object({ length: lengthUnit, maxWeight: weightUnit, partWeight: weightUnit })
+  }),
+  packStatus: z.enum(['idle', 'packing', 'done', 'failed']),
+  view: z.enum(['model', 'packed']),
+  units: outputUnits
+})
+
+/** An estimate that exists, or the reason it does not — never a bare absence. */
+export const estimateAvailability = z.union([
+  z.object({ available: z.literal(true), report: z.object(estimateOutput) }),
+  z.object({ available: z.literal(false), reason: z.string() })
+])
+
+/** What every mutating drive tool (and get_app_state) returns. */
+export const driveOutcomeOutput = {
+  state: appStateObject,
+  estimate: estimateAvailability
+}
+
+export const loadModelInput = {
+  path: z.string().describe('Absolute path to a model file (.step, .stp, .stl) on this machine — loaded into the running app exactly as if dropped on the window.'),
+  outputUnits: outputUnitsInput
+}
+
+export const setInputsInput = {
+  mode: z.enum(['fit-check', 'max-quantity']).optional(),
+  tier: z.enum(['fast', 'thorough']).optional(),
+  carton: z
+    .object({
+      dimensions: partialDimensions.optional(),
+      measured: z.enum(['inner', 'outer']).optional(),
+      wallThickness: lengthValue.optional()
+    })
+    .optional(),
+  clearances: z
+    .object({ betweenParts: lengthValue.optional(), wall: lengthValue.optional() })
+    .optional(),
+  maxWeight: weightValue.optional(),
+  weight: z
+    .object({
+      partWeight: weightValue.optional(),
+      densityGPerCm3: z.number().optional()
+    })
+    .optional()
+    .describe('Give a part weight OR a density, not both. Setting one switches the app to that weight mode.'),
+  displayUnits: z
+    .object({
+      length: lengthUnit.optional(),
+      maxWeight: weightUnit.optional(),
+      partWeight: weightUnit.optional()
+    })
+    .optional()
+    .describe('What the app’s own panel DISPLAYS — independent of outputUnits, which governs this reply.'),
+  unitPart: z
+    .union([z.string(), z.null()])
+    .optional()
+    .describe('max-quantity: which part kind to replicate; null returns to the whole file as one unit.'),
+  outputUnits: outputUnitsInput
+}
+
+export const setPartWeightInput = {
+  kind: z.string().describe('A part kind name as get_app_state or inspect_model reports it.'),
+  weight: z
+    .union([weightValue, z.null()])
+    .describe('The measured weight of one part of this kind, or null to clear the override and return to the computed weight.'),
+  outputUnits: outputUnitsInput
+}
+
+export const getEstimateInput = {
+  outputUnits: outputUnitsInput
+}
+
+export const getAppStateInput = {
+  outputUnits: outputUnitsInput
+}
+
+export const captureViewInput = {
+  view: z
+    .enum(['model', 'packed'])
+    .optional()
+    .describe('Pin which view to capture; omitted captures whatever the app is showing (the packed carton once an estimate exists).')
 }

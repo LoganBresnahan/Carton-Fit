@@ -1,6 +1,7 @@
 import { app, BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { resolveServerOptions, serveStdio } from './mcp/host'
+import { createDriveBridge } from './mcp/driveBridge'
 import { registerStorageIpc, closeStorage } from './storage'
 import { registerExportIpc } from './exportFile'
 import { registerUpdateIpc, startUpdateCheck } from './updateCheck'
@@ -96,9 +97,15 @@ app.whenReady().then(() => {
   // serve is reported and NOT fatal: the person launched an app, and the app
   // half still works.
   if (MCP_SERVER_MODE) {
-    serveStdio(resolveServerOptions(__dirname)).catch((err: unknown) => {
-      console.error('carton-fit mcp server failed to start:', err)
-    })
+    // The drive bridge is what makes this mode more than the headless entry:
+    // the v2 tools reach the renderer's store through it (ADR-0029 v2). Its
+    // first call waits for the window's drive host to announce itself, so
+    // starting the server ahead of createWindow() is safe.
+    serveStdio({ ...resolveServerOptions(__dirname), drive: createDriveBridge() }).catch(
+      (err: unknown) => {
+        console.error('carton-fit mcp server failed to start:', err)
+      }
+    )
   }
   // Registers handlers only — the database itself opens on first use, so a
   // storage problem cannot delay or prevent the window appearing (ADR-0007).

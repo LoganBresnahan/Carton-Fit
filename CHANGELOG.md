@@ -24,6 +24,19 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   a one-click "Connect to Claude" setup is coming later in this item.
   ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
 
+- **An AI assistant can drive the running app — and you can watch it work.**
+  With the app launched in server mode, six more tools let a Claude
+  conversation load a model into your window (`load_model`), change the
+  carton, clearances, weight cap, mode or tier (`set_inputs` — partial edits,
+  exactly like typing into the panel), weigh a part kind by hand
+  (`set_part_weight`), read the current answer with all its caveats
+  (`get_estimate`, `get_app_state`), and *see* the packed carton as an image
+  (`capture_view`). Every change recomputes through the same auto-run your own
+  edits use, replies wait until the fresh estimate exists (never a stale
+  number), and each AI edit is one Ctrl+Z step — undo treats Claude's changes
+  like anyone else's.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 ### Changed
 
 - **A smaller install: 7.5 MB of never-used code no longer ships.** The MCP

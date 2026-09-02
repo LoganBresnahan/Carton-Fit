@@ -5,6 +5,7 @@ import { startAutoPack } from './packing/service'
 import { installUndoKeyboard, startUndoHistory } from './history/undo'
 import { installPanelWidthKeyboard, installPanelWidthResize } from './layout/panel-controls'
 import { checkForUpdate } from './update/service'
+import { startDriveHost } from './mcp/driveHost'
 import './styles.css'
 
 // The estimate follows the inputs: this subscription re-packs whenever the
@@ -24,6 +25,11 @@ installUndoKeyboard(window)
 // it needs the column's own left edge.
 installPanelWidthKeyboard(window)
 installPanelWidthResize(window)
+
+// The MCP drive host (ADR-0029 v2): answers main's drive requests through the
+// store's own actions. Installed unconditionally — main only sends requests in
+// --mcp-server mode, and a listener nobody calls costs nothing.
+startDriveHost()
 
 // Ask main what its launch check found (ADR-0021). Fire-and-forget: it resolves
 // to null for "current" and for every failure alike, and nothing waits on it.
