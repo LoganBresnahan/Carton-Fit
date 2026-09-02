@@ -1,4 +1,5 @@
 import { resolveServerOptions, serveStdio } from './mcp/host'
+import { claimStdoutForProtocol } from './mcp/stdout'
 
 // The HEADLESS MCP entry (ADR-0029, slice `mcp-server-host-in-main`): built to
 // out/main/mcp.js and executed as
@@ -12,7 +13,11 @@ import { resolveServerOptions, serveStdio } from './mcp/host'
 // 5 grows it into the --mcp shim that proxies to a running app instance, which
 // is why it exists as its own build entry rather than as a flag on index.ts.
 //
-// stdout is the protocol stream. Anything a person should read goes to stderr.
+// stdout is the protocol stream. Anything a person should read goes to stderr —
+// and this line is what makes that true rather than asked for: it runs before
+// any other import can print (slice `stdout-protocol-discipline`).
+
+claimStdoutForProtocol()
 
 serveStdio(resolveServerOptions(__dirname))
   .then((server) => {

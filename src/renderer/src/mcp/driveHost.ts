@@ -2,6 +2,11 @@ import { useAppStore, resolvedView } from '../store'
 import { importFile } from '../import/service'
 import { captureViewportPng, dataUrlToBase64 } from '../viewport/capture'
 import { partKinds } from '../packing/kinds'
+import { loadConfiguration, saveConfiguration } from '../storage/configurations'
+import { restoreEstimateSettings, saveEstimate } from '../storage/estimates'
+import { buildCsv } from '../export/csv'
+import { buildSummary } from '../export/summary'
+import { collectExport, suggestedFileName } from '../export/collect'
 import { buildAppState } from '../../../main/mcp/appState'
 import {
   buildEstimateReport,
@@ -182,6 +187,82 @@ async function handle(action: DriveAction): Promise<DriveResult> {
             ? { available: false, reason: 'An estimate is being recomputed right now — call get_estimate to wait for it.' }
             : estimateFrom(await settle.waitForSettle(), action.units)
         }
+      }
+    }
+
+    // --- the v3 data tier (slice `v3-data-tools`) -------------------------
+    //
+    // Every one of these is the SAME function the corresponding button calls.
+    // That is the point: ADR-0016's "a restore is one undo step", ADR-0018's
+    // pruning of overrides to the loaded file's kinds, and ADR-0017's rule that
+    // an export carries the screen's warnings are all already implemented once,
+    // in code a person's click goes through. A second path for Claude would be
+    // a second set of those decisions, drifting quietly.
+
+    case 'save_preset': {
+      // Saving means saving what is ON SCREEN, so settle first: a preset
+      // written mid-recompute would record inputs the person has already moved
+      // past. (The bridge serializes drive calls, so this is only ever waiting
+      // on a HUMAN edit — which is exactly what the tracker is for.)
+      await settle.waitForSettle()
+      if (!(await saveConfiguration(action.name))) {
+        throw new DriveRefusal(
+          store.getState().storageError ?? `could not save the preset “${action.name}”.`
+        )
+      }
+      return { kind: 'written' }
+    }
+
+    case 'apply_preset': {
+      if (!(await loadConfiguration(action.name))) {
+        throw new DriveRefusal(
+          store.getState().storageError ?? `no saved preset called “${action.name}”.`
+        )
+      }
+      return { kind: 'outcome', outcome: await settledOutcome(action.units) }
+    }
+
+    case 'save_estimate': {
+      await settle.waitForSettle()
+      const state = store.getState()
+      // Checked here rather than left to `saveEstimate`'s quiet false: that
+      // guard exists for a button that is already disabled, so its silence is
+      // right on screen and wrong on the wire, where a client would read "no
+      // error" as "saved" (ADR-0029: absence must carry its reason).
+      if (state.packStatus !== 'done' || state.packResult === null) {
+        throw new DriveRefusal(
+          'There is no current estimate to save — load a model and set inputs the app can ' +
+            'estimate from first.'
+        )
+      }
+      if (!(await saveEstimate())) {
+        throw new DriveRefusal(store.getState().storageError ?? 'the estimate could not be saved.')
+      }
+      return { kind: 'written' }
+    }
+
+    case 'restore_estimate': {
+      restoreEstimateSettings(action.row)
+      return { kind: 'outcome', outcome: await settledOutcome(action.units) }
+    }
+
+    case 'export_estimate': {
+      await settle.waitForSettle()
+      const input = collectExport()
+      if (input === null) {
+        throw new DriveRefusal(
+          'There is nothing to export — the app has no current estimate (no model loaded, or ' +
+            'the inputs do not produce one).'
+        )
+      }
+      return {
+        kind: 'text',
+        format: action.format,
+        // The name the app would have offered in its own save dialog, so a
+        // client that does write the file to disk names it the way the app
+        // would have (ADR-0017 §3).
+        suggestedName: suggestedFileName(input, action.format === 'csv' ? 'csv' : 'txt'),
+        text: action.format === 'csv' ? buildCsv(input) : buildSummary(input)
       }
     }
 

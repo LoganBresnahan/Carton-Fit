@@ -37,7 +37,35 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   like anyone else's.
   ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
 
+- **An AI assistant can reach your saved presets, receipts and exports.** Seven
+  more tools let a Claude conversation list and apply your saved presets, save
+  the current inputs as a new one, list and restore your saved estimates, keep
+  the estimate on screen as a receipt, and hand back the CSV or the summary
+  export as text — the same bytes the export buttons write, warnings included,
+  with nothing written to disk unless you save it yourself. Applying a preset or
+  restoring an estimate is one Ctrl+Z step, exactly like clicking it. There is
+  deliberately **no way for an assistant to delete** a preset or an estimate:
+  everything else it can do here is undoable, and that is not.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+- **In server mode the window waits until it is needed.** Claude Desktop starts
+  its servers when *it* starts, so Carton Fit launched with `--mcp-server` now
+  stays out of sight until the first tool call actually drives it — then it
+  appears, so you can watch. Closing that window no longer quits the app while
+  an assistant is still connected; the next tool call opens a fresh one. A
+  Carton Fit launched normally is completely unchanged: it shows its window and
+  quits when you close it.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 ### Changed
+
+- **An assistant can now tell you exactly which build answered.** A Carton Fit
+  that is not a released build reports its version with the commit appended —
+  `1.2.0+4f9f2f8` — the same way `/deploy` names an installer, so a number
+  quoted out of a chat cannot be mistaken for the release whose number it is
+  still carrying. Released builds report the plain number.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md),
+  [ADR-0027](doc/adr/0027-staged-builds-name-their-sha.md))
 
 - **A smaller install: 7.5 MB of never-used code no longer ships.** The MCP
   SDK's dependency tree included a full HTTP server stack this app never

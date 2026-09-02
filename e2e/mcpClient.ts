@@ -23,6 +23,24 @@ export function appVersion(): string {
     .version
 }
 
+/**
+ * What the server must introduce itself with (ADR-0029 slice
+ * `one-version-handshake`, ADR-0027's rule).
+ *
+ * `package.json`'s number plus the build id — read from `out/main/build-id.json`,
+ * which the build WROTE, rather than re-derived from git here. Re-deriving would
+ * ask a question about the repo as it stands now and compare the answer to a
+ * build made from the repo as it stood then; reading the artifact asks what was
+ * actually built. Between releases this is `1.2.0+4f9f2f8`; at a release tag with
+ * a clean tree it is just `1.2.0`, which is the whole point of the rule.
+ */
+export function expectedServerVersion(): string {
+  const { buildId } = JSON.parse(
+    readFileSync(join(REPO_ROOT, 'out', 'main', 'build-id.json'), 'utf8')
+  ) as { buildId: string }
+  return `${appVersion()}${buildId}`
+}
+
 /** Child env for a run-as-node launch. The harness strips this variable for
  *  app launches because VSCode leaks it; here it is the mechanism itself. */
 export function nodeModeEnv(): Record<string, string> {

@@ -1,3 +1,4 @@
+import type { EstimateRow } from './storage'
 import type { SetInputsRequest } from '../main/mcp/inputs'
 import type { EstimateReport } from '../main/mcp/estimate'
 import type { AppStateReport } from '../main/mcp/appState'
@@ -33,6 +34,22 @@ export type DriveAction =
   | { type: 'get_estimate'; units?: Partial<OutputUnits> }
   | { type: 'get_app_state'; units?: Partial<OutputUnits> }
   | { type: 'capture_view'; view?: 'model' | 'packed' }
+  // The v3 DATA tier (slice `v3-data-tools`). Only the WRITES and the two
+  // restores cross the bridge: reading the lists is a database query main can
+  // do itself, but saving means saving *what is on screen*, and applying means
+  // going through the store's own actions so one AI edit stays one undo step
+  // (ADR-0016 §2) — exactly the rule the v2 tier follows.
+  | { type: 'save_preset'; name: string }
+  | { type: 'apply_preset'; name: string; units?: Partial<OutputUnits> }
+  | { type: 'save_estimate' }
+  /** The row is fetched by MAIN and passed whole, so the renderer restores the
+   *  same bytes the list reported rather than looking an id up a second time. */
+  | { type: 'restore_estimate'; row: EstimateRow; units?: Partial<OutputUnits> }
+  | { type: 'export_estimate'; format: ExportFormat }
+
+/** What `export_estimate` can produce — the two file exports ADR-0017 defines,
+ *  minus the PNG, which `capture_view` already returns as an image. */
+export type ExportFormat = 'csv' | 'summary'
 
 /** An estimate that either exists or says WHY it does not — the same
  *  absence-with-reason rule the v1 wire schemas follow (phase-2 addendum). */
@@ -51,6 +68,10 @@ export type DriveResult =
   | { kind: 'outcome'; outcome: DriveOutcome }
   | { kind: 'estimate'; estimate: EstimateAvailability }
   | { kind: 'image'; pngBase64: string }
+  /** A write the renderer performed; main answers with the resulting LIST,
+   *  which it re-reads from the database it owns. */
+  | { kind: 'written' }
+  | { kind: 'text'; format: ExportFormat; suggestedName: string; text: string }
 
 export interface DriveEnvelope {
   id: number

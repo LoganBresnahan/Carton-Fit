@@ -1,6 +1,35 @@
+import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
+import { buildIdFrom } from './src/main/mcp/buildId'
+
+// WHICH BUILD THIS IS (ADR-0029 slice `one-version-handshake`, ADR-0027's
+// rule). The MCP handshake has to distinguish a release from a build that
+// merely still carries the last release's number — the same distinction
+// `/deploy` puts in an installer's filename. The RULE lives in
+// src/main/mcp/buildId.ts (pure, and unit-tested there); this is only the part
+// that has to ask git, which is possible at build time and not at runtime.
+//
+// Never throws. A build outside a git checkout — an exported tarball, a
+// vendored copy — has nothing truthful to say, and `buildIdFrom` answers that
+// with an empty suffix rather than a guess.
+function gitBuildId(): string {
+  const git = (...args: string[]): string =>
+    execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  try {
+    const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string }
+    return buildIdFrom({
+      version,
+      sha: git('rev-parse', '--short', 'HEAD'),
+      dirty: git('status', '--porcelain') !== '',
+      tags: git('tag', '--points-at', 'HEAD').split('\n').filter(Boolean)
+    })
+  } catch {
+    return ''
+  }
+}
 
 // Which node_modules packages were BUNDLED into out/main, written to
 // out/main/bundled-modules.json. This is licence bookkeeping, not build
@@ -25,6 +54,23 @@ function bundledModulesManifest(): Plugin {
         type: 'asset',
         fileName: 'bundled-modules.json',
         source: JSON.stringify([...packages].sort(), null, 2) + '\n'
+      })
+    }
+  }
+}
+
+// The same id, written beside the bundle so a test can read what was built
+// rather than re-deriving it from a repo that may have moved on. Same idea as
+// bundled-modules.json: what shipped is a fact about the build, not something
+// to recompute later and hope it matches.
+function buildIdManifest(): Plugin {
+  return {
+    name: 'build-id-manifest',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'build-id.json',
+        source: JSON.stringify({ buildId: gitBuildId() }, null, 2) + '\n'
       })
     }
   }
@@ -68,8 +114,14 @@ export default defineConfig({
   // binary — which is why it must be its own file whose import graph never
   // touches 'electron'. Phase 5's --mcp shim grows out of that entry.
   main: {
+    // The one build-time constant in the app. Injected into MAIN alone,
+    // because main is the only process that answers the "which build?"
+    // question — the renderer shows no version at all (ADR-0027's revisit
+    // trigger).
+    define: { __BUILD_ID__: JSON.stringify(gitBuildId()) },
     plugins: [
       externalizeDepsPlugin({ exclude: ['occt-import-js', 'three'] }),
+      buildIdManifest(),
       bundledModulesManifest()
     ],
     build: {

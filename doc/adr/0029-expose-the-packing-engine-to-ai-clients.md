@@ -328,6 +328,111 @@ result and the stateless call produce identical wording from identical facts —
 the drive tier's answer can never disagree with the v1 tool's for the same
 question.
 
+### Phase-4 addendum (2026-09-01) — the lifecycle, the data tier, and one honest version
+
+Four slices, all layering on phase 3's host and bridge. Each settled a question
+the earlier phases could name but not yet answer.
+
+**stdout is TAKEN, not asked for.** In server mode this process's stdout is the
+MCP wire, and one stray byte on it corrupts a JSON-RPC frame — the handshake if
+it happens early, one answer inside a working session if it happens late.
+Redirecting `console.log` would cover today's ways of printing and none of
+tomorrow's, so `mcp/stdout.ts` captures the real `process.stdout.write` and
+hands it to the transport alone; everything else written to that stream is
+diverted to stderr, where Claude Desktop shows it in the server's log. Nothing
+is lost, only moved off the wire. Claimed at MODULE LOAD by both entries,
+because the client's transport is reading our stdout from the moment it spawned
+us — a boot message precedes the server's own construction. The one subtlety is
+that the transport waits on the real stream's `drain` when a write returns
+false, so the protocol writer is a proxy over the claimed stream rather than a
+wrapping `Writable` with a buffer of its own: `capture_view`'s base64 PNG is
+exactly the payload that makes an unbounded buffer matter.
+
+**The window is hidden until it is driven, and closing it no longer ends the
+process.** Claude Desktop starts its servers when *it* starts, so a window
+appearing on launch is an app taking over the screen because a chat client
+booted. `--mcp-server` therefore defers the show until the first drive call
+(`ensureWindow`, which the bridge now routes every call through). Three
+lifecycle interactions came with that, and all three are decided rather than
+inherited:
+
+- **The update check follows the window, not the app.** ADR-0021 §2 gated it on
+  a visible window for latency; hidden launch makes that gate stronger — an app
+  serving MCP with nothing on screen has nobody to read a banner, so it makes no
+  network request at all until it has one. A headless-forever session is
+  therefore also a session that never phones GitHub.
+- **`window-all-closed` does not quit in server mode.** The process belongs to
+  the MCP client as much as to the person, and quitting would kill a server
+  Claude Desktop is still holding — the next tool call would fail as a transport
+  error rather than an answer. `ensureWindow` builds a new window when one is
+  next needed, which is exactly how macOS has always treated a closed window,
+  now for the same reason everywhere. A rebuilt window starts empty and the
+  reply says so (`state.file.loaded` is false) rather than leaving the client to
+  wonder where its model went. The bridge's readiness therefore had to become a
+  property of a PAGE rather than of the app: keyed on webContents id and cleared
+  when that page starts loading again, which also discharges the reload race
+  phase 3 documented as "times out and reports".
+- **`backgroundThrottling: false`, in server mode only.** A window created with
+  `show: false` is a hidden page to Chromium, which throttles its timers and
+  stops its animation frames. This mode's whole shape is a window sitting hidden
+  for as long as Claude Desktop is open — and auto-run is debounced on a timer
+  while the viewport renders on rAF, so a throttled hidden page turns the first
+  drive call into a minutes-long wait for milliseconds of work. The ordinary app
+  keeps throttling: there, a hidden window is a minimized one nobody is waiting
+  on.
+
+**The v3 data tier is seven tools, and deliberately not eight.** Reads
+(`list_presets`, `list_saved_estimates`) answer from main's own database
+connection — a round trip through the renderer would add nothing but a way for
+the tool's list and the panel's list to disagree. Writes and restores
+(`save_preset`, `apply_preset`, `save_estimate`, `restore_estimate`,
+`export_estimate`) go through the renderer's own functions over the bridge,
+because "save" means *save what is on screen* and "apply" means *through the
+store's own actions*, where ADR-0016's one-restore-one-undo-step and ADR-0018's
+pruning of overrides to the loaded file's kinds already live. The eighth tool —
+delete — is absent on purpose and pinned by a test that says so: everything else
+here is recoverable, a wrong preset is re-applied and a wrong restore is one
+Ctrl+Z, but a deleted preset is gone and the person whose data it is may not be
+at the screen. The app's own buttons remain the way to delete. Two smaller
+consequences: `export_estimate` returns the text rather than writing a file (the
+save dialog is for a human choosing a location; a client gets the bytes, plus
+the name the app would have offered), and `save_estimate` refuses loudly where
+the button quietly does nothing — a disabled button's silence is right on screen
+and wrong on a wire, where "no error" reads as "saved".
+
+**One version, stamped on the wire and nowhere else.** ADR-0020 makes the
+version a promise about behaviour, and between releases `package.json` still
+carries the last release's number — so the handshake would let a dogfooding
+build introduce itself as the release it is not. That is ADR-0027's confusion
+arriving on a second surface: there it was an installer's filename, here it is
+what Claude quotes back to someone asking which version answered. The same rule
+and the same `+sha` form now apply to `serverInfo` and to `get_app_state`'s
+version field. **Composed at build time and only for this wire**, because
+`src/main/version.ts` REJECTS a build suffix by design: the update check
+compares `app.getVersion()` against a release tag and its documented response to
+anything unparseable is silence (ADR-0021 §3), so stamping the version at its
+source would buy a truthful handshake by making the update check permanently
+mute. An electron-vite `define` injects the suffix, `package.json` and
+`app.getVersion()` are untouched, and the build writes the same id to
+`out/main/build-id.json` so a test can read what was built rather than
+re-deriving it from a repo that may have moved on.
+
+**Verification.** 748 vitest, 97 packaged e2e. The three lifecycle specs are
+mutation-tested — inverting the hidden/visible decision fails exactly the two
+launch specs, and deleting the `window-all-closed` carve-out fails exactly the
+quit spec (its first shape did NOT: polling the window count answered before
+the process had finished exiting, so the assertion passed against the mutant,
+and it had to become "wait for the quit that must not come"). The v3 tier is
+proven twice: against fakes over the in-memory transport for the tier's own
+choice of who answers what, and against the PACKAGED bytes for the half only a
+real app has — a preset written by better-sqlite3, read back by main, applied,
+and re-packed through the debounce and the worker to a golden count. The one
+claim no spec reaches is the reveal itself: it fires from the drive bridge,
+which needs an MCP client on stdin, and Playwright's Electron launch gives the
+child no writable stdin. Every drive call routing through `ensureWindow` is
+covered (the drive specs fail outright otherwise) and the hidden start is
+covered; the show in between is a dogfooding check.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

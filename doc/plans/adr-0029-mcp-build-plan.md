@@ -223,13 +223,22 @@ contract design._
 _Four slices layering on phase 3's host and bridge; mutually independent — batch
 freely._
 
-- [ ] `stdout-protocol-discipline` · low — src/main has no stdout-bound console
+- [x] `stdout-protocol-discipline` · low — src/main has no stdout-bound console
       calls today (storage.ts uses warn/error → stderr under Node), so this is a
       small guard keyed off the server-mode flag: redirect console.log/info to
       stderr, guard against future strays. A corrupted stream breaks the first
       handshake instantly — loud.
       Depends on: `mcp-server-host-in-main`.
-- [ ] `hidden-launch-show-on-drive` · medium — Server-mode flag suppresses
+      **Shipped 2026-09-01**, and STRONGER than the slice described: rather than
+      redirecting `console.log`, `mcp/stdout.ts` captures the real
+      `process.stdout.write` and gives it to the transport alone, so a direct
+      write from anywhere in the bundle is diverted too — the case a console
+      redirect misses. Claimed at module load by both entries (boot output
+      precedes the server's construction). The protocol writer is a proxy over
+      the claimed stream, not a wrapping Writable: the transport waits on the
+      real stream's `drain`, and `capture_view`'s PNG is the payload that makes
+      a private buffer matter.
+- [x] `hidden-launch-show-on-drive` · medium — Server-mode flag suppresses
       `win.show()`; first drive-tier call shows the window. Three index.ts
       lifecycle interactions lift it above mechanical: `startUpdateCheck()` is
       gated on the window showing (ADR-0021 §2) and needs a decision for hidden
@@ -238,7 +247,24 @@ freely._
       maximize-before-show/windowState sequencing must survive a deferred show.
       See sequencing risk 3.
       Depends on: `mcp-server-host-in-main`, `v2-drive-tools`.
-- [ ] `v3-data-tools` · medium — Seven tools, every one a thin adapter over a seam
+      **Shipped 2026-09-01.** All three interactions decided, not inherited: the
+      update check now follows the WINDOW (a hidden server never phones GitHub);
+      `window-all-closed` carves out server mode and `ensureWindow` rebuilds a
+      closed window on demand, which forced the bridge's readiness to become a
+      property of a page rather than of the app — discharging the reload race
+      phase 3 had documented as "times out and reports"; and maximize-before-show
+      survived untouched because it was never tied to `ready-to-show`. One trap
+      the slice did not name: a `show: false` window is a HIDDEN PAGE to
+      Chromium, so its timers throttle and rAF stops — fatal for a mode whose
+      shape is a window idle for hours then driven, so server mode sets
+      `backgroundThrottling: false`. Risk 3 is pinned in both directions by
+      `e2e/mcp-hidden-launch.spec.ts` (the plain app still quits; the server does
+      not), mutation-tested. What no spec reaches is the reveal itself —
+      Playwright's Electron launch gives the child no writable stdin, so the
+      drive call that triggers it cannot be made from a spec; the hidden start
+      and the `ensureWindow` routing are covered, the show between them is a
+      dogfooding check.
+- [x] `v3-data-tools` · medium — Seven tools, every one a thin adapter over a seam
       that exists: preset/estimate lists via main's own db functions;
       apply/restore/save via the renderer functions that already carry ADR-0016/0018
       semantics, riding the v2 bridge ("through the store actions, never a side
@@ -246,13 +272,34 @@ freely._
       string and skipping the dialog path.
       Depends on: `mcp-server-host-in-main`, `v2-drive-tools`,
       `explicit-units-wire-contract`.
-- [ ] `one-version-handshake` · medium — `app.getVersion()` (with `+sha` when
+      **Shipped 2026-09-01** as SEVEN tools, not the planned seven-with-delete:
+      `list_presets`, `save_preset`, `apply_preset`, `list_saved_estimates`,
+      `save_estimate`, `restore_estimate`, `export_estimate`. Deletion is
+      deliberately absent and pinned by a test — everything else here is
+      recoverable and a deleted preset is not. The split the slice predicted
+      held exactly: reads answer from main's own connection, writes and restores
+      ride the bridge into the renderer's own functions. Two things it did not
+      predict — `export_estimate` returns the text instead of taking the dialog
+      path (so it also returns the name the app would have offered), and
+      `save_estimate` had to refuse LOUDLY where the button quietly returns
+      false, because on a wire "no error" reads as "saved". One small db
+      addition: `EstimatesStore.byId`, since this is the first caller handed an
+      id rather than a row.
+- [x] `one-version-handshake` · medium — `app.getVersion()` (with `+sha` when
       staged, per ADR-0027) into the SDK's serverInfo and a version field in
       `get_app_state`, plus the doc amendment folding tool schemas into ADR-0020's
       surface. The non-trivial part: ADR-0027 §4 keeps the internal version string
       clean and `src/main/version.ts` rejects build suffixes, so the `+sha` form is
       composed at build time (electron-vite define) without touching either.
       Depends on: `mcp-server-host-in-main`, `v2-drive-tools`.
+      **Shipped 2026-09-01** exactly as the non-trivial part described. The rule
+      lives in `src/main/mcp/buildId.ts` (pure, unit-tested against fabricated
+      git states); the vite config asks git and injects the suffix; `version.ts`
+      and `package.json` are untouched, and a test asserts `parseVersion` still
+      rejects the stamped form — which is the whole reason it is stamped only on
+      the wire. The build also writes `out/main/build-id.json`, so the e2e
+      asserts against what was BUILT rather than re-deriving from a repo that
+      may have moved on.
 
 ### 5. Fable batch B: --mcp shim + single-instance pipe — **fable**
 _Deliberately isolated: the highest-risk slice in the plan. Follow with a

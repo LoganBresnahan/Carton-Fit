@@ -321,3 +321,81 @@ export const captureViewInput = {
     .optional()
     .describe('Pin which view to capture; omitted captures whatever the app is showing (the packed carton once an estimate exists).')
 }
+
+// --- the data tier (v3 — slice `v3-data-tools`) ---------------------------
+//
+// Presets and saved estimates: the app's own persisted data (ADR-0007,
+// ADR-0016), reachable by a client that cannot click the panels. Reads are
+// answered from the database directly; writes and restores go through the
+// running app, so what gets saved is what is on screen and what gets applied
+// lands on the undo stack.
+//
+// DELETION IS DELIBERATELY ABSENT. Every other tool in this tier is
+// recoverable — a wrong preset is re-applied, a wrong restore is one Ctrl+Z —
+// but a deleted preset is gone, and the person whose data it is may not be
+// watching. ADR-0029's v3 scope is presets/saved estimates/exports, and none of
+// that requires destroying any. The app's own buttons remain the way to delete.
+
+const savedAt = z
+  .string()
+  .describe('When this was saved, ISO 8601 UTC — or "unknown" for a row whose timestamp is unreadable.')
+
+export const listPresetsInput = {}
+
+export const presetsOutput = {
+  presets: z.array(z.object({ name: z.string(), savedAt }))
+}
+
+export const savePresetInput = {
+  name: z
+    .string()
+    .min(1)
+    .describe(
+      'What to call it. An existing preset of the same name is REPLACED with the app’s current settings.'
+    )
+}
+
+export const applyPresetInput = {
+  name: z.string().min(1).describe('A preset name as list_presets reports it.'),
+  outputUnits: outputUnitsInput
+}
+
+export const listSavedEstimatesInput = {
+  limit: z.number().int().positive().optional().describe('How many, newest first. Defaults to 50.')
+}
+
+export const savedEstimatesOutput = {
+  estimates: z.array(
+    z.object({
+      id: z.number().describe('Pass this to restore_estimate.'),
+      file: z.string(),
+      savedAt,
+      summary: z
+        .string()
+        .describe('The one-line receipt the app’s own list shows for this row — same sentence.')
+    })
+  )
+}
+
+export const saveEstimateInput = {}
+
+export const restoreEstimateInput = {
+  id: z.number().int().describe('A saved estimate’s id, as list_saved_estimates reports it.'),
+  outputUnits: outputUnitsInput
+}
+
+export const exportEstimateInput = {
+  format: z
+    .enum(['csv', 'summary'])
+    .describe(
+      'csv: the per-part measurements table. summary: the paste-into-a-quote text block, warnings included.'
+    )
+}
+
+export const exportEstimateOutput = {
+  format: z.enum(['csv', 'summary']),
+  suggestedName: z
+    .string()
+    .describe('The filename the app would offer — part, carton and units — if the person saved this themselves.'),
+  text: z.string()
+}

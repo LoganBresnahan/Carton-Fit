@@ -45,13 +45,29 @@ depend on:
 3. **Export formats.** The CSV's columns and the summary's phrasing are read by
    people and pasted into quotes. Adding a column is a minor; removing or
    reordering one is a major.
+4. **The MCP tool surface** *(added 2026-09-01, ADR-0029 phase 4)*. Tool names,
+   their input and output schemas, and the meaning of the qualifications every
+   answer carries. Adding a tool or an optional field is a minor; removing a
+   tool, renaming one, requiring a field that used to be optional, or dropping a
+   qualification from an output schema is a major — the SDK validates structured
+   output against those schemas, so a dropped qualification is not a smaller
+   answer, it is a failed call for every client that has one. This is one number
+   with the app's, not a second version line: a client asks the server which
+   build it is talking to and gets the same answer the installer's filename
+   gives, which is what makes "which version answered?" a question with one
+   answer.
 
 Breaking any of those is **2.0.0**.
 
 This says what a *released* number promises. What an unreleased build's number
 promises — nothing, since `package.json` is not bumped until release — is
 **ADR-0027**: `/deploy` names such a build after its sha so it cannot be
-mistaken for the release whose number it is still carrying.
+mistaken for the release whose number it is still carrying. *(2026-09-01: the
+MCP handshake applies the same rule for the same reason — a server introducing
+itself as `1.2.0+4f9f2f8` is telling a client that this build is not that
+release. The suffix is composed at build time and lives only on that wire;
+`package.json` and `app.getVersion()` stay clean, because `version.ts` rejects a
+suffix and a stamped one would silence the update check.)*
 
 **Explicitly NOT covered — a changed count is not a breaking change.** Packing
 is heuristic by design (ADR-0003): *Fast* reports a bound, not a proof, and

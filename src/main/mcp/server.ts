@@ -5,6 +5,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { readModel } from '../occt/ingest'
 import type { OcctWasmContext } from '../occt/wasmPath'
 import type { DriveBridge, DriveOutcome, EstimateAvailability } from '../../shared/mcpDrive'
+import { presetsReport, savedEstimatesReport, type ToolStorage } from './data'
 import { estimateParts, EstimateInputError, type EstimateInput } from './estimate'
 import type { SetInputsRequest } from './inputs'
 import { inspectParts } from './inspect'
@@ -20,7 +21,17 @@ import {
   inspectOutput,
   loadModelInput,
   setInputsInput,
-  setPartWeightInput
+  setPartWeightInput,
+  applyPresetInput,
+  exportEstimateInput,
+  exportEstimateOutput,
+  listPresetsInput,
+  listSavedEstimatesInput,
+  presetsOutput,
+  restoreEstimateInput,
+  saveEstimateInput,
+  savePresetInput,
+  savedEstimatesOutput
 } from './schemas'
 
 // The v1 tool surface (ADR-0029). Two tools, both stateless, both answering
@@ -65,6 +76,10 @@ export interface ServerOptions {
    *  ABSENT rather than present-and-shrugging (ADR-0029: a tool that shrugs is
    *  worse than absence). */
   drive?: DriveBridge
+  /** The app's own database, present under the same condition as `drive` — the
+   *  v3 data tier needs BOTH (a list to read from, and a window to save what is
+   *  on screen), so it registers only when both are here. */
+  storage?: ToolStorage
 }
 
 /** Turn any failure into the message an AI client will read out loud. Input
@@ -129,6 +144,9 @@ export function createCartonFitServer(options: ServerOptions): McpServer {
 
   if (options.drive !== undefined) {
     registerDriveTools(server, options.drive, options.version)
+    if (options.storage !== undefined) {
+      registerDataTools(server, options.drive, options.storage, options.version)
+    }
   }
 
   server.registerTool(
@@ -168,16 +186,23 @@ export function createCartonFitServer(options: ServerOptions): McpServer {
  * reflects the change. The version is stamped into every state reply HERE,
  * because main is the one process that knows it — one number, one source.
  */
+/** A drive outcome with the version stamped in, shaped for
+ *  `driveOutcomeOutput`. The version is added HERE, in main, because main is
+ *  the one process that knows it — one number, one source (ADR-0020). */
+function stamped(
+  outcome: DriveOutcome,
+  version: string
+): { state: object; estimate: EstimateAvailability } {
+  return { ...outcome, state: { ...outcome.state, version } }
+}
+
+/** The sentence every settling tool ends with, so a client learns the property
+ *  once and can rely on it everywhere. */
+const SETTLED =
+  'The reply is not sent until the app has re-estimated for this change, so the estimate ' +
+  'in it is never stale.'
+
 function registerDriveTools(server: McpServer, drive: DriveBridge, version: string): void {
-  /** A drive outcome with the version stamped in, shaped for `driveOutcomeOutput`. */
-  function stamped(outcome: DriveOutcome): { state: object; estimate: EstimateAvailability } {
-    return { ...outcome, state: { ...outcome.state, version } }
-  }
-
-  const SETTLED =
-    'The reply is not sent until the app has re-estimated for this change, so the estimate ' +
-    'in it is never stale.'
-
   server.registerTool(
     'load_model',
     {
@@ -203,7 +228,7 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
           units: outputUnits
         })
         if (result.kind !== 'outcome') throw new Error('unexpected drive reply')
-        return toolOk(stamped(result.outcome))
+        return toolOk(stamped(result.outcome, version))
       } catch (err) {
         return toolError(err)
       }
@@ -232,7 +257,7 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
           units: outputUnits
         })
         if (result.kind !== 'outcome') throw new Error('unexpected drive reply')
-        return toolOk(stamped(result.outcome))
+        return toolOk(stamped(result.outcome, version))
       } catch (err) {
         return toolError(err)
       }
@@ -260,7 +285,7 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
           units: outputUnits
         })
         if (result.kind !== 'outcome') throw new Error('unexpected drive reply')
-        return toolOk(stamped(result.outcome))
+        return toolOk(stamped(result.outcome, version))
       } catch (err) {
         return toolError(err)
       }
@@ -312,7 +337,7 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
       try {
         const result = await drive.call({ type: 'get_app_state', units: outputUnits })
         if (result.kind !== 'outcome') throw new Error('unexpected drive reply')
-        return toolOk(stamped(result.outcome))
+        return toolOk(stamped(result.outcome, version))
       } catch (err) {
         return toolError(err)
       }
@@ -336,6 +361,188 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         return {
           content: [{ type: 'image', data: result.pngBase64, mimeType: 'image/png' }]
         }
+      } catch (err) {
+        return toolError(err)
+      }
+    }
+  )
+}
+
+/**
+ * The v3 DATA tier (ADR-0029): the app's saved presets and estimates, and its
+ * exports.
+ *
+ * SPLIT BY WHO OWNS THE ANSWER, which is why some of these touch the bridge and
+ * some do not. A LIST is a database query and main holds the database, so
+ * `list_presets` and `list_saved_estimates` answer directly — a round trip
+ * through the renderer would add nothing but a way for the tool's list and the
+ * panel's list to disagree. A WRITE means "save what is on screen" and a
+ * RESTORE means "apply this through the store's own actions" (ADR-0016 §2: one
+ * restore is one undo step), so those go to the renderer, exactly like the v2
+ * tier. Nothing here re-implements either half.
+ */
+function registerDataTools(
+  server: McpServer,
+  drive: DriveBridge,
+  storage: ToolStorage,
+  version: string
+): void {
+  server.registerTool(
+    'list_presets',
+    {
+      title: 'List saved carton presets',
+      description:
+        'The named input presets saved in this app — the same list its preset picker shows. ' +
+        'Apply one with apply_preset.',
+      inputSchema: listPresetsInput,
+      outputSchema: presetsOutput
+    },
+    async () => {
+      try {
+        return toolOk(presetsReport(storage.listConfigurations()))
+      } catch (err) {
+        return toolError(err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'save_preset',
+    {
+      title: 'Save the current inputs as a preset',
+      description:
+        'Save the app’s CURRENT inputs — carton, clearances, weight cap, mode, tier, units — ' +
+        'under a name, so they can be recalled later. Saves what is on screen, so set the ' +
+        'inputs first. An existing preset of the same name is replaced.',
+      inputSchema: savePresetInput,
+      outputSchema: presetsOutput
+    },
+    async ({ name }) => {
+      try {
+        const result = await drive.call({ type: 'save_preset', name })
+        if (result.kind !== 'written') throw new Error('unexpected drive reply')
+        // Re-read rather than echo: the list that comes back is the one the
+        // database now holds, which is the only version worth reporting.
+        return toolOk(presetsReport(storage.listConfigurations()))
+      } catch (err) {
+        return toolError(err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'apply_preset',
+    {
+      title: 'Apply a saved preset',
+      description:
+        'Load a saved preset into the running app’s inputs. Merged over the current inputs, ' +
+        'so a preset written by an older build cannot blank out a field it never knew about. ' +
+        'One call = one Ctrl+Z step. ' +
+        SETTLED,
+      inputSchema: applyPresetInput,
+      outputSchema: driveOutcomeOutput
+    },
+    async ({ name, outputUnits }) => {
+      try {
+        const result = await drive.call({ type: 'apply_preset', name, units: outputUnits })
+        if (result.kind !== 'outcome') throw new Error('unexpected drive reply')
+        return toolOk(stamped(result.outcome, version))
+      } catch (err) {
+        return toolError(err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'list_saved_estimates',
+    {
+      title: 'List saved estimates',
+      description:
+        'The estimates someone chose to keep, newest first, each with the one-line receipt the ' +
+        'app’s own list shows. These are RECEIPTS, not a cache: restore_estimate re-applies a ' +
+        'row’s inputs and the engine computes the answer again (ADR-0016).',
+      inputSchema: listSavedEstimatesInput,
+      outputSchema: savedEstimatesOutput
+    },
+    async ({ limit }) => {
+      try {
+        return toolOk(savedEstimatesReport(storage.recentEstimates(limit)))
+      } catch (err) {
+        return toolError(err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'save_estimate',
+    {
+      title: 'Save the current estimate',
+      description:
+        'Keep the estimate the app is showing right now, with the inputs that produced it. ' +
+        'Explicit by design: the app records nothing automatically, because only the person ' +
+        'asking knows which estimate was an answer rather than a keystroke (ADR-0016).',
+      inputSchema: saveEstimateInput,
+      outputSchema: savedEstimatesOutput
+    },
+    async () => {
+      try {
+        const result = await drive.call({ type: 'save_estimate' })
+        if (result.kind !== 'written') throw new Error('unexpected drive reply')
+        return toolOk(savedEstimatesReport(storage.recentEstimates()))
+      } catch (err) {
+        return toolError(err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'restore_estimate',
+    {
+      title: 'Restore a saved estimate’s inputs',
+      description:
+        'Re-apply a saved estimate’s INPUTS to the running app. Never its stored answer: the ' +
+        'app always shows something the engine just computed, so with the same file loaded ' +
+        'this reproduces the number honestly, and with a different file loaded you get that ' +
+        'file’s answer under those inputs. Per-part weight overrides come back too, pruned to ' +
+        'the kinds the loaded file actually has. ' +
+        SETTLED,
+      inputSchema: restoreEstimateInput,
+      outputSchema: driveOutcomeOutput
+    },
+    async ({ id, outputUnits }) => {
+      try {
+        const row = storage.estimateById(id)
+        if (row === null) {
+          throw new Error(`no saved estimate with id ${id} — call list_saved_estimates for the ids.`)
+        }
+        const result = await drive.call({ type: 'restore_estimate', row, units: outputUnits })
+        if (result.kind !== 'outcome') throw new Error('unexpected drive reply')
+        return toolOk(stamped(result.outcome, version))
+      } catch (err) {
+        return toolError(err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'export_estimate',
+    {
+      title: 'Export the current estimate',
+      description:
+        'The app’s own export of the estimate on screen, returned as text rather than written ' +
+        'to a file — no save dialog, nothing lands on disk. csv is the per-part measurements ' +
+        'table; summary is the paste-into-a-quote block. Both carry every warning the screen ' +
+        'carries: an answer that is qualified in the app stays qualified once it leaves it ' +
+        '(ADR-0017).',
+      inputSchema: exportEstimateInput,
+      outputSchema: exportEstimateOutput
+    },
+    async ({ format }) => {
+      try {
+        const result = await drive.call({ type: 'export_estimate', format })
+        if (result.kind !== 'text') throw new Error('unexpected drive reply')
+        const { kind: _kind, ...report } = result
+        return toolOk(report)
       } catch (err) {
         return toolError(err)
       }

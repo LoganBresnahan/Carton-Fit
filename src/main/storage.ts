@@ -1,6 +1,7 @@
 import { app, ipcMain } from 'electron'
 import { join } from 'node:path'
 import type { Database } from 'better-sqlite3'
+import type { ToolStorage } from './mcp/data'
 import { openDatabase } from './db/open'
 import { ConfigurationsStore } from './db/configurations'
 import { EstimatesStore } from './db/estimates'
@@ -111,6 +112,27 @@ export function registerStorageIpc(): void {
     (_event, contentHash: string, limit?: number) =>
       require_().estimates.forContent(contentHash, limit)
   )
+}
+
+/**
+ * The reads the v3 MCP tools do (ADR-0029).
+ *
+ * Straight to main's own connection rather than back out through the renderer:
+ * the lists are already here, and a round trip would only add a way for the
+ * tool's answer and the panel's list to disagree. WRITES are deliberately not
+ * here — saving a preset or an estimate means saving *what is on screen*, so
+ * those go through the renderer's own functions over the drive bridge, where
+ * ADR-0016's and ADR-0018's semantics already live.
+ *
+ * `require_` throws when storage is unavailable, and that message reaches the
+ * AI client as the tool's error — which is right: "presets are broken" and
+ * "you have no presets" must not look the same (ADR-0007). The interface
+ * itself lives in mcp/data.ts, which the Electron-free server module can see.
+ */
+export const storageForTools: ToolStorage = {
+  listConfigurations: () => require_().configurations.list(),
+  recentEstimates: (limit) => require_().estimates.recent(limit),
+  estimateById: (id) => require_().estimates.byId(id)
 }
 
 /** Close the handle on quit so WAL checkpoints and the file is left clean. */

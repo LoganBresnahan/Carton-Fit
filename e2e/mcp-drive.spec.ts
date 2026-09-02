@@ -6,7 +6,13 @@ import type { DriveOutcome } from '../src/shared/mcpDrive'
 import type { AppStateReport } from '../src/main/mcp/appState'
 import type { EstimateReport } from '../src/main/mcp/estimate'
 import { SAMPLES } from './harness'
-import { appHostedLaunch, appModeEnv, appVersion, callStructured, connect } from './mcpClient'
+import {
+  appHostedLaunch,
+  appModeEnv,
+  callStructured,
+  connect,
+  expectedServerVersion
+} from './mcpClient'
 
 /**
  * The v2 drive tier (ADR-0029, slice `v2-drive-tools`): Claude's half of the
@@ -48,7 +54,7 @@ test('a drive journey: every reply carries the estimate for ITS OWN inputs', asy
   try {
     const loaded = await loadCube(client)
     expect(loaded.state.file).toMatchObject({ loaded: true, name: CUBE_STL.file, parts: 1 })
-    expect(loaded.state.version).toBe(appVersion())
+    expect(loaded.state.version).toBe(expectedServerVersion())
 
     // Golden: 12 in carton → 27,000 cubes. The reply to the set_inputs call
     // itself must already say so (auto-run: setting inputs IS estimating).
@@ -108,7 +114,7 @@ test('a drive journey: every reply carries the estimate for ITS OWN inputs', asy
     const state = await callStructured<Outcome>(client, 'get_app_state', {})
     expect(state.state.file).toMatchObject({ loaded: true, name: CUBE_STL.file })
     expect(state.state.inputs.mode).toBe('max-quantity')
-    expect(state.state.version).toBe(appVersion())
+    expect(state.state.version).toBe(expectedServerVersion())
   } finally {
     await client.close()
   }

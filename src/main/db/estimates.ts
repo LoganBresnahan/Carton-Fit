@@ -19,6 +19,7 @@ export class EstimatesStore {
   readonly #insert: Statement
   readonly #recent: Statement
   readonly #byHash: Statement
+  readonly #byId: Statement
   readonly #now: () => number
 
   constructor(db: Database, now: () => number = Date.now) {
@@ -36,6 +37,7 @@ export class EstimatesStore {
     this.#byHash = db.prepare(
       'SELECT * FROM estimates WHERE content_hash = ? ORDER BY created_at DESC, id DESC LIMIT ?'
     )
+    this.#byId = db.prepare('SELECT * FROM estimates WHERE id = ?')
   }
 
   /** Record an estimate. Returns its new id. */
@@ -53,6 +55,15 @@ export class EstimatesStore {
   /** Most recent estimates, newest first. */
   recent(limit = 50): EstimateRow[] {
     return (this.#recent.all(limit) as StoredRow[]).map(hydrate)
+  }
+
+  /** One row by id, or null. Added for the MCP restore tool (ADR-0029 v3),
+   *  which is handed an id from a list rather than a row: the app's own restore
+   *  button already holds the row it is rendering, so this is the first caller
+   *  that has to look one up. */
+  byId(id: number): EstimateRow | null {
+    const row = this.#byId.get(id) as StoredRow | undefined
+    return row === undefined ? null : hydrate(row)
   }
 
   /** History for one part, newest first — "have I estimated this before?". */

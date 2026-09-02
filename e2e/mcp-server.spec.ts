@@ -7,7 +7,7 @@ import { SAMPLES } from './harness'
 import {
   appHostedLaunch,
   appModeEnv,
-  appVersion,
+  expectedServerVersion,
   callStructured,
   connect,
   headlessLaunch,
@@ -40,10 +40,13 @@ test('headless entry serves v1 over stdio under ELECTRON_RUN_AS_NODE', async () 
   const client = await connect(headlessLaunch(), nodeModeEnv())
   try {
     // The handshake carries the build's identity (ADR-0029: one version
-    // number). Headless derives it without Electron; it must equal the app's.
+    // number). Headless derives it without Electron; it must equal the app's —
+    // and it carries the `+sha` suffix whenever this build is not its own
+    // release, so a dogfooding build cannot introduce itself as the release
+    // whose number package.json is still holding (ADR-0027).
     expect(client.getServerVersion()).toMatchObject({
       name: 'carton-fit',
-      version: appVersion()
+      version: expectedServerVersion()
     })
 
     // v1 only, and deliberately so: the drive tools need a running app, and a
@@ -95,17 +98,27 @@ test('the app launched with --mcp-server serves the full surface from main', asy
   try {
     expect(client.getServerVersion()).toMatchObject({
       name: 'carton-fit',
-      version: appVersion()
+      version: expectedServerVersion()
     })
-    // The whole surface: v1 plus the drive tier the running app makes possible.
+    // The whole surface: v1, plus the drive and data tiers the running app
+    // makes possible. The headless entry above publishes two; this publishes
+    // fifteen, and the difference is exactly "there is a window and a database
+    // here".
     const { tools } = await client.listTools()
     expect(tools.map((tool) => tool.name).sort()).toEqual([
+      'apply_preset',
       'capture_view',
       'estimate',
+      'export_estimate',
       'get_app_state',
       'get_estimate',
       'inspect_model',
+      'list_presets',
+      'list_saved_estimates',
       'load_model',
+      'restore_estimate',
+      'save_estimate',
+      'save_preset',
       'set_inputs',
       'set_part_weight'
     ])

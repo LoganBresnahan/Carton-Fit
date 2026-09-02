@@ -556,8 +556,37 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         two count specs). The verify pass also caught a v1 qualification lying
         (overrides-only estimates said "no weight given, cap could not bind"
         while being weight-bound) — fixed in the shared report assembly.
-      92 packaged e2e, 721 vitest green twice. Next: phase 4 (opus batch —
-      stdout discipline, hidden launch, v3 data tools, version handshake).
+      92 packaged e2e, 721 vitest green twice.
+      **Phase 4 landed 2026-09-01** (all four opus slices) — the server grows a
+      lifecycle, a data tier, and an honest name:
+      - `stdout-protocol-discipline`: stdout is TAKEN rather than asked for —
+        the real `process.stdout.write` is captured for the transport and every
+        other write to that stream goes to stderr, so a future direct write
+        (the case a `console.log` redirect misses) cannot corrupt a frame.
+      - `hidden-launch-show-on-drive`: `--mcp-server` launches hidden and
+        reveals on the first drive call, because Claude Desktop starts its
+        servers when *it* starts. All three lifecycle interactions decided: the
+        update check follows the window (a hidden server never phones GitHub),
+        `window-all-closed` carves out server mode with a window rebuilt on
+        demand — which made the bridge's readiness a property of a page and
+        discharged phase 3's reload race — and `backgroundThrottling: false`,
+        the trap nobody named: a `show: false` window is a hidden page whose
+        timers throttle and whose rAF stops, fatal for a mode that idles for
+        hours then gets driven. Both directions of the quit rule are pinned and
+        mutation-tested.
+      - `v3-data-tools`: SEVEN tools, and deliberately not eight. Reads answer
+        from main's own database; writes and restores ride the bridge into the
+        renderer's own functions, so ADR-0016's one-restore-one-undo-step and
+        ADR-0018's override pruning are reused rather than restated. Deletion is
+        absent on purpose and pinned by a test — everything else here is
+        recoverable and a deleted preset is not.
+      - `one-version-handshake`: ADR-0027's `+sha` rule, applied to the
+        handshake. Composed at build time and living ONLY on that wire, because
+        `version.ts` rejects a build suffix by design — stamping the version at
+        its source would buy a truthful handshake by silencing the update check.
+      97 packaged e2e, 748 vitest green twice. Next: phase 5 (fable, isolated —
+      the `--mcp` shim and the single-instance pipe, the plan's highest-risk
+      slice, because the lock changes every launch).
 
 ## Later
 
