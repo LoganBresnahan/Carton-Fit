@@ -700,6 +700,22 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       program has ONE config location — which is why no test caught it: every
       test agreed with the assumption. ADR-0029 phase-6 addendum part 2.
 
+- [ ] 22. A client-agnostic connect surface — **ADR-0030, Proposed 2026-09-02.**
+      "The same for ChatGPT" turned out to mean OpenAI Codex (the Store
+      package's binary is `ChatGPT.exe`), which speaks stdio MCP, keeps a
+      *non*-virtualised `~/.codex/config.toml` — TOML, not JSON — and ships
+      its own CLI with a complete `codex mcp add/get/list/remove`. Probed in
+      a throwaway `CODEX_HOME`: `add` preserves comments and other servers and
+      replaces a same-named entry in place. So the rule the ADR adopts is
+      **each client's config through the mechanism its owner supports** —
+      the client's tooling first, its file (read-merge-write) only when there
+      is none, and the entry as copyable text as the fallback that touches
+      nobody's files. No TOML parser; one `ConnectClient` seam in main; the
+      Claude adapter is phase-6 code moved, not rewritten. `adr-plan` after
+      the flip to Accepted. Open details worth reading before starting: Codex's
+      10 s startup timeout vs. a cold Electron boot (measure first), and the
+      fact that Codex is verified only by dogfooding — no CI runner has it.
+
 ## Later
 
 - [x] 14. Slim the packaged app, second pass — **shipped 2026-07-26: Windows
