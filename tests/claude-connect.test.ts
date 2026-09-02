@@ -5,14 +5,15 @@ import {
   claudeConfigCandidates,
   claudeConfigFile,
   mergeEntry,
-  readConfig,
-  sameEntry,
-  shimEntry
+  readConfig
 } from '../src/main/claudeConfig'
 import { MCP_SERVER_KEY } from '../src/shared/connect'
 
-// "Connect to Claude" (ADR-0029, slice `connect-to-claude-button`), pinned at
-// the unit layer.
+// The Claude Desktop client's own half — its config paths, its JSON parse, its
+// merge (ADR-0029 slice `connect-to-claude-button`; ADR-0030 Decision 2 makes
+// the file the mechanism of last resort, taken here because Claude Desktop
+// offers no tooling). The launch entry it writes is client-neutral and pinned
+// in `connect-entry.test.ts`.
 //
 // What is worth pinning here is not the button — it is everything the button
 // could get wrong SILENTLY. A config path that is right on Linux and wrong on
@@ -100,61 +101,6 @@ describe('chooseConfigDir — which of them this machine actually has', () => {
 
   it('survives an empty candidate list without throwing', () => {
     expect(chooseConfigDir([], none, none)).toEqual({ dir: '', found: false })
-  })
-})
-
-describe('shimEntry — the launch line Claude Desktop will run', () => {
-  const base = {
-    execPath: '/opt/Carton Fit/carton-fit',
-    appPath: '/opt/Carton Fit/resources/app.asar',
-    userData: '/home/o/.config/Carton-Fit',
-    defaultUserData: '/home/o/.config/Carton-Fit'
-  }
-
-  it('runs the built shim entry under run-as-node', () => {
-    const entry = shimEntry(base)
-    expect(entry.command).toBe('/opt/Carton Fit/carton-fit')
-    expect(entry.args).toEqual([
-      '/opt/Carton Fit/resources/app.asar/out/main/mcp.js',
-      '--mcp'
-    ])
-    // The whole Windows finding rides on this variable: without it Claude
-    // Desktop launches a GUI process whose stdin never arrives, and the
-    // session hangs forever with no error anywhere.
-    expect(entry.env).toEqual({ ELECTRON_RUN_AS_NODE: '1' })
-  })
-
-  it('omits the profile flag on the default profile and adds it otherwise', () => {
-    expect(shimEntry(base).args).not.toContain('--user-data-dir=/home/o/.config/Carton-Fit')
-    // A non-default profile MUST travel: the pipe is named per-profile, so an
-    // entry without it sends Claude to a universe with no app listening.
-    expect(shimEntry({ ...base, userData: '/tmp/p9' }).args).toContain('--user-data-dir=/tmp/p9')
-  })
-
-  it('works unchanged from a repo checkout', () => {
-    // `process.execPath` is the Electron binary in both layouts — packaged the
-    // installed app, in a checkout node_modules/electron — so one rule covers
-    // both and only appPath differs.
-    const entry = shimEntry({
-      execPath: '/repo/node_modules/electron/dist/electron',
-      appPath: '/repo',
-      userData: '/home/o/.config/Carton-Fit',
-      defaultUserData: '/home/o/.config/Carton-Fit'
-    })
-    expect(entry.args[0]).toBe('/repo/out/main/mcp.js')
-  })
-})
-
-describe('sameEntry — connected vs. outdated', () => {
-  const entry = { command: '/a', args: ['/a/out/main/mcp.js', '--mcp'], env: { X: '1' } }
-
-  it('is true only for an entry naming this exact launch', () => {
-    expect(sameEntry(entry, { ...entry, args: [...entry.args] })).toBe(true)
-    // An app that moved: same key, different binary. That is `outdated`, which
-    // the UI offers to fix, rather than `connected`, which it would not.
-    expect(sameEntry(entry, { ...entry, command: '/b' })).toBe(false)
-    expect(sameEntry(entry, { ...entry, args: ['/a/out/main/mcp.js'] })).toBe(false)
-    expect(sameEntry(entry, { ...entry, env: {} })).toBe(false)
   })
 })
 

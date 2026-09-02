@@ -9,11 +9,9 @@ import {
   claudeConfigFile,
   mergeEntry,
   readConfig,
-  sameEntry,
-  shimEntry,
-  type ChosenConfigDir,
-  type ServerEntry
+  type ChosenConfigDir
 } from './claudeConfig'
+import { sameEntry, shimEntry, type ServerEntry } from './connect/entry'
 import { resolveAppRoot } from './mcp/host'
 import { defaultUserDataPath } from './mcp/pipePath'
 

@@ -55,7 +55,7 @@ each._
       `claudeConnect` registered inline as the first client** so
       `e2e/claude-connect.spec.ts` stays green through the rename.
       Depends on: none.
-- [ ] `shared-shim-entry` · medium (partial — `ServerEntry`, `shimEntry`,
+- [x] `shared-shim-entry` · medium (partial — `ServerEntry`, `shimEntry`,
       `sameEntry`, `mergeEntry` already exist and are pure, `claudeConfig.ts:128-180`)
       — Move them to a client-neutral module, then add two pure serialisers: entry →
       `codex mcp add carton-fit --env ELECTRON_RUN_AS_NODE=1 -- <command> <args…>`
