@@ -90,7 +90,7 @@ _`codex-adapter` in parallel with fallback + panel; fallback main-half first, th
 the panel renders it (risk 1). Ends with a Claude row and a Codex `not-detected`
 row on Linux (Consequence 5) and the renamed Claude e2e green._
 
-- [ ] `codex-adapter` · medium — `status()` runs `codex mcp get carton-fit --json`
+- [x] `codex-adapter` · medium — `status()` runs `codex mcp get carton-fit --json`
       via `execFile` with an args array (no shell, so no quoting); exit 1 →
       `not-connected`, parsed `transport` compared with `sameEntry` →
       `connected`/`outdated`, spawn failure (ENOENT, timeout) and other non-zero

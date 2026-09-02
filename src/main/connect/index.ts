@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { CONNECT_CHANNELS, type ClientStatus, type ConnectClientId } from '../../shared/connect'
 import { claudeDesktopClient } from './claude'
+import { codexClient } from './codex'
 
 // The connect registry (ADR-0030 Decision 1) — the trunk every client adapter
 // hangs on, and the one place an id becomes code.
@@ -29,18 +30,28 @@ import { claudeDesktopClient } from './claude'
  * by finding a directory; making that a second public member would put the
  * *mechanism* back in the interface, which is the thing this ADR moved out.
  */
+/**
+ * ASYNC, though the first client had no need to be. Claude Desktop's adapter
+ * reads a small JSON file and answers in microseconds; Codex's spawns
+ * `codex.exe`, which is a 293 MB binary on the requesting machine. Answering
+ * that synchronously would freeze the window — including its animation frames
+ * and its packing worker's message pump — for as long as another company's
+ * program takes to boot. The IPC boundary was already a promise on the
+ * renderer's side, so this costs nothing but an `async` keyword on the client
+ * that does not need it.
+ */
 export interface ConnectClient {
   readonly id: ConnectClientId
   readonly displayName: string
   /** Look, change nothing. Total: every failure arrives as `state: 'error'`. */
-  status(): ClientStatus
+  status(): Promise<ClientStatus>
   /** Write (or refresh) this build's entry, then read the state back. */
-  connect(): ClientStatus
+  connect(): Promise<ClientStatus>
 }
 
 /** Registration order is display order — the confirmed client first
  *  (ADR-0030: Claude Desktop is proven by dogfooding, Codex is not yet). */
-const CLIENTS: readonly ConnectClient[] = [claudeDesktopClient]
+const CLIENTS: readonly ConnectClient[] = [claudeDesktopClient, codexClient]
 
 /**
  * An id to the client that registered it, or a refusal.
@@ -56,14 +67,20 @@ function resolve(id: unknown): ConnectClient {
   return client
 }
 
-/** Every registered client's state, in registration order. */
-export function connectStatus(): ClientStatus[] {
-  return CLIENTS.map((client) => client.status())
+/**
+ * Every registered client's state, in registration order.
+ *
+ * CONCURRENTLY, and the order is restored by `Promise.all` rather than by
+ * asking one client to wait for another: a Codex install that takes a second to
+ * answer must not delay the Claude row, and the panel renders both together.
+ */
+export function connectStatus(): Promise<ClientStatus[]> {
+  return Promise.all(CLIENTS.map((client) => client.status()))
 }
 
 export function registerConnectIpc(): void {
-  ipcMain.handle(CONNECT_CHANNELS.status, (): ClientStatus[] => connectStatus())
-  ipcMain.handle(CONNECT_CHANNELS.connect, (_event, id: unknown): ClientStatus =>
+  ipcMain.handle(CONNECT_CHANNELS.status, (): Promise<ClientStatus[]> => connectStatus())
+  ipcMain.handle(CONNECT_CHANNELS.connect, (_event, id: unknown): Promise<ClientStatus> =>
     resolve(id).connect()
   )
 }

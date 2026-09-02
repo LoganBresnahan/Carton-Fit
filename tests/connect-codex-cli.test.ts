@@ -1,6 +1,12 @@
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { codexBinRoot, codexHome, findCodexCli, type CodexLookup } from '../src/main/connect/codexCli'
+import {
+  codexBinRoot,
+  codexHome,
+  findCodexCli,
+  parseCodexGet,
+  type CodexLookup
+} from '../src/main/connect/codexCli'
 
 // Finding Codex's CLI (ADR-0030 Decision 4), pinned at the unit layer.
 //
@@ -156,5 +162,60 @@ describe('findCodexCli — PATH', () => {
 
   it('survives no PATH at all', () => {
     expect(findCodexCli(lookup({ platform: 'linux', env: {} }))).toBeNull()
+  })
+})
+
+describe('parseCodexGet — reading another program’s JSON, sceptically', () => {
+  const good = JSON.stringify({
+    transport: {
+      command: 'C:\\app\\Carton Fit.exe',
+      args: ['C:\\app\\mcp.js', '--mcp'],
+      env: { ELECTRON_RUN_AS_NODE: '1' }
+    },
+    enabled: true
+  })
+
+  it('reads the shape the CLI was probed to produce', () => {
+    const server = parseCodexGet(good)
+    expect(server?.entry).toEqual({
+      command: 'C:\\app\\Carton Fit.exe',
+      args: ['C:\\app\\mcp.js', '--mcp'],
+      env: { ELECTRON_RUN_AS_NODE: '1' }
+    })
+    expect(server?.enabled).toBe(true)
+  })
+
+  it('treats a missing `enabled` as ON, because it is an opt-OUT', () => {
+    expect(parseCodexGet(JSON.stringify({ transport: { command: '/a' } }))?.enabled).toBe(true)
+    expect(parseCodexGet(JSON.stringify({ transport: { command: '/a' }, enabled: false }))?.enabled).toBe(
+      false
+    )
+  })
+
+  it('defaults absent args to empty rather than dropping the entry', () => {
+    expect(parseCodexGet(JSON.stringify({ transport: { command: '/a' } }))?.entry.args).toEqual([])
+  })
+
+  it('REFUSES anything it cannot read as a transport', () => {
+    // Each of these means "the CLI's contract moved under us", which the
+    // adapter turns into a loud error rather than a silent offer to re-add a
+    // server that is already there. ADR-0030's first revisit trigger.
+    expect(parseCodexGet('not json at all')).toBeNull()
+    expect(parseCodexGet('[]')).toBeNull()
+    expect(parseCodexGet('"a string"')).toBeNull()
+    expect(parseCodexGet(JSON.stringify({ enabled: true }))).toBeNull()
+    expect(parseCodexGet(JSON.stringify({ transport: 'npx' }))).toBeNull()
+    expect(parseCodexGet(JSON.stringify({ transport: { command: 7 } }))).toBeNull()
+    expect(parseCodexGet(JSON.stringify({ transport: { command: '/a', args: 'x' } }))).toBeNull()
+    expect(parseCodexGet(JSON.stringify({ transport: { command: '/a', args: [1] } }))).toBeNull()
+  })
+
+  it('ignores non-string env values instead of failing the whole read', () => {
+    // An entry is still usable when one env value is odd; refusing the lot
+    // would report "ChatGPT updated" over a triviality.
+    const server = parseCodexGet(
+      JSON.stringify({ transport: { command: '/a', env: { A: '1', B: 2 } } })
+    )
+    expect(server?.entry.env).toEqual({ A: '1' })
   })
 })

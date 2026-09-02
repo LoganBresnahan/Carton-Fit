@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import type { ServerEntry } from './entry'
 
 // Finding Codex's CLI (ADR-0030 Decision 4) — the whole of Codex detection.
 //
@@ -115,4 +116,63 @@ export function findCodexCli(lookup: CodexLookup): string | null {
     }
   }
   return null
+}
+
+/** What `codex mcp get <name> --json` reports, as far as we rely on it. */
+export interface CodexServer {
+  readonly entry: ServerEntry
+  /** Codex lets a person switch a server off in its own UI. An entry that is
+   *  present but disabled will not run, so it is not `connected`. */
+  readonly enabled: boolean
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/**
+ * Read `codex mcp get carton-fit --json`, or refuse to guess.
+ *
+ * The shape is the one probed on the requesting machine and recorded in the
+ * ADR: `{ transport: { command, args, env }, enabled, … }`. It is
+ * SHAPE-CHECKED rather than cast, because it came out of another program: a
+ * `--json` that changed underneath us is ADR-0030's first revisit trigger, and
+ * the adapter turns a `null` here into a loud error rather than a quiet offer
+ * to re-add. That is the difference between "OpenAI changed their CLI" showing
+ * up on a dogfooder's screen and it showing up as a Connect button that never
+ * finishes connecting.
+ */
+export function parseCodexGet(stdout: string): CodexServer | null {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(stdout)
+  } catch {
+    return null
+  }
+  if (!isPlainObject(parsed)) return null
+
+  const transport = parsed['transport']
+  if (!isPlainObject(transport)) return null
+
+  const command = transport['command']
+  const args = transport['args']
+  if (typeof command !== 'string') return null
+  if (args !== undefined && (!Array.isArray(args) || args.some((a) => typeof a !== 'string'))) {
+    return null
+  }
+  const env = isPlainObject(transport['env'])
+    ? Object.fromEntries(
+        Object.entries(transport['env']).filter(([, v]) => typeof v === 'string') as [
+          string,
+          string
+        ][]
+      )
+    : undefined
+
+  return {
+    entry: { command, args: (args as string[] | undefined) ?? [], env },
+    // Absent means on: `enabled` is Codex's opt-OUT, and a server it lists
+    // without the key is one it will run.
+    enabled: parsed['enabled'] !== false
+  }
 }

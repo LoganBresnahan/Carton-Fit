@@ -170,6 +170,9 @@ export function claudeConnect(): ClientStatus {
 export const claudeDesktopClient: ConnectClient = {
   id: 'claude-desktop',
   displayName: CONNECT_CLIENT_LABELS['claude-desktop'],
-  status: claudeStatus,
-  connect: claudeConnect
+  // Wrapped rather than made async: these two are synchronous by nature (a
+  // small file read, a temp-and-rename) and reading them as straight-line code
+  // is worth more than matching the interface's shape inside the file.
+  status: async () => claudeStatus(),
+  connect: async () => claudeConnect()
 }
