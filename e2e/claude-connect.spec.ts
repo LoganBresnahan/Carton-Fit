@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { CUBE_STL } from '../samples/goldens'
 import type { AppStateReport } from '../src/main/mcp/appState'
-import { CLAUDE_SERVER_KEY } from '../src/shared/claudeConnect'
+import { MCP_SERVER_KEY } from '../src/shared/connect'
 import { importSample, launchApp, type AppHandle } from './harness'
 import { appModeEnv, callStructured, connect, stopSpawnedApp } from './mcpClient'
 
@@ -89,7 +89,7 @@ test('the button writes an invocation that actually reaches this window', async 
     expect(written['globalShortcut']).toBe('Alt+Space')
     expect(written.mcpServers?.['filesystem']).toEqual(existing.mcpServers.filesystem)
 
-    const entry = written.mcpServers?.[CLAUDE_SERVER_KEY]
+    const entry = written.mcpServers?.[MCP_SERVER_KEY]
     expect(entry, 'no carton-fit entry was written').toBeDefined()
     if (entry === undefined) return
 
@@ -149,7 +149,7 @@ test('an entry naming a different copy of the app is offered as a reconnect', as
   writeFileSync(
     configPath(dir),
     JSON.stringify(
-      { mcpServers: { [CLAUDE_SERVER_KEY]: { command: '/gone/carton-fit', args: ['/gone/mcp.js'] } } },
+      { mcpServers: { [MCP_SERVER_KEY]: { command: '/gone/carton-fit', args: ['/gone/mcp.js'] } } },
       null,
       2
     ),
@@ -167,8 +167,8 @@ test('an entry naming a different copy of the app is offered as a reconnect', as
     // REPLACED, not accumulated — the key is stable across installs precisely
     // so a move leaves one entry rather than a dead one beside a live one.
     const written = JSON.parse(readFileSync(configPath(dir), 'utf8')) as ConfigFile
-    expect(Object.keys(written.mcpServers ?? {})).toEqual([CLAUDE_SERVER_KEY])
-    expect(written.mcpServers?.[CLAUDE_SERVER_KEY]?.command).not.toBe('/gone/carton-fit')
+    expect(Object.keys(written.mcpServers ?? {})).toEqual([MCP_SERVER_KEY])
+    expect(written.mcpServers?.[MCP_SERVER_KEY]?.command).not.toBe('/gone/carton-fit')
   } finally {
     await app.app.close()
   }

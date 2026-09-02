@@ -44,7 +44,7 @@
 _All three have no prerequisites. One sitting, three commits; `/shipshape` after
 each._
 
-- [ ] `connect-client-seam` · medium — The trunk every other slice hangs on.
+- [x] `connect-client-seam` · medium — The trunk every other slice hangs on.
       `src/shared/connect.ts` replaces `shared/claudeConnect.ts`: `ConnectClientId`,
       `ClientStatus` (id, displayName, location, problem, five states with
       `claude-not-found` renamed `not-detected`), `connect:*` channels,

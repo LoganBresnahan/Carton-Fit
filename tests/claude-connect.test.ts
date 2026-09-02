@@ -9,7 +9,7 @@ import {
   sameEntry,
   shimEntry
 } from '../src/main/claudeConfig'
-import { CLAUDE_SERVER_KEY } from '../src/shared/claudeConnect'
+import { MCP_SERVER_KEY } from '../src/shared/connect'
 
 // "Connect to Claude" (ADR-0029, slice `connect-to-claude-button`), pinned at
 // the unit layer.
@@ -184,13 +184,13 @@ describe('readConfig — rule 2: when in doubt, refuse', () => {
 
   it('reads our entry back, and treats an unreadable one as absent', () => {
     const good = readConfig(
-      JSON.stringify({ mcpServers: { [CLAUDE_SERVER_KEY]: { command: '/a', args: ['x'] } } })
+      JSON.stringify({ mcpServers: { [MCP_SERVER_KEY]: { command: '/a', args: ['x'] } } })
     )
     expect(good.ok && good.entry).toEqual({ command: '/a', args: ['x'], env: undefined })
 
     // Ours by key but not an entry we can understand: absent, so Connect
     // overwrites it. It is our key and it is not working.
-    const junk = readConfig(JSON.stringify({ mcpServers: { [CLAUDE_SERVER_KEY]: { args: 3 } } }))
+    const junk = readConfig(JSON.stringify({ mcpServers: { [MCP_SERVER_KEY]: { args: 3 } } }))
     expect(junk.ok && junk.entry).toBe(null)
   })
 })
@@ -208,23 +208,23 @@ describe('mergeEntry — rule 1: merge, never clobber', () => {
     const after = JSON.parse(mergeEntry(before, entry)) as Record<string, never>
     expect(after['globalShortcut']).toBe('Alt+Space')
     expect(after['mcpServers']['filesystem']).toEqual(before.mcpServers.filesystem)
-    expect(after['mcpServers'][CLAUDE_SERVER_KEY]).toEqual(entry)
+    expect(after['mcpServers'][MCP_SERVER_KEY]).toEqual(entry)
   })
 
   it('REPLACES a previous Carton Fit entry instead of accumulating installs', () => {
     // The key is stable across versions and profiles precisely so that
     // re-connecting after a move updates one entry rather than leaving a dead
-    // one beside a live one (`shared/claudeConnect.ts`).
-    const before = { mcpServers: { [CLAUDE_SERVER_KEY]: { command: '/old', args: [] } } }
+    // one beside a live one (`shared/connect.ts`).
+    const before = { mcpServers: { [MCP_SERVER_KEY]: { command: '/old', args: [] } } }
     const after = JSON.parse(mergeEntry(before, entry)) as Record<string, never>
-    expect(Object.keys(after['mcpServers'])).toEqual([CLAUDE_SERVER_KEY])
-    expect(after['mcpServers'][CLAUDE_SERVER_KEY]).toEqual(entry)
+    expect(Object.keys(after['mcpServers'])).toEqual([MCP_SERVER_KEY])
+    expect(after['mcpServers'][MCP_SERVER_KEY]).toEqual(entry)
   })
 
   it('creates mcpServers when the config has none', () => {
     const after = JSON.parse(mergeEntry({ theme: 'dark' }, entry)) as Record<string, never>
     expect(after['theme']).toBe('dark')
-    expect(after['mcpServers'][CLAUDE_SERVER_KEY]).toEqual(entry)
+    expect(after['mcpServers'][MCP_SERVER_KEY]).toEqual(entry)
   })
 
   it('writes the shape Claude Desktop writes — 2-space JSON, trailing newline', () => {

@@ -1,8 +1,8 @@
-import { app, ipcMain } from 'electron'
+import { app } from 'electron'
 import { existsSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { CLAUDE_CONNECT_CHANNELS, type ClaudeConnectStatus } from '../shared/claudeConnect'
+import { CONNECT_CLIENT_LABELS, type ClientStatus } from '../shared/connect'
 import {
   chooseConfigDir,
   claudeConfigCandidates,
@@ -17,13 +17,19 @@ import {
 import { resolveAppRoot } from './mcp/host'
 import { defaultUserDataPath } from './mcp/pipePath'
 
-// "Connect to Claude" (ADR-0029, slice `connect-to-claude-button`) — the half
-// that touches the disk and the IPC boundary. The path rules, the entry, and
-// the merge itself live in `claudeConfig.ts`, Electron-free so they unit-test.
+// The Claude Desktop client (ADR-0029, slice `connect-to-claude-button`) — the
+// half that touches the disk. The path rules, the entry, and the merge itself
+// live in `claudeConfig.ts`, Electron-free so they unit-test.
 //
 // Rules 1 and 2 from that file govern here too, and the enforcement is here:
 // a refusal to parse becomes a refusal to write, and every write lands through
 // a temp file and a rename.
+//
+// It no longer owns an IPC channel: ADR-0030 made it one client of a registry
+// (`connect/index.ts`), which is what registers and calls the two functions
+// below. What changed here is only the shape they answer in — a `ClientStatus`
+// naming which client it describes, since a panel of rows must be able to tell
+// them apart. Read-write-refuse is untouched.
 
 /**
  * The `Claude_*` package folders under `%LOCALAPPDATA%\\Packages` — the Store
@@ -82,8 +88,23 @@ function currentEntry(): ServerEntry {
   })
 }
 
-function problemStatus(configPath: string, problem: string): ClaudeConnectStatus {
-  return { state: 'error', configPath, problem }
+/** Every status this client returns, in the shared shape. */
+function status(
+  state: ClientStatus['state'],
+  configPath: string,
+  problem?: string
+): ClientStatus {
+  return {
+    id: 'claude-desktop',
+    displayName: CONNECT_CLIENT_LABELS['claude-desktop'],
+    state,
+    location: configPath,
+    ...(problem === undefined ? {} : { problem })
+  }
+}
+
+function problemStatus(configPath: string, problem: string): ClientStatus {
+  return status('error', configPath, problem)
 }
 
 function describe(err: unknown): string {
@@ -91,18 +112,15 @@ function describe(err: unknown): string {
 }
 
 /** Look, change nothing. */
-export function claudeStatus(): ClaudeConnectStatus {
+export function claudeStatus(): ClientStatus {
   const chosen = resolveDir()
   const configPath = claudeConfigFile(chosen.dir)
-  if (!chosen.found) return { state: 'claude-not-found', configPath }
+  if (!chosen.found) return status('not-detected', configPath)
   try {
     const read = readConfig(readConfigFile(configPath))
     if (!read.ok) return problemStatus(configPath, read.problem)
-    if (read.entry === null) return { state: 'not-connected', configPath }
-    return {
-      state: sameEntry(read.entry, currentEntry()) ? 'connected' : 'outdated',
-      configPath
-    }
+    if (read.entry === null) return status('not-connected', configPath)
+    return status(sameEntry(read.entry, currentEntry()) ? 'connected' : 'outdated', configPath)
   } catch (err) {
     return problemStatus(configPath, `Claude Desktop’s config could not be read: ${describe(err)}`)
   }
@@ -116,10 +134,10 @@ export function claudeStatus(): ClaudeConnectStatus {
  * the loss rule 1 exists to prevent, and it is not recoverable by trying again.
  * `renameSync` replaces an existing file on every platform we ship.
  */
-export function claudeConnect(): ClaudeConnectStatus {
+export function claudeConnect(): ClientStatus {
   const chosen = resolveDir()
   const configPath = claudeConfigFile(chosen.dir)
-  if (!chosen.found) return { state: 'claude-not-found', configPath }
+  if (!chosen.found) return status('not-detected', configPath)
 
   const temp = `${configPath}.carton-fit.tmp`
   try {
@@ -140,7 +158,3 @@ export function claudeConnect(): ClaudeConnectStatus {
   return claudeStatus()
 }
 
-export function registerClaudeConnectIpc(): void {
-  ipcMain.handle(CLAUDE_CONNECT_CHANNELS.status, (): ClaudeConnectStatus => claudeStatus())
-  ipcMain.handle(CLAUDE_CONNECT_CHANNELS.connect, (): ClaudeConnectStatus => claudeConnect())
-}

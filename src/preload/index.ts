@@ -22,10 +22,11 @@ import {
   type ThemeState
 } from '../shared/theme'
 import {
-  CLAUDE_CONNECT_CHANNELS,
-  type ClaudeConnectApi,
-  type ClaudeConnectStatus
-} from '../shared/claudeConnect'
+  CONNECT_CHANNELS,
+  type ClientStatus,
+  type ConnectApi,
+  type ConnectClientId
+} from '../shared/connect'
 import {
   MCP_DRIVE_CHANNELS,
   type DriveEnvelope,
@@ -90,13 +91,15 @@ const theme: ThemeApi = {
     ipcRenderer.invoke(THEME_CHANNELS.set, preference) as Promise<ThemeState>
 }
 
-// Both calls are argument-free for the same reason the update pair is
-// (ADR-0029, slice `connect-to-claude-button`): main owns the config path and
-// the launch command, so page content can neither nominate a file for the app
-// to write nor a program for Claude Desktop to run.
-const claudeConnect: ClaudeConnectApi = {
-  status: () => ipcRenderer.invoke(CLAUDE_CONNECT_CHANNELS.status) as Promise<ClaudeConnectStatus>,
-  connect: () => ipcRenderer.invoke(CLAUDE_CONNECT_CHANNELS.connect) as Promise<ClaudeConnectStatus>
+// The connect surface (ADR-0030). The one argument that crosses here is a
+// client id, and it is a NAME, not a mechanism: main looks it up in the
+// registry it populated, so page content still cannot nominate a file for the
+// app to write nor a program for a client to run (ADR-0029's property, kept by
+// lookup instead of by having no argument at all).
+const connect: ConnectApi = {
+  status: () => ipcRenderer.invoke(CONNECT_CHANNELS.status) as Promise<ClientStatus[]>,
+  connect: (id: ConnectClientId) =>
+    ipcRenderer.invoke(CONNECT_CHANNELS.connect, id) as Promise<ClientStatus>
 }
 
 // The drive bridge's renderer end (ADR-0029 v2) — the one channel pair where
@@ -118,7 +121,7 @@ const api = {
   exportFile,
   update,
   theme,
-  claudeConnect,
+  connect,
   mcpDrive
 }
 

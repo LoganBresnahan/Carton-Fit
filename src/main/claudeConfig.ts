@@ -1,6 +1,6 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { CLAUDE_SERVER_KEY } from '../shared/claudeConnect'
+import { MCP_SERVER_KEY } from '../shared/connect'
 
 // The Electron-free half of "Connect to Claude" (ADR-0029, slice
 // `connect-to-claude-button`): where Claude Desktop's config lives, what our
@@ -10,8 +10,8 @@ import { CLAUDE_SERVER_KEY } from '../shared/claudeConnect'
 // PURE derivation over strings, and the failures worth fearing — a path that
 // is right on one OS, a merge that eats somebody's other servers — are exactly
 // the ones a unit test can pin without an app, a filesystem, or Claude Desktop
-// installed. `claudeConnect.ts` holds the half that touches the disk and the
-// IPC boundary.
+// installed. `claudeConnect.ts` holds the half that touches the disk; the IPC
+// boundary belongs to the client registry in `connect/` (ADR-0030).
 //
 // This is the LAST slice of ADR-0029 on purpose, because the config entry it
 // writes IS the shim's launch contract, and there was no point writing a
@@ -193,7 +193,7 @@ export type ConfigRead =
  * not one — is refused rather than replaced, because rule 1 above cannot be
  * honoured for entries we cannot see.
  */
-export function readConfig(text: string | null, key: string = CLAUDE_SERVER_KEY): ConfigRead {
+export function readConfig(text: string | null, key: string = MCP_SERVER_KEY): ConfigRead {
   if (text === null || text.trim().length === 0) return { ok: true, config: {}, entry: null }
 
   let parsed: unknown
@@ -250,7 +250,7 @@ export function readConfig(text: string | null, key: string = CLAUDE_SERVER_KEY)
 export function mergeEntry(
   config: Record<string, unknown>,
   entry: ServerEntry,
-  key: string = CLAUDE_SERVER_KEY
+  key: string = MCP_SERVER_KEY
 ): string {
   const servers = isPlainObject(config['mcpServers']) ? config['mcpServers'] : {}
   const merged = { ...config, mcpServers: { ...servers, [key]: entry } }

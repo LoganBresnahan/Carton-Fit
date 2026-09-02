@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { ClaudeConnectStatus } from '../../../shared/claudeConnect'
-import { claudeConnect, claudeStatus } from '../claude/service'
+import type { ClientStatus } from '../../../shared/connect'
+import { connectClient, connectStatus } from '../connect/service'
 
 // "Connect to Claude" (ADR-0029, slice `connect-to-claude-button`) — the whole
 // setup story for the MCP server, in one button.
@@ -9,6 +9,12 @@ import { claudeConnect, claudeStatus } from '../claude/service'
 // internal users, and a feature whose install step is hand-editing another
 // program's config file is one most of them will never turn on. What the button
 // writes is exactly the `--mcp` shim invocation the e2e specs drive.
+//
+// ADR-0030 put this panel behind a client registry: it now asks for a LIST of
+// client states and picks its one row out of it. The panel of rows the ADR
+// describes is `connect-panel-rows`; until then this stays a Claude-shaped
+// panel over a client-agnostic service, which is what keeps the phase-6 e2e
+// asserting the same thing through the rename.
 //
 // STATE IS LOCAL, not in the store (ADR-0006). Nothing else in the app reads
 // this — it is not part of the estimate's data spine, it is the state of
@@ -21,7 +27,7 @@ import { claudeConnect, claudeStatus } from '../claude/service'
 // broken one, and the user's next move is to doubt the button.
 
 export default function ClaudeConnectPanel(): React.JSX.Element {
-  const [status, setStatus] = useState<ClaudeConnectStatus | null>(null)
+  const [status, setStatus] = useState<ClientStatus | null>(null)
   const [busy, setBusy] = useState(false)
   /** Set only by a click that wrote the file — so the restart line appears for
    *  someone who just connected, and not for someone who was already connected
@@ -30,8 +36,9 @@ export default function ClaudeConnectPanel(): React.JSX.Element {
 
   useEffect(() => {
     let live = true
-    void claudeStatus().then((next) => {
-      if (live) setStatus(next)
+    void connectStatus().then((all) => {
+      const claude = all.find((one) => one.id === 'claude-desktop')
+      if (live && claude !== undefined) setStatus(claude)
     })
     return () => {
       live = false
@@ -49,7 +56,7 @@ export default function ClaudeConnectPanel(): React.JSX.Element {
 
   const onClick = (): void => {
     setBusy(true)
-    void claudeConnect()
+    void connectClient('claude-desktop')
       .then((next) => {
         setStatus(next)
         setJustWrote(next.state === 'connected')
@@ -64,7 +71,7 @@ export default function ClaudeConnectPanel(): React.JSX.Element {
         Let Claude Desktop measure parts and run estimates in this app.
       </p>
 
-      {status.state === 'claude-not-found' ? (
+      {status.state === 'not-detected' ? (
         // No button at all rather than a disabled one: there is nothing to
         // enable it, and writing a config for a program that is not installed
         // would be litter under a name its owner never chose.
@@ -78,7 +85,7 @@ export default function ClaudeConnectPanel(): React.JSX.Element {
             className="save-estimate"
             data-testid="claude-connect"
             disabled={busy}
-            title={`Adds Carton Fit to ${status.configPath}`}
+            title={`Adds Carton Fit to ${status.location}`}
             onClick={onClick}
           >
             {status.state === 'connected' ? 'Reconnect' : 'Connect to Claude'}
@@ -106,7 +113,7 @@ export default function ClaudeConnectPanel(): React.JSX.Element {
             // failure mode this replaces is a button that looks like it worked
             // and a Claude Desktop that never connects.
             <p className="error" data-testid="claude-error">
-              {status.problem} {status.configPath !== '' && `(${status.configPath})`}
+              {status.problem} {status.location !== '' && `(${status.location})`}
             </p>
           )}
         </>

@@ -6,7 +6,7 @@ import { resolveServerOptions, servePipeSessions, serveStdio, type ServerOptions
 import { createDriveBridge } from './mcp/driveBridge'
 import { pipePath } from './mcp/pipePath'
 import { claimStdoutForProtocol } from './mcp/stdout'
-import { registerClaudeConnectIpc } from './claudeConnect'
+import { registerConnectIpc } from './connect'
 import { registerStorageIpc, closeStorage, storageForTools } from './storage'
 import { registerExportIpc } from './exportFile'
 import { registerUpdateIpc, startUpdateCheck } from './updateCheck'
@@ -326,7 +326,7 @@ app.whenReady().then(() => {
   // Handlers only: every read and write of Claude Desktop's config happens
   // inside a call, so nothing here touches another application's files at
   // launch (ADR-0029, slice `connect-to-claude-button`).
-  registerClaudeConnectIpc()
+  registerConnectIpc()
   createWindow()
 
   app.on('activate', () => {
