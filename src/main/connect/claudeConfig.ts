@@ -1,7 +1,7 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { MCP_SERVER_KEY } from '../shared/connect'
-import type { ServerEntry } from './connect/entry'
+import { MCP_SERVER_KEY } from '../../shared/connect'
+import type { ServerEntry } from './entry'
 
 // The Electron-free half of "Connect to Claude" (ADR-0029, slice
 // `connect-to-claude-button`): where Claude Desktop's config lives, what our
@@ -11,7 +11,7 @@ import type { ServerEntry } from './connect/entry'
 // PURE derivation over strings, and the failures worth fearing — a path that
 // is right on one OS, a merge that eats somebody's other servers — are exactly
 // the ones a unit test can pin without an app, a filesystem, or Claude Desktop
-// installed. `claudeConnect.ts` holds the half that touches the disk; the IPC
+// installed. `claude.ts` holds the half that touches the disk; the IPC
 // boundary belongs to the client registry in `connect/` (ADR-0030).
 //
 // What is left here after ADR-0030 is the CLAUDE-SPECIFIC half, and the split

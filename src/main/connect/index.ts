@@ -1,11 +1,6 @@
 import { ipcMain } from 'electron'
-import {
-  CONNECT_CHANNELS,
-  CONNECT_CLIENT_LABELS,
-  type ClientStatus,
-  type ConnectClientId
-} from '../../shared/connect'
-import { claudeConnect, claudeStatus } from '../claudeConnect'
+import { CONNECT_CHANNELS, type ClientStatus, type ConnectClientId } from '../../shared/connect'
+import { claudeDesktopClient } from './claude'
 
 // The connect registry (ADR-0030 Decision 1) — the trunk every client adapter
 // hangs on, and the one place an id becomes code.
@@ -43,23 +38,9 @@ export interface ConnectClient {
   connect(): ClientStatus
 }
 
-/**
- * Claude Desktop, registered inline.
- *
- * The functions are ADR-0029's, unmoved: this slice changes who calls them and
- * what they return, not what they do, so `e2e/claude-connect.spec.ts` stays
- * green through the rename. `claude-adapter-move` gives them their own module
- * under this directory alongside the Codex one.
- */
-const claudeDesktop: ConnectClient = {
-  id: 'claude-desktop',
-  displayName: CONNECT_CLIENT_LABELS['claude-desktop'],
-  status: claudeStatus,
-  connect: claudeConnect
-}
-
-/** Registration order is display order — the confirmed client first. */
-const CLIENTS: readonly ConnectClient[] = [claudeDesktop]
+/** Registration order is display order — the confirmed client first
+ *  (ADR-0030: Claude Desktop is proven by dogfooding, Codex is not yet). */
+const CLIENTS: readonly ConnectClient[] = [claudeDesktopClient]
 
 /**
  * An id to the client that registered it, or a refusal.

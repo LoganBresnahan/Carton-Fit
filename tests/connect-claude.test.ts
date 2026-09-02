@@ -6,7 +6,7 @@ import {
   claudeConfigFile,
   mergeEntry,
   readConfig
-} from '../src/main/claudeConfig'
+} from '../src/main/connect/claudeConfig'
 import { MCP_SERVER_KEY } from '../src/shared/connect'
 
 // The Claude Desktop client's own half — its config paths, its JSON parse, its

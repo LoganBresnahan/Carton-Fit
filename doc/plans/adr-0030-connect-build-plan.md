@@ -71,7 +71,7 @@ each._
 ### 2. Adapters behind the seam — **opus**
 _Both depend only on the seam and share no files. One PR._
 
-- [ ] `claude-adapter-move` · low — Wrap-and-rename, not a design problem:
+- [x] `claude-adapter-move` · low — Wrap-and-rename, not a design problem:
       `resolveDir()` is `detect()`, `claudeStatus()`/`claudeConnect()` are
       `status()`/`connect()`. Candidate ordering, has-a-config-wins,
       refuse-when-unparseable, temp-and-rename stay byte-for-byte. Delete

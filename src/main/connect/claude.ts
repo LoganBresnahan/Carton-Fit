@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { existsSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { CONNECT_CLIENT_LABELS, type ClientStatus } from '../shared/connect'
+import { CONNECT_CLIENT_LABELS, type ClientStatus } from '../../shared/connect'
 import {
   chooseConfigDir,
   claudeConfigCandidates,
@@ -11,9 +11,10 @@ import {
   readConfig,
   type ChosenConfigDir
 } from './claudeConfig'
-import { sameEntry, shimEntry, type ServerEntry } from './connect/entry'
-import { resolveAppRoot } from './mcp/host'
-import { defaultUserDataPath } from './mcp/pipePath'
+import { sameEntry, shimEntry, type ServerEntry } from './entry'
+import type { ConnectClient } from './index'
+import { resolveAppRoot } from '../mcp/host'
+import { defaultUserDataPath } from '../mcp/pipePath'
 
 // The Claude Desktop client (ADR-0029, slice `connect-to-claude-button`) — the
 // half that touches the disk. The path rules, the entry, and the merge itself
@@ -23,11 +24,14 @@ import { defaultUserDataPath } from './mcp/pipePath'
 // a refusal to parse becomes a refusal to write, and every write lands through
 // a temp file and a rename.
 //
-// It no longer owns an IPC channel: ADR-0030 made it one client of a registry
-// (`connect/index.ts`), which is what registers and calls the two functions
-// below. What changed here is only the shape they answer in — a `ClientStatus`
-// naming which client it describes, since a panel of rows must be able to tell
-// them apart. Read-write-refuse is untouched.
+// It owns no IPC channel: ADR-0030 made it one client of a registry
+// (`index.ts`), which registers and calls the `ConnectClient` at the bottom of
+// this file. Read-write-refuse is untouched by that move, and deliberately so
+// — this is the mechanism the ADR ranks SECOND (Decision 2), taken only
+// because Claude Desktop offers no tooling of its own. If it ever ships a CLI
+// for `mcpServers`, this whole file is replaced by a dozen lines that shell out
+// to it, and the MSIX candidate list below becomes Claude's problem again,
+// where it belongs.
 
 /**
  * The `Claude_*` package folders under `%LOCALAPPDATA%\\Packages` — the Store
@@ -156,3 +160,16 @@ export function claudeConnect(): ClientStatus {
   return claudeStatus()
 }
 
+/**
+ * Claude Desktop as a registered client.
+ *
+ * The interface has no `detect()`: this file's `resolveDir()` is that, and it
+ * feeds the `not-detected` state instead of a second public member — see the
+ * `ConnectClient` comment in `index.ts`.
+ */
+export const claudeDesktopClient: ConnectClient = {
+  id: 'claude-desktop',
+  displayName: CONNECT_CLIENT_LABELS['claude-desktop'],
+  status: claudeStatus,
+  connect: claudeConnect
+}

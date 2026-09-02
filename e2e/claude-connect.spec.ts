@@ -63,7 +63,7 @@ test('the button writes an invocation that actually reaches this window', async 
 
   // A config that is already somebody's: another server, and a top-level key
   // that has nothing to do with us. Both must survive — rule 1 of
-  // src/main/claudeConfig.ts, which is a promise about other people's work.
+  // src/main/connect/claudeConfig.ts, a promise about other people's work.
   const existing = {
     globalShortcut: 'Alt+Space',
     mcpServers: {
