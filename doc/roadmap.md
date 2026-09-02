@@ -584,29 +584,38 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         handshake. Composed at build time and living ONLY on that wire, because
         `version.ts` rejects a build suffix by design — stamping the version at
         its source would buy a truthful handshake by silencing the update check.
-      **CARRY-IN, found by the first CI run that ever exercised these specs on
-      Windows (33582003764, 2026-09-02): `--mcp-server` — the APP-HOSTED server
-      — does not answer on windows-latest.** Every spec using it times out on
-      the very first request, on both attempts and both retries; 90 others pass.
-      The HEADLESS entry is fine on the same runner (it completed a handshake
-      and listed tools), so this is not the SDK, the schemas, or the stdout
-      claim — those are the same code in both modes. What differs is the
-      process: headless runs under `ELECTRON_RUN_AS_NODE`, app-hosted is a
-      Windows GUI-subsystem binary, and inherited stdio is exactly where those
-      two diverge. **Hypothesis, not yet evidence** — the run captured no
-      stderr from the app, so the next step is to make the e2e client pipe the
-      server's stderr into the log and re-run.
-      Two things stop this being a phase-4 regression: it is phase 3's mode, and
-      release.yml last succeeded at 0496b90 — BEFORE ADR-0029 phase 1 — so no
-      MCP spec had ever run on Windows until now. ci.yml runs the packaged e2e
-      under xvfb, i.e. Linux only, which is why nothing caught it earlier.
-      If the hypothesis holds, **phase 5 is already the fix**: the `--mcp` shim
-      runs headless (the mode that works) and proxies to the app over a named
-      pipe, so the GUI process never owns the protocol stream. That reorders the
-      argument for phase 5 from "launch-order independence" to "the only way
-      this works on the primary target", and sequencing risk 4 — "the pipe
-      behaviour cannot be fully proven on the WSL dev box" — was pointing here
-      the whole time.
+      **CARRY-IN — `--mcp-server`, the APP-HOSTED server, does not work on
+      Windows, and this is now evidence rather than suspicion.** Found by the
+      first CI run that ever exercised these specs on Windows (33582003764,
+      2026-09-02); diagnosed over two further runs by making the harness read
+      the protocol stream raw (33584136244, 33585707659).
+      **What the stream actually contains: `"\r\n"`. That is all of it.** One
+      CRLF, no protocol frame, ever — and stderr completely empty, so nothing
+      crashed and nothing complained. The client's `Unexpected end of JSON
+      input` was it choking on that empty first line.
+      The HEADLESS entry speaks perfectly on the same runner, in the same run,
+      from the same bytes. The two differ in exactly one way: headless runs
+      under `ELECTRON_RUN_AS_NODE`, while `--mcp-server` is a Windows
+      GUI-subsystem process. So a GUI-subsystem Electron main process on
+      Windows cannot deliver its stdout to the parent that spawned it — which
+      makes hosting MCP on that process's stdio unworkable on the primary
+      target, not merely untested there.
+      Not a phase-4 regression: it is phase 3's mode, and release.yml last
+      succeeded at 0496b90 — BEFORE ADR-0029 phase 1 — so no MCP spec had ever
+      run on Windows. ci.yml runs the packaged e2e under xvfb, i.e. Linux only,
+      which is why nothing caught it for three phases.
+      **Phase 5 is already the fix, and this reorders why it exists.** The
+      `--mcp` shim runs headless — the mode that demonstrably works on Windows —
+      and proxies to the app over a named pipe, so the GUI process never owns
+      the protocol stream. That was designed for launch-order independence; it
+      turns out to be the only way the drive tier works on Windows at all.
+      Sequencing risk 4 ("the pipe behaviour cannot be fully proven on the WSL
+      dev box") was pointing here the whole time.
+      Worth one experiment before accepting the shim as the only route: whether
+      `fs.writeSync(1, …)` reaches the pipe where `process.stdout.write` does
+      not. Something wrote that CRLF, so the handle is not simply dead.
+      `e2e/mcp-stdout-discipline.spec.ts` is the permanent guard and the
+      diagnostic in one — it names the offending bytes rather than timing out.
       97 packaged e2e ON LINUX, 750 vitest green twice. Next: phase 5 (fable,
       isolated —
       the `--mcp` shim and the single-instance pipe, the plan's highest-risk

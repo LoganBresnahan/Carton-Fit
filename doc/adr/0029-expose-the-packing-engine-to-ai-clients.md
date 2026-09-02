@@ -433,6 +433,33 @@ child no writable stdin. Every drive call routing through `ensureWindow` is
 covered (the drive specs fail outright otherwise) and the hidden start is
 covered; the show in between is a dogfooding check.
 
+### Windows finding (2026-09-02) — the app-hosted server cannot own stdio there
+
+The first CI run ever to exercise the MCP specs on Windows found that
+`--mcp-server` does not work on the primary target. Three runs narrowed it
+(33582003764 → 33584136244 → 33585707659), and the answer is not ambiguous:
+**the GUI process's entire stdout is `"\r\n"`.** One CRLF, no frame, ever,
+with stderr empty — nothing crashed, nothing complained, and the client's
+`Unexpected end of JSON input` was it parsing that empty first line. The
+headless entry speaks perfectly on the same runner, in the same run, from the
+same bytes; the two differ only in that headless runs under
+`ELECTRON_RUN_AS_NODE` while `--mcp-server` is a Windows GUI-subsystem process.
+
+This does not change the ADR's decision, but it does change which half of it
+carries the weight. §"Launch-order independence" specified a `--mcp` shim plus a
+single-instance pipe so a client could connect whether or not the app was
+already running. That shim runs HEADLESS and proxies to the app over a named
+pipe — meaning the GUI process never owns the protocol stream. Designed for
+launch order, it turns out to be the only arrangement in which the drive tier
+works on Windows at all. Phase 5 is therefore not polish; it is the mechanism.
+
+Two consequences worth stating plainly. The v1 tier is unaffected — the headless
+entry is exactly what Claude Desktop is pointed at today, and it works on
+Windows. And the property `stdout-protocol-discipline` claims is now guarded by
+a spec that reads the pipe raw and prints what it found
+(`e2e/mcp-stdout-discipline.spec.ts`), because a timeout says only "no answer"
+while three CI cycles were spent asking "answer to what?".
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The
