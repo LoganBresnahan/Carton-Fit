@@ -679,6 +679,26 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       on purpose (ADR-0005): this slice's whole risk is path resolution —
       `process.execPath` and an `appPath` that is an asar archive — and dev
       green would have proven none of it.
+      — **DOGFOODING FOUND THE ONE THING THE PYRAMID COULD NOT** (2026-09-02,
+      within an hour of staging): on the first real Windows machine, a
+      Microsoft Store Claude Desktop was installed and the panel said it was
+      not. The Store build is MSIX-packaged and MSIX **virtualizes
+      `%APPDATA%`** — the packaged app's `%APPDATA%\Claude` is really
+      `%LOCALAPPDATA%\Packages\Claude_<hash>\LocalCache\Roaming\Claude`,
+      which an unpackaged writer never sees. Both processes were right about
+      `%APPDATA%`; they were looking at different filesystems.
+      Fixed by making path resolution a candidate list plus a selection rule:
+      a candidate that HOLDS a config beats one that merely exists (on a
+      machine with both builds the file says which is in use; an empty
+      directory says nothing), Store tried first on win32, and the
+      not-installed message still names the classic path a person can go look
+      at. The package folder is matched by the `Claude_` prefix — the suffix is
+      a publisher hash and not ours to pin. Both halves are pure (enumerated
+      package names passed in, fs questions injected as predicates), so every
+      Windows shape unit-tests on Linux. 783 vitest.
+      The defect was not a wrong constant but an unexamined assumption that a
+      program has ONE config location — which is why no test caught it: every
+      test agreed with the assumption. ADR-0029 phase-6 addendum part 2.
 
 ## Later
 

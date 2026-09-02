@@ -1,8 +1,9 @@
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  claudeConfigDir,
-  claudeConfigPath,
+  chooseConfigDir,
+  claudeConfigCandidates,
+  claudeConfigFile,
   mergeEntry,
   readConfig,
   sameEntry,
@@ -21,35 +22,84 @@ import { CLAUDE_SERVER_KEY } from '../src/shared/claudeConnect'
 // "Claude Desktop doesn't see Carton Fit" or, worse, as someone else's server
 // disappearing.
 
-const NO_HOME_ENV = {} as NodeJS.ProcessEnv
+describe('claudeConfigCandidates — Claude Desktop ships two ways on Windows', () => {
+  // The dogfooding bug, 2026-09-02: a Microsoft Store Claude Desktop was
+  // plainly installed and the panel said it was not. MSIX virtualizes
+  // %APPDATA%, so the packaged app's "%APPDATA%\Claude" is really
+  // %LOCALAPPDATA%\Packages\Claude_<hash>\LocalCache\Roaming\Claude — a
+  // path an unpackaged writer never sees. Both processes were right about
+  // %APPDATA%; they were looking at different filesystems.
+  const WIN = { APPDATA: 'C:\\U\\o\\Roaming', LOCALAPPDATA: 'C:\\U\\o\\Local' }
 
-describe('claudeConfigDir — Claude Desktop’s own locations', () => {
-  it('follows APPDATA on Windows, and falls back to its default shape', () => {
-    expect(claudeConfigDir('win32', { APPDATA: 'C:\\Users\\o\\AppData\\Roaming' }, 'C:\\Users\\o')).toBe(
-      // `join` on the running platform, the same way tests/mcp-pipe.test.ts
-      // pins the userData twin: what matters is the shape, not the separator
-      // this machine happens to use.
-      join('C:\\Users\\o\\AppData\\Roaming', 'Claude')
-    )
-    expect(claudeConfigDir('win32', NO_HOME_ENV, 'C:/Users/o')).toContain('AppData')
+  it('offers the Store location FIRST, then the classic one', () => {
+    expect(claudeConfigCandidates('win32', WIN, 'C:\\U\\o', ['Claude_pzs8sxrjxfjjc'])).toEqual([
+      join('C:\\U\\o\\Local', 'Packages', 'Claude_pzs8sxrjxfjjc', 'LocalCache', 'Roaming', 'Claude'),
+      join('C:\\U\\o\\Roaming', 'Claude')
+    ])
   })
 
-  it('uses Application Support on macOS and XDG on Linux', () => {
-    expect(claudeConfigDir('darwin', NO_HOME_ENV, '/Users/o')).toBe(
+  it('still answers with the classic path when no Store package is present', () => {
+    // The non-Store install, and also every machine where the Packages
+    // directory cannot be listed — the caller contributes no names and this
+    // must not become an empty list.
+    expect(claudeConfigCandidates('win32', WIN, 'C:\\U\\o', [])).toEqual([
+      join('C:\\U\\o\\Roaming', 'Claude')
+    ])
+  })
+
+  it('uses Application Support on macOS and XDG on Linux — one location each', () => {
+    expect(claudeConfigCandidates('darwin', {}, '/Users/o')).toEqual([
       '/Users/o/Library/Application Support/Claude'
-    )
-    expect(claudeConfigDir('linux', NO_HOME_ENV, '/home/o')).toBe('/home/o/.config/Claude')
-    expect(claudeConfigDir('linux', { XDG_CONFIG_HOME: '/x' }, '/home/o')).toBe('/x/Claude')
+    ])
+    expect(claudeConfigCandidates('linux', {}, '/home/o')).toEqual(['/home/o/.config/Claude'])
+    expect(claudeConfigCandidates('linux', { XDG_CONFIG_HOME: '/x' }, '/home/o')).toEqual([
+      '/x/Claude'
+    ])
   })
 
-  it('lets the environment own the path, so tests never touch a real install', () => {
-    // The ADR-0021 seam, reused: the e2e writes a real config into a temp dir.
-    expect(claudeConfigDir('linux', { CLAUDE_DESKTOP_CONFIG_DIR: '/tmp/fake' }, '/home/o')).toBe(
-      '/tmp/fake'
+  it('lets the environment own the path, and COLLAPSES the list to it', () => {
+    // Collapsing matters as much as overriding: a test must never be at the
+    // mercy of what Claude Desktop the running machine happens to have.
+    const env = { CLAUDE_DESKTOP_CONFIG_DIR: '/tmp/fake', APPDATA: 'C:\\U\\o\\Roaming' }
+    expect(claudeConfigCandidates('win32', env, '/home/o', ['Claude_x'])).toEqual(['/tmp/fake'])
+    expect(claudeConfigFile('/tmp/fake')).toBe(join('/tmp/fake', 'claude_desktop_config.json'))
+  })
+})
+
+describe('chooseConfigDir — which of them this machine actually has', () => {
+  const store = '/local/Packages/Claude_x/LocalCache/Roaming/Claude'
+  const classic = '/roaming/Claude'
+  const none = (): boolean => false
+
+  it('prefers a directory that HOLDS a config over one that merely exists', () => {
+    // Both installed is the ambiguous case, and the file is the evidence of
+    // which Claude Desktop is really in use. An empty directory proves nothing.
+    const chosen = chooseConfigDir(
+      [store, classic],
+      () => true,
+      (path) => path === claudeConfigFile(classic)
     )
-    expect(claudeConfigPath('linux', { CLAUDE_DESKTOP_CONFIG_DIR: '/tmp/fake' }, '/home/o')).toBe(
-      '/tmp/fake/claude_desktop_config.json'
-    )
+    expect(chosen).toEqual({ dir: classic, found: true })
+  })
+
+  it('falls back to mere existence, in candidate order', () => {
+    expect(chooseConfigDir([store, classic], (p) => p === store, none)).toEqual({
+      dir: store,
+      found: true
+    })
+  })
+
+  it('reports not-found with the CLASSIC path, the one worth showing a user', () => {
+    // This is the message the dogfooding bug produced. It must keep naming a
+    // path a person can go and look at, not the last thing we happened to try.
+    expect(chooseConfigDir([store, classic], none, none)).toEqual({
+      dir: classic,
+      found: false
+    })
+  })
+
+  it('survives an empty candidate list without throwing', () => {
+    expect(chooseConfigDir([], none, none)).toEqual({ dir: '', found: false })
   })
 })
 

@@ -34,38 +34,94 @@ import { CLAUDE_SERVER_KEY } from '../shared/claudeConnect'
 //      like it worked and a Claude Desktop that never connects.
 
 /**
- * Claude Desktop's config directory, per OS.
+ * Claude Desktop's config directories, in the order they should be tried.
  *
- * Windows and macOS are Claude Desktop's own documented locations. Linux has
- * no first-party desktop build; the community packages put it at the ordinary
- * XDG config root, which is also what makes this feature testable on our Linux
- * CI. A directory that is not there is answered as "not installed" rather than
- * created — see `claudeStatus` next door.
+ * PLURAL, and that is the whole point — found by dogfooding on 2026-09-02,
+ * where an install that was plainly there reported "Claude Desktop isn't
+ * installed". **Windows has two locations, because Claude Desktop ships two
+ * ways.** The Microsoft Store build is MSIX-packaged, and MSIX VIRTUALIZES
+ * `%APPDATA%`: the packaged app writes what it sees as
+ * `%APPDATA%\Claude\claude_desktop_config.json`, and Windows silently
+ * redirects it to
+ * `%LOCALAPPDATA%\Packages\Claude_<publisher>\LocalCache\Roaming\Claude\`.
+ * Carton Fit is NOT packaged, so it sees the real `%APPDATA%\Claude` — which
+ * on a Store-only machine does not exist at all. Both processes are "right"
+ * about `%APPDATA%`; they are simply not looking at the same filesystem.
+ *
+ * So the Store location is tried FIRST on win32, then the classic one. The
+ * package folder is matched by prefix rather than hardcoded: the name is
+ * `Claude_<publisher hash>`, and a publisher hash is not ours to pin.
+ *
+ * macOS has one location. Linux has no first-party desktop build; the
+ * community packages use the ordinary XDG config root, which is also what
+ * makes this feature testable on our Linux CI.
  *
  * `CLAUDE_DESKTOP_CONFIG_DIR` lets tests own the path, the same seam ADR-0021
- * gives the update check: the e2e must exercise a real read-merge-write
- * without touching a dogfooder's actual Claude Desktop.
+ * gives the update check — and it collapses the list to one, so a test is
+ * never at the mercy of what is installed on the machine running it.
+ *
+ * @param msixPackages names of the `Claude_*` folders found under
+ * `%LOCALAPPDATA%\Packages`. Passed IN rather than read here, so this stays a
+ * pure derivation over strings and the Windows shapes unit-test on Linux.
  */
-export function claudeConfigDir(
+export function claudeConfigCandidates(
   platform: NodeJS.Platform = process.platform,
   env: NodeJS.ProcessEnv = process.env,
-  home: string = homedir()
-): string {
+  home: string = homedir(),
+  msixPackages: readonly string[] = []
+): string[] {
   const override = env['CLAUDE_DESKTOP_CONFIG_DIR']
-  if (override !== undefined && override.length > 0) return override
+  if (override !== undefined && override.length > 0) return [override]
+
   if (platform === 'win32') {
-    return join(env['APPDATA'] ?? join(home, 'AppData', 'Roaming'), 'Claude')
+    const localAppData = env['LOCALAPPDATA'] ?? join(home, 'AppData', 'Local')
+    const roaming = env['APPDATA'] ?? join(home, 'AppData', 'Roaming')
+    return [
+      ...msixPackages.map((name) =>
+        join(localAppData, 'Packages', name, 'LocalCache', 'Roaming', 'Claude')
+      ),
+      join(roaming, 'Claude')
+    ]
   }
-  if (platform === 'darwin') return join(home, 'Library', 'Application Support', 'Claude')
-  return join(env['XDG_CONFIG_HOME'] ?? join(home, '.config'), 'Claude')
+  if (platform === 'darwin') return [join(home, 'Library', 'Application Support', 'Claude')]
+  return [join(env['XDG_CONFIG_HOME'] ?? join(home, '.config'), 'Claude')]
 }
 
-export function claudeConfigPath(
-  platform: NodeJS.Platform = process.platform,
-  env: NodeJS.ProcessEnv = process.env,
-  home: string = homedir()
-): string {
-  return join(claudeConfigDir(platform, env, home), 'claude_desktop_config.json')
+/** The config file inside one of those directories. */
+export function claudeConfigFile(dir: string): string {
+  return join(dir, 'claude_desktop_config.json')
+}
+
+export interface ChosenConfigDir {
+  readonly dir: string
+  /** Whether Claude Desktop appears to be installed at all. */
+  readonly found: boolean
+}
+
+/**
+ * Pick the directory to read and write, given what is actually on disk.
+ *
+ * A candidate that already HOLDS a config wins outright, ahead of one that
+ * merely exists: on a machine with both a Store and a classic Claude Desktop,
+ * the file is the evidence of which one is really in use, while an empty
+ * directory is evidence of nothing. Only if no candidate has a config does
+ * mere existence decide, in candidate order.
+ *
+ * When nothing is found the LAST candidate is returned as the dir — the
+ * classic `%APPDATA%\Claude` on Windows — because that path is the one worth
+ * showing a user in a "not installed" message. Predicates are injected so the
+ * rule itself is pure and every branch is unit-testable without a filesystem.
+ */
+export function chooseConfigDir(
+  candidates: readonly string[],
+  exists: (path: string) => boolean,
+  hasConfig: (path: string) => boolean
+): ChosenConfigDir {
+  const withConfig = candidates.find((dir) => hasConfig(claudeConfigFile(dir)))
+  if (withConfig !== undefined) return { dir: withConfig, found: true }
+  const present = candidates.find((dir) => exists(dir))
+  if (present !== undefined) return { dir: present, found: true }
+  return { dir: candidates[candidates.length - 1] ?? '', found: false }
 }
 
 /** One `mcpServers` value, in Claude Desktop's own shape. */

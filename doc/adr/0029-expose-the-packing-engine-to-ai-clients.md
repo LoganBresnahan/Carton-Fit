@@ -604,6 +604,49 @@ runs happen on. Linux has no first-party Claude Desktop; the community
 packages use the ordinary XDG config root, which is what makes any of this
 testable on our CI at all.
 
+### Phase-6 addendum, part 2 (2026-09-02) — Windows has two config locations
+
+**Found by dogfooding, on the first real machine, within minutes.** A
+Microsoft Store Claude Desktop was plainly installed and the panel said
+*"Claude Desktop isn't installed on this computer."*
+
+The panel was telling the truth about the path it checked. **Claude Desktop
+ships two ways on Windows, and the Store build is MSIX-packaged, which
+VIRTUALIZES `%APPDATA%`.** The packaged app writes what it sees as
+`%APPDATA%\Claude\claude_desktop_config.json`; Windows silently redirects
+that to
+`%LOCALAPPDATA%\Packages\Claude_<publisher hash>\LocalCache\Roaming\Claude\`.
+Carton Fit is not packaged, so it sees the *real* `%APPDATA%\Claude` — which
+on a Store-only machine does not exist at all. Both processes were right about
+`%APPDATA%`; they were simply not looking at the same filesystem. The
+dogfooder's config was found at the redirected path, holding a full set of
+preferences and no `mcpServers` key — precisely the file the merge rule exists
+to protect.
+
+So path resolution becomes a **candidate list plus a selection rule**, and the
+rule is the interesting half. A candidate that already HOLDS a
+`claude_desktop_config.json` wins outright over one that merely exists: on a
+machine carrying both builds the file is the evidence of which Claude Desktop
+is actually in use, while an empty directory is evidence of nothing. Only if
+no candidate has a config does mere existence decide, in candidate order
+(Store first on win32). When nothing is found, the message names the CLASSIC
+path — the one a person can go and look at. The package folder is matched by
+the `Claude_` prefix rather than hardcoded, because the suffix is a publisher
+hash and a publisher hash is not ours to pin.
+
+The list is built by a pure function that takes the enumerated package folder
+names as an argument, and the selection rule takes its two filesystem
+questions as injected predicates — so every Windows shape and every branch of
+the rule unit-tests on Linux, which is the only way this specific bug could
+have had a test before a Windows machine saw it.
+
+**What this says about the original design.** The defect was not a wrong
+constant, it was an unexamined assumption that a program has *one* config
+location — and no test could have caught it, because every test agreed with
+the assumption. Dogfooding on a real machine is what ADR-0005 puts at the top
+of the pyramid for exactly this class of finding, and it earned its place here
+inside an hour of the build being staged.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

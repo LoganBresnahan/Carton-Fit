@@ -72,7 +72,9 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   restart Claude Desktop to finish. Anything else already in that
   configuration — other servers, your own settings — is left exactly as it was,
   and if the file cannot be read the app refuses to touch it and says so rather
-  than starting it over. If the app later moves, the button offers **Reconnect**
+  than starting it over. Both Windows flavours of Claude Desktop are found —
+  the Microsoft Store build keeps its configuration somewhere else entirely,
+  and looking in only one place made an installed Claude Desktop look absent. If the app later moves, the button offers **Reconnect**
   and points Claude at the new location; if Claude Desktop isn't installed, the
   section says so instead of offering a button that could not work.
   ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))

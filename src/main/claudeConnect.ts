@@ -1,13 +1,17 @@
 import { app, ipcMain } from 'electron'
-import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { CLAUDE_CONNECT_CHANNELS, type ClaudeConnectStatus } from '../shared/claudeConnect'
 import {
-  claudeConfigDir,
-  claudeConfigPath,
+  chooseConfigDir,
+  claudeConfigCandidates,
+  claudeConfigFile,
   mergeEntry,
   readConfig,
   sameEntry,
   shimEntry,
+  type ChosenConfigDir,
   type ServerEntry
 } from './claudeConfig'
 import { resolveAppRoot } from './mcp/host'
@@ -20,6 +24,40 @@ import { defaultUserDataPath } from './mcp/pipePath'
 // Rules 1 and 2 from that file govern here too, and the enforcement is here:
 // a refusal to parse becomes a refusal to write, and every write lands through
 // a temp file and a rename.
+
+/**
+ * The `Claude_*` package folders under `%LOCALAPPDATA%\\Packages` — the Store
+ * build's virtualized home (see `claudeConfigCandidates`).
+ *
+ * Best-effort and win32-only: no Packages directory, or one we may not list,
+ * simply contributes no candidates and the classic path still answers. The
+ * prefix match is deliberate — the folder is `Claude_<publisher hash>`, and
+ * the hash is not ours to hardcode.
+ */
+function msixPackageNames(): string[] {
+  if (process.platform !== 'win32') return []
+  const root = join(process.env['LOCALAPPDATA'] ?? join(homedir(), 'AppData', 'Local'), 'Packages')
+  try {
+    return readdirSync(root).filter((name) => name.startsWith('Claude_'))
+  } catch {
+    return []
+  }
+}
+
+/** Which config directory this machine actually has, and whether it has one. */
+function resolveDir(): ChosenConfigDir {
+  return chooseConfigDir(
+    claudeConfigCandidates(process.platform, process.env, homedir(), msixPackageNames()),
+    (path) => {
+      try {
+        return statSync(path).isDirectory()
+      } catch {
+        return false
+      }
+    },
+    (path) => existsSync(path)
+  )
+}
 
 /** Read the file, or null when it is not there. Any other read failure throws
  *  — a permission error must not masquerade as "no config yet" and get
@@ -54,8 +92,9 @@ function describe(err: unknown): string {
 
 /** Look, change nothing. */
 export function claudeStatus(): ClaudeConnectStatus {
-  const configPath = claudeConfigPath()
-  if (!existsSync(claudeConfigDir())) return { state: 'claude-not-found', configPath }
+  const chosen = resolveDir()
+  const configPath = claudeConfigFile(chosen.dir)
+  if (!chosen.found) return { state: 'claude-not-found', configPath }
   try {
     const read = readConfig(readConfigFile(configPath))
     if (!read.ok) return problemStatus(configPath, read.problem)
@@ -78,9 +117,9 @@ export function claudeStatus(): ClaudeConnectStatus {
  * `renameSync` replaces an existing file on every platform we ship.
  */
 export function claudeConnect(): ClaudeConnectStatus {
-  const configPath = claudeConfigPath()
-  const dir = claudeConfigDir()
-  if (!existsSync(dir)) return { state: 'claude-not-found', configPath }
+  const chosen = resolveDir()
+  const configPath = claudeConfigFile(chosen.dir)
+  if (!chosen.found) return { state: 'claude-not-found', configPath }
 
   const temp = `${configPath}.carton-fit.tmp`
   try {
