@@ -77,7 +77,7 @@ _Both depend only on the seam and share no files. One PR._
       refuse-when-unparseable, temp-and-rename stay byte-for-byte. Delete
       `registerClaudeConnectIpc` and its call in `src/main/index.ts`.
       Depends on: `connect-client-seam`.
-- [ ] `codex-cli-discovery` · medium — Electron-free module modelled on
+- [x] `codex-cli-discovery` · medium — Electron-free module modelled on
       `claudeConfigCandidates`: win32 glob over `%LOCALAPPDATA%\OpenAI\Codex\bin\*\codex.exe`
       newest-by-mtime through injected `stat`/`listBinDirs`; `PATH` split plus
       exists-check elsewhere; `CODEX_HOME` else `~/.codex` computed but **never
