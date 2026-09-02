@@ -9,6 +9,7 @@ import StorageBanner from './components/StorageBanner'
 import ThemeSelect from './components/ThemeSelect'
 import UpdateBanner from './components/UpdateBanner'
 import UnitPicker from './components/UnitPicker'
+import ClaudeConnectPanel from './components/ClaudeConnectPanel'
 import { ConfigurationsPanel } from './components/ConfigurationsPanel'
 import SavedEstimatesPanel from './components/SavedEstimatesPanel'
 import ViewToggle from './components/ViewToggle'
@@ -55,6 +56,10 @@ export default function App() {
             <PartWeightsPanel />
             <ConfigurationsPanel />
             <SavedEstimatesPanel />
+            {/* Last in the column: setup, not an input. Nobody reaches for it
+                while estimating, and it is the one section a user touches once
+                (ADR-0029, slice `connect-to-claude-button`). */}
+            <ClaudeConnectPanel />
           </div>
           <ResultsPanel />
           {/* Last child and absolutely positioned: it overlays the column's

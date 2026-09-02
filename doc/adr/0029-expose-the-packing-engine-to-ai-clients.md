@@ -526,6 +526,84 @@ simultaneous pipe sessions share the drive bridge's global serialization —
 two clients cannot interleave a settle window, though they can of course
 observe each other's edits, the same as two people at one machine would.
 
+**Windows verdict (2026-09-02): green.** The release workflow for `f4985dc`
+passed on `windows-latest` — packaged e2e plus both ADR-0011 compliance
+checks — which is what closes the Windows finding above rather than merely
+routing around it. The drive and data tiers now have a working transport on
+the primary target, and the three CI runs that blamed a stray CRLF stand as
+the record of a diagnosis that was wrong for a defensible reason: the noise
+was real, it just was not the fault.
+
+### Phase-6 addendum (2026-09-02) — the button, and a file that is not ours
+
+Setup was resolved at acceptance as "a button, not JSON" (see **Distribution
+shape** above). This is that button, and the whole slice is governed by one
+fact the ADR had not had to face until now: **this is the first time Carton
+Fit writes a file belonging to another application.** Every decision below
+falls out of it.
+
+**Merge, never clobber — and refuse when we cannot see.** The write is a
+read-merge-write of `claude_desktop_config.json` that preserves every other
+`mcpServers` entry and every unrelated top-level key, in their original
+order, in the 2-space-plus-newline shape Claude Desktop itself writes (so
+connecting does not surface as a whole-file reformat in a dotfile repo). The
+harder half is the malformed case, and "tolerate" there means something
+specific: a **missing or empty** file is a fresh start, because Claude Desktop
+ships without one; a file that does not parse is **refused**, untouched, with
+a sentence naming it. The tempting reading — treat unparseable as blank — is
+data loss wearing a tolerance label: a file we cannot read is not a file with
+nothing in it, and it may hold exactly the servers the merge rule exists to
+protect. Same reasoning extends to an `mcpServers` that is not an object. The
+write itself lands through a temp file and a rename, because a truncated write
+over that config is the same loss by a different route.
+
+**The entry is the shim invocation the specs already drive**, not a fresh
+guess: `process.execPath` (the Electron binary in both layouts — the installed
+app when packaged, `node_modules/electron` in a checkout) running
+`<appPath>/out/main/mcp.js --mcp` with `ELECTRON_RUN_AS_NODE=1`. That variable
+is the Windows finding made operational: without it Claude Desktop launches a
+GUI-subsystem process whose stdin never arrives, and the session hangs with
+nothing in any log. `appPath` comes from the same `resolveAppRoot` derivation
+both server modes use, so a config cannot name a build the handshake would
+not. The `--user-data-dir=` flag appears **only** on a non-default profile —
+the pipe is named per-profile, so omitting it on a throwaway profile would
+send Claude to a universe with no app in it, while emitting it always would
+put a machine-specific path in an ordinary install's config for no reason.
+
+**Four states, because three would lie.** `connected` / `outdated` /
+`not-connected` / `claude-not-found`, plus a loud `error`. `outdated` earns
+its place: an entry under our key naming a different binary is an app that
+MOVED, which re-connecting fixes — reporting it as connected would leave a
+user staring at a working button and a broken Claude. The key
+(`carton-fit`) is stable across versions and profiles for the same reason, so
+a re-connect replaces one entry instead of accumulating one per install.
+`claude-not-found` (no config directory) shows a sentence and **no button**:
+writing a config for an absent program is litter under a name its owner never
+chose.
+
+**Failure is loud, which inverts ADR-0021 deliberately.** The update check
+answers every failure with silence because the app started it; this the user
+just asked for, so its failures are theirs to see. The panel names the config
+path in the error, because their next move is to go and look at it.
+
+**The restart line is part of the feature.** Claude Desktop reads its config
+at startup, so a correct write connects nothing until it is restarted —
+without that sentence, success and failure look identical and the user's next
+move is to doubt the button.
+
+**Verification.** The e2e does not compare the written entry to a constant: it
+**runs** it — spawning exactly the command the button wrote, speaking MCP down
+it, and asking the app which file is open, with the answer being the part
+imported through the UI moments earlier. Mutation-tested, and the mutation
+testing corrected a claim: dropping the profile flag fails the round-trip as
+expected, but dropping `ELECTRON_RUN_AS_NODE` **survives on Linux**, where an
+Electron process's stdio works either way. The variable is a Windows
+requirement, so it is carried by explicit assertions at the unit and e2e
+layers rather than left to a round-trip that cannot see it on the machine most
+runs happen on. Linux has no first-party Claude Desktop; the community
+packages use the ordinary XDG config root, which is what makes any of this
+testable on our CI at all.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

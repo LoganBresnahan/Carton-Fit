@@ -72,6 +72,12 @@ or the packed carton with every part in its computed position.
   save the per-part measurements as a CSV, or save the packed view as a PNG.
   Warnings travel with every export: an answer that is qualified on screen
   stays qualified once it leaves the app.
+- **Ask Claude about it.** Carton Fit hosts an MCP server, so Claude Desktop
+  can measure a CAD file, run an estimate, drive the app in front of you, and
+  reach your presets and saved estimates. Claude keeps the judgment; every
+  number comes from the same engine the panel uses, with its units and its
+  caveats attached. Setup is the **Connect to Claude** button at the bottom of
+  the inputs panel — then restart Claude Desktop.
 
 ## Install
 

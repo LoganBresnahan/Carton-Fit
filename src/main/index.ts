@@ -6,6 +6,7 @@ import { resolveServerOptions, servePipeSessions, serveStdio, type ServerOptions
 import { createDriveBridge } from './mcp/driveBridge'
 import { pipePath } from './mcp/pipePath'
 import { claimStdoutForProtocol } from './mcp/stdout'
+import { registerClaudeConnectIpc } from './claudeConnect'
 import { registerStorageIpc, closeStorage, storageForTools } from './storage'
 import { registerExportIpc } from './exportFile'
 import { registerUpdateIpc, startUpdateCheck } from './updateCheck'
@@ -322,6 +323,10 @@ app.whenReady().then(() => {
   // Handlers only as well — `createWindow` applies the saved preference itself,
   // since it needs it before the window is constructed.
   registerThemeIpc()
+  // Handlers only: every read and write of Claude Desktop's config happens
+  // inside a call, so nothing here touches another application's files at
+  // launch (ADR-0029, slice `connect-to-claude-button`).
+  registerClaudeConnectIpc()
   createWindow()
 
   app.on('activate', () => {

@@ -22,6 +22,11 @@ import {
   type ThemeState
 } from '../shared/theme'
 import {
+  CLAUDE_CONNECT_CHANNELS,
+  type ClaudeConnectApi,
+  type ClaudeConnectStatus
+} from '../shared/claudeConnect'
+import {
   MCP_DRIVE_CHANNELS,
   type DriveEnvelope,
   type DriveResponse,
@@ -85,6 +90,15 @@ const theme: ThemeApi = {
     ipcRenderer.invoke(THEME_CHANNELS.set, preference) as Promise<ThemeState>
 }
 
+// Both calls are argument-free for the same reason the update pair is
+// (ADR-0029, slice `connect-to-claude-button`): main owns the config path and
+// the launch command, so page content can neither nominate a file for the app
+// to write nor a program for Claude Desktop to run.
+const claudeConnect: ClaudeConnectApi = {
+  status: () => ipcRenderer.invoke(CLAUDE_CONNECT_CHANNELS.status) as Promise<ClaudeConnectStatus>,
+  connect: () => ipcRenderer.invoke(CLAUDE_CONNECT_CHANNELS.connect) as Promise<ClaudeConnectStatus>
+}
+
 // The drive bridge's renderer end (ADR-0029 v2) — the one channel pair where
 // MAIN asks and the renderer answers. The handler is installed by
 // mcp/driveHost.ts at startup; `ready` is what tells main it may start asking.
@@ -104,6 +118,7 @@ const api = {
   exportFile,
   update,
   theme,
+  claudeConnect,
   mcpDrive
 }
 

@@ -346,7 +346,15 @@ normal-launch dogfood pass and a Windows CI check._
 ### 6. Connect to Claude button — **opus**
 _Last on purpose: the config entry it writes IS the shim's launch contract._
 
-- [ ] `connect-to-claude-button` · medium — Per-OS config-path resolution,
+- [x] `connect-to-claude-button` · medium — **shipped 2026-09-02.** Phase-6
+      addendum in ADR-0029 carries the reasoning; the two decisions worth
+      naming here are that "tolerate malformed" resolved as REFUSE-and-say-so
+      (an unparseable config is not a blank one), and that the e2e RUNS the
+      written entry rather than comparing it to a constant. Mutation testing
+      found that `ELECTRON_RUN_AS_NODE` cannot be caught by that round-trip on
+      Linux — it is a Windows requirement — so it is pinned by explicit
+      assertion at both layers.
+      Original scope: Per-OS config-path resolution,
       read-**merge**-write of `claude_desktop_config.json` (never clobber other
       mcpServers entries; tolerate missing/malformed config), packaged
       `process.execPath` + `--mcp` vs dev launch, "Claude Desktop not installed"

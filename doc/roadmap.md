@@ -473,7 +473,8 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       that says "routinely"; the gate holds, but ADR-0029's surface would turn
       conversations like this into a standing evidence channel.
 
-- [ ] 21. Claude can drive Carton Fit — **ADR-0029, Accepted 2026-09-01**.
+- [x] 21. Claude can drive Carton Fit — **ADR-0029, Accepted 2026-09-01**,
+      all six phases shipped 2026-09-01/02.
       The app hosts an MCP stdio server for Claude Desktop (confirmed
       client); Claude keeps the judgment layer, the engine supplies every
       number. Designed 2026-09-01 down to a three-tier tool surface: **v1**
@@ -625,16 +626,59 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       - The drive/data e2e specs now ride the shim — the transport users get,
         and the one that exists on Windows. Server-mode apps write
         `<userData>/mcp-server.pid` so the harness can stop a detached app.
-      103 packaged e2e, 763 vitest green twice on Linux; the Windows verdict
-      is the release.yml run for this sha. Next: phase 6, the Connect to
-      Claude button — the config it writes is exactly the shim invocation
-      these specs drive.
+      103 packaged e2e, 763 vitest green twice on Linux — and **the Windows
+      verdict came back green**: the release.yml run for f4985dc passed on
+      `windows-latest` (packaged e2e plus both ADR-0011 compliance checks),
+      which is what actually closes the Windows finding rather than routing
+      around it.
       — a second, smaller CI catch, already fixed (5a8a462): the build id asked
       git twice per build and vite's own transient config file made the two
       readings disagree, so a CLEAN checkout stamped `+<sha>-dirty`. At a
       release tag that would have inverted ADR-0027 — the one build entitled to
       a bare number introducing itself as a snapshot. Unfindable on this dev
       box, where the tree was dirty and both readings agreed.
+      **Phase 6 landed 2026-09-02** (`connect-to-claude-button`) — setup is a
+      button, and item 21 closes. The panel writes this build's entry into
+      `claude_desktop_config.json` itself, which is the first time the app
+      writes a file belonging to ANOTHER APPLICATION, and that fact wrote the
+      whole slice:
+      - read-**merge**-write preserving every other `mcpServers` entry, every
+        unrelated key, their order, and Claude Desktop's own formatting; temp
+        file plus rename so a truncated write cannot eat the file.
+      - "tolerate malformed" resolved as **refuse, untouched, and say which
+        file**. Missing or empty is a fresh start (Claude Desktop ships without
+        the file); unparseable is NOT — treating it as blank is data loss
+        wearing a tolerance label, since the file we cannot read may hold
+        exactly the servers the merge rule protects.
+      - the entry is the shim invocation the e2e specs already drive, not a
+        fresh guess — `execPath` + `<appPath>/out/main/mcp.js --mcp` +
+        `ELECTRON_RUN_AS_NODE=1`, with `--user-data-dir=` only on a non-default
+        profile (the pipe is per-profile: omitting it would send Claude to a
+        universe with no app in it; emitting it always would bake a
+        machine-specific path into an ordinary install's config).
+      - four states plus a loud error, because three would lie: `outdated` —
+        our key naming a different binary, i.e. the app moved — is offered as
+        Reconnect rather than reported as connected. `claude-not-found` shows a
+        sentence and NO button; a config for an absent program is litter.
+        Failure is loud and names the path, deliberately inverting ADR-0021's
+        silence rule: the update check is something the app decided to do, this
+        is something the user just asked for.
+      - the restart line IS the feature. Claude Desktop reads its config at
+        startup, so a correct write connects nothing until it restarts, and
+        without that sentence success and failure look identical.
+      - the e2e **runs what the button wrote** rather than comparing it to a
+        constant: it spawns exactly that command, speaks MCP down it, and reads
+        back the part imported through the UI moments earlier.
+      — **mutation testing corrected one of this slice's own claims.** Dropping
+      the profile flag kills the round-trip as expected; dropping
+      `ELECTRON_RUN_AS_NODE` **survives on Linux**, where an Electron process's
+      stdio works either way. It is a WINDOWS requirement, so it is pinned by
+      explicit assertion at the unit and e2e layers instead of by a round-trip
+      that cannot see it on the machine most runs happen on.
+      106 packaged e2e, 778 vitest green twice. Run against the PACKAGED bytes
+      on purpose (ADR-0005): this slice's whole risk is path resolution —
+      `process.execPath` and an `appPath` that is an asar archive — and dev
+      green would have proven none of it.
 
 ## Later
 

@@ -21,7 +21,7 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   directions. Two ways to run it: launch the app with `--mcp-server`, or point
   a client at the bundled headless entry
   (`ELECTRON_RUN_AS_NODE=1 <app binary> resources/app.asar/out/main/mcp.js`) —
-  a one-click "Connect to Claude" setup is coming later in this item.
+  or just press **Connect to Claude** in the app, below.
   ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
 
 - **An AI assistant can drive the running app — and you can watch it work.**
@@ -64,6 +64,17 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   your saved data with the first. Ask Claude about the app you already have
   open, and it connects to exactly that window: the part you loaded is the part
   it sees.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+- **Connect to Claude — one button, no JSON.** A new *Claude* section at the
+  bottom of the inputs panel sets Carton Fit up in Claude Desktop for you: it
+  adds this copy of the app to Claude Desktop's configuration, and tells you to
+  restart Claude Desktop to finish. Anything else already in that
+  configuration — other servers, your own settings — is left exactly as it was,
+  and if the file cannot be read the app refuses to touch it and says so rather
+  than starting it over. If the app later moves, the button offers **Reconnect**
+  and points Claude at the new location; if Claude Desktop isn't installed, the
+  section says so instead of offering a button that could not work.
   ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
 
 ### Changed
