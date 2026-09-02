@@ -76,3 +76,31 @@ export function buildIdFrom(stamp: BuildStamp): string {
   if (stamp.tags.includes(`v${stamp.version}`)) return ''
   return `+${stamp.sha}`
 }
+
+/**
+ * Does `git status --porcelain` output mean the SOURCE TREE is dirty?
+ *
+ * Not a plain emptiness test, and the difference is a bug CI caught that no
+ * local run could. Vite compiles the config file to a sibling
+ * `electron.vite.config.<ms>.mjs` while loading it, and deletes it afterwards —
+ * so a git query made FROM INSIDE the config sees one untracked file that a
+ * query made later does not. On a clean checkout that made the version stamp
+ * `+<sha>-dirty`, which for a tagged release would have been ADR-0027's rule
+ * inverted: the one build entitled to an unadorned number calling itself a
+ * snapshot. It could not be seen on this dev box, where the tree was genuinely
+ * dirty and both readings therefore agreed.
+ *
+ * Narrow on purpose: only an UNTRACKED file whose name is a vite config with
+ * something appended is ignored. A real untracked source file still means
+ * dirty — it is a difference from the commit the sha names, which is the whole
+ * question being asked.
+ */
+const BUILD_TOOL_SCRATCH = /^\?\?\s+.*vite\.config\..*\.(?:mjs|cjs|js)$/
+
+export function treeIsDirty(porcelain: string): boolean {
+  return porcelain
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '')
+    .some((line) => !BUILD_TOOL_SCRATCH.test(line))
+}

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { buildIdFrom } from '../src/main/mcp/buildId'
+import { buildIdFrom, treeIsDirty } from '../src/main/mcp/buildId'
 import { resolveServerOptions } from '../src/main/mcp/host'
 import { parseVersion } from '../src/main/version'
 
@@ -48,6 +48,35 @@ describe('buildIdFrom', () => {
     // …and a dirty flag with no sha still says nothing: there is no sha to
     // name, and `+-dirty` would be a suffix carrying no identity.
     expect(at({ sha: null, dirty: true })).toBe('')
+  })
+})
+
+describe('treeIsDirty', () => {
+  // THE BUG CI CAUGHT AND THIS MACHINE COULD NOT. Vite compiles the config to a
+  // sibling `.mjs` while loading it, so a git query made from inside the config
+  // sees an untracked file that a query made a moment later does not. On a
+  // clean checkout that stamped `+<sha>-dirty` — and for a tagged release it
+  // would have inverted ADR-0027 outright, making the one build entitled to a
+  // bare number call itself a snapshot. Invisible here, where the tree was
+  // genuinely dirty and both readings agreed.
+  const OBSERVED = '?? electron.vite.config.1788316159674.mjs'
+
+  it('a tree holding only vite’s own scratch file is CLEAN', () => {
+    expect(treeIsDirty(OBSERVED)).toBe(false)
+    expect(treeIsDirty('')).toBe(false)
+    // The newer vite naming, so an upgrade does not quietly reintroduce this.
+    expect(treeIsDirty('?? vite.config.ts.timestamp-1788316159674-a1b2c3.mjs')).toBe(false)
+  })
+
+  it('a real change is still dirty, scratch file or not', () => {
+    expect(treeIsDirty(' M src/main/index.ts')).toBe(true)
+    expect(treeIsDirty(`${OBSERVED}\n M src/main/index.ts`)).toBe(true)
+    // An untracked SOURCE file is a difference from the commit the sha names,
+    // which is exactly the question — the exemption is for the build tool's
+    // scratch and nothing else.
+    expect(treeIsDirty('?? src/main/mcp/newTool.ts')).toBe(true)
+    // …including one that merely mentions a config in its path.
+    expect(treeIsDirty('?? docs/vite.config.notes.md')).toBe(true)
   })
 })
 

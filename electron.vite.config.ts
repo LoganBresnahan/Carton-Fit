@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
-import { buildIdFrom } from './src/main/mcp/buildId'
+import { buildIdFrom, treeIsDirty } from './src/main/mcp/buildId'
 
 // WHICH BUILD THIS IS (ADR-0029 slice `one-version-handshake`, ADR-0027's
 // rule). The MCP handshake has to distinguish a release from a build that
@@ -15,6 +15,12 @@ import { buildIdFrom } from './src/main/mcp/buildId'
 // Never throws. A build outside a git checkout — an exported tarball, a
 // vendored copy — has nothing truthful to say, and `buildIdFrom` answers that
 // with an empty suffix rather than a guess.
+//
+// ASKED ONCE, at module load, and the answer reused (BUILD_ID below). Two calls
+// during one build CAN disagree — the second reading of the tree happens after
+// vite has cleaned up the transient config file the first reading saw — and a
+// build whose bundle and whose manifest name it differently is worse than
+// either answer alone.
 function gitBuildId(): string {
   const git = (...args: string[]): string =>
     execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
@@ -23,7 +29,7 @@ function gitBuildId(): string {
     return buildIdFrom({
       version,
       sha: git('rev-parse', '--short', 'HEAD'),
-      dirty: git('status', '--porcelain') !== '',
+      dirty: treeIsDirty(git('status', '--porcelain')),
       tags: git('tag', '--points-at', 'HEAD').split('\n').filter(Boolean)
     })
   } catch {
@@ -70,11 +76,14 @@ function buildIdManifest(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'build-id.json',
-        source: JSON.stringify({ buildId: gitBuildId() }, null, 2) + '\n'
+        source: JSON.stringify({ buildId: BUILD_ID }, null, 2) + '\n'
       })
     }
   }
 }
+
+/** This build's identity, computed once. Everything below reads this. */
+const BUILD_ID = gitBuildId()
 
 export default defineConfig({
   // better-sqlite3 is a NATIVE module: a compiled .node binary that Rollup
@@ -118,7 +127,7 @@ export default defineConfig({
     // because main is the only process that answers the "which build?"
     // question — the renderer shows no version at all (ADR-0027's revisit
     // trigger).
-    define: { __BUILD_ID__: JSON.stringify(gitBuildId()) },
+    define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
     plugins: [
       externalizeDepsPlugin({ exclude: ['occt-import-js', 'three'] }),
       buildIdManifest(),
