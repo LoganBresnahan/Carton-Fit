@@ -72,6 +72,48 @@ problem the button does not have, because the app writes its own
 `process.execPath` and can re-point it (the `outdated` state). See
 Alternatives.
 
+## Addendum, 2026-09-02 (during phase 2)
+
+Two Context facts above were established by probing the CLI. Probing the
+*machine* while implementing `codex-cli-discovery` corrected one of them and
+strengthened another.
+
+**1. `bin` holds one directory per bundled TOOL, not per shipped version — so
+"newest by mtime" is the wrong rule, not merely a heuristic.** On the
+requesting machine the two directories are:
+
+| directory | written | contents |
+| --- | --- | --- |
+| `87e5fb3433dabab1` | 12:15:34 | `codex.exe`, `codex-command-runner.exe`, `codex-code-mode-host.exe`, `codex-windows-sandbox-setup.exe` |
+| `fce30c272acde6f9` | 12:15:37 | `rg.exe`, and nothing else |
+
+The NEWEST directory is ripgrep. Decision 4's rule as written selects it, finds
+no `codex.exe`, and reports Codex absent on the machine that asked for this
+feature. **The rule is therefore "the directory that holds a `codex.exe`", with
+mtime only ordering the candidates among several that do.** Implemented that
+way in `connect/codexCli.ts` and pinned with the real hashes.
+
+This also dissolves open detail 3 ("which `codex.exe` is the desktop app's"):
+there is exactly one, so no disagreement is possible. It returns only if a
+future install ships two.
+
+**2. The "ChatGPT desktop app" and this Codex package are one program, and its
+config is NOT virtualised.** Confirmed by the maintainer: the app offered at
+`chatgpt.com/download` is installed here as the Store MSIX
+`OpenAI.Codex_2p2nqsd0c76g0`, and no other OpenAI desktop install exists on the
+machine. Its Settings → Plugins → MCPs lists `node_repl` — the server present
+in the *real* `~/.codex/config.toml`. So the packaged app reads the same file an
+unpackaged process sees, and the ADR-0029 MSIX trap (a virtualised `%APPDATA%`
+splitting one path into two filesystems) **does not recur for this client**,
+because its config was never under `%APPDATA%` to begin with. That is what makes
+`codex mcp add`'s write visible to the app rather than a hopeful guess.
+
+**3. The app has an in-app "Add" MCP server UI**, alongside a plugin
+marketplace — the Codex analogue of Claude's `.mcpb` route, and subject to the
+same objection in Alternatives: it is a GUI a person drives by hand, and the
+audience for this feature is precisely the person who will not. Recorded so a
+later reader knows it was seen and not overlooked.
+
 ## Decision
 
 **1. One surface, many clients, one seam.** The main process owns a registry

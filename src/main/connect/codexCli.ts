@@ -36,7 +36,7 @@ export interface CodexLookup {
   exists: (path: string) => boolean
 }
 
-/** The versioned `bin` the Windows desktop install keeps its CLI under. */
+/** The hashed `bin` the Windows desktop install keeps its bundled tools under. */
 export function codexBinRoot(env: NodeJS.ProcessEnv, home: string): string {
   const localAppData = env['LOCALAPPDATA'] ?? join(home, 'AppData', 'Local')
   return join(localAppData, 'OpenAI', 'Codex', 'bin')
@@ -84,11 +84,12 @@ export function findCodexCli(lookup: CodexLookup): string | null {
 
   if (lookup.platform === 'win32') {
     const root = codexBinRoot(lookup.env, lookup.home)
+    // Newest first only to ORDER the candidates; the loop below is what
+    // decides, by looking for the binary. Name descending breaks an mtime tie:
+    // the names are hashes, so no ordering of them means anything, and this one
+    // is merely STABLE — the property that matters is that the same machine
+    // must not resolve a different CLI on two consecutive checks.
     const newestFirst = [...lookup.listBinDirs(root)].sort(
-      // Name descending breaks an mtime tie. The names are version hashes, so
-      // no ordering of them means anything — this one is merely STABLE, which
-      // is the property that matters: the same machine must not resolve a
-      // different CLI on two consecutive checks.
       (a, b) => b.mtimeMs - a.mtimeMs || (a.name < b.name ? 1 : a.name > b.name ? -1 : 0)
     )
     for (const dir of newestFirst) {

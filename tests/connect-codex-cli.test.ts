@@ -75,24 +75,27 @@ describe('findCodexCli — the Windows desktop install', () => {
   })
 
   it('falls through a newest directory that has no codex.exe in it', () => {
-    // A half-written update must not read as "Codex is not installed" — the
-    // previous version is still there and still works.
+    // NOT hypothetical — this is the requesting machine, 2026-09-02. Its `bin`
+    // holds one directory per bundled TOOL, not per version, and the newer of
+    // the two (by three seconds) contains `rg.exe` alone. Ranking by mtime
+    // without this fall-through reports Codex as absent on the machine that
+    // asked for the feature.
     const found = findCodexCli(
       lookup({
         listBinDirs: () => [
-          { name: 'old', mtimeMs: 100 },
-          { name: 'new', mtimeMs: 900 }
+          { name: '87e5fb3433dabab1', mtimeMs: 1788369334000 },
+          { name: 'fce30c272acde6f9', mtimeMs: 1788369337000 }
         ],
-        exists: (path) => path === join(BIN, 'old', 'codex.exe')
+        exists: (path) => path === join(BIN, '87e5fb3433dabab1', 'codex.exe')
       })
     )
-    expect(found).toBe(join(BIN, 'old', 'codex.exe'))
+    expect(found).toBe(join(BIN, '87e5fb3433dabab1', 'codex.exe'))
   })
 
   it('breaks an mtime tie the SAME WAY twice', () => {
-    // The two versions on the requesting machine were installed minutes apart
-    // by one update, so equal mtimes are not hypothetical. Any answer will do;
-    // an answer that changes between calls would flicker the panel.
+    // The requesting machine's two directories were written three seconds
+    // apart, so near-equal mtimes are the norm rather than a curiosity. Any
+    // answer will do; one that changes between calls would flicker the panel.
     const dirs = [
       { name: 'bbb', mtimeMs: 500 },
       { name: 'aaa', mtimeMs: 500 }
