@@ -145,10 +145,15 @@ rule below:
 ```bash
 grep -rn "occt-import-js" src
 # expect ONLY these, and read them as one rule rather than a file list:
-#   workers/occt/{loadOcct,occt-to-parts,occt-import-js.d}.ts — the renderer's
-#     parser, reached from import.worker.ts and nowhere else on that side
+#   workers/occt/{loadOcct,occt-to-parts}.ts — the renderer's parser, reached
+#     from import.worker.ts and nowhere else on that side
 #   main/occt/{ingest,wasmPath}.ts — the same parser from the main process, for
 #     the ADR-0029 MCP surface (no window, no UI thread to block)
+#   src/types/occt-import-js.d.ts — the ambient types (the package ships none);
+#     a `declare module` block is program-wide, so it lives in neither tree —
+#     it was moved out of workers/occt/ in ADR-0029 phase 3 exactly because
+#     main's code was being typed by a renderer file with no import connecting
+#     them
 # THE INVARIANT IS ONE SHIPPED WASM, NOT ONE IMPORT SITE. Both sides load the
 # single asarUnpack'ed binary; a second copy would make ADR-0011's replace-the-
 # library guarantee true for the viewport and false for the AI surface, which is
