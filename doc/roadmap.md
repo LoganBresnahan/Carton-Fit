@@ -710,6 +710,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       by diffing tools/list before and after, and pinned by
       `tests/mcp-schema-dialect.test.ts` on the full surface. ADR-0029
       phase-6 addendum part 3.
+      — **third finding, by the client itself, on its first working session:**
+      a fit at 38% of the weight cap reported *"the weight cap stopped this"*.
+      The core's least-headroom attribution is right and deliberate; the MCP
+      note turned "closest" into "stopped". `binding.bound` (required, additive)
+      + an honest note + panel heading "Closest limit" on a fit. ADR-0029
+      phase-2 contract amendment, which also names the role the ADR missed:
+      the AI as adversarial reader of the engine's prose.
+      — carry-in: **exports still say "Limited by" on a comfortable fit**
+      (`export/summary.ts`, `export/csv.ts`) — the same overstatement, in the
+      place it is most likely to be quoted. Deserves its own pass with the
+      export spec, not a silent widening of this one.
 
 - [ ] 22. A client-agnostic connect surface — **ADR-0030, Proposed 2026-09-02.**
       "The same for ChatGPT" turned out to mean OpenAI Codex (the Store

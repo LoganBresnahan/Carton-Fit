@@ -692,6 +692,50 @@ JSON object as "no schema" and validates only zod; `patch-package` on the
 SDK's default — correct but a new build dependency and a postinstall hook to
 fix what one line of our own code fixes; upgrading — nothing to upgrade to.
 
+### Phase-2 contract amendment (2026-09-02) — `binding.bound`, and a role the ADR did not name
+
+**The third dogfood finding of the day, and the first made by the client
+itself.** On its first working session Claude loaded a real assembly, ran
+three passes, and flagged this from the middle one — a fit at 13.23 lb of a
+35 lb cap, all 18 parts placed, 26% fill:
+
+> `"binding": {"constraint": "weight", "note": "The weight cap stopped this,
+> not the carton — there is room left."}` — Nothing stopped it. … that note
+> is exactly the kind of thing someone would repeat in a packaging decision.
+
+Its diagnosis was close and not exact, and the difference is the fix. The
+core's attribution is deliberate and documented (`extremePointFit.ts`): with
+everything placed, `binding` names the constraint with the **least headroom**
+— 38% of the cap against 26% of the carton is "weight", and that is useful
+information (what would bind first if more were added). What was wrong was
+the sentence this layer wrapped around it: the core said *closest*, the
+report said *stopped*. The panel makes the same stretch ("Limited by:
+weight") but sits beside "13 of 35 lb", so a person can see nothing was hit.
+An AI client reads the note, not the panel.
+
+**Amendment.** `binding` gains a required `bound: boolean` — true only when a
+constraint actually rejected or truncated something (any max-quantity count;
+a non-fit) — and the note on an all-placed fit now says what the number
+means: *"Nothing bound — all 18 parts placed at 38% of the weight cap and
+26% of the carton. Weight is the closer limit."* The enum stays
+`geometry | weight`: a `none` value would be a breaking change under
+ADR-0020 and would discard the headroom answer; a required boolean is
+additive (minor), and structural rather than prose per this addendum's own
+rule 3. The panel heading becomes **"Closest limit"** on a fit, "Limited by"
+otherwise. Exports (`summary.ts`, `csv.ts`) still say "Limited by" on a fit
+— carried on roadmap item 21; a quote is the worst place for the
+overstatement, and it deserves its own look rather than a silent widening.
+
+**The role the ADR did not name.** The premise was two roles: the AI keeps
+judgment, the engine supplies numbers. Today produced a third — **the AI as
+an adversarial reader of the engine's prose.** 805 tests and two months of
+dogfooding passed that note, because nothing asserted what it *meant*; the
+client caught it on first contact because it had to decide whether to repeat
+it. The consequence is a rule going forward: every sentence the engine
+emits on the wire is a claim, and a claim gets a test that pins the claim,
+not the wording (the same discipline `tests/pack-verdict.test.ts` already
+applies to the panel's verdict captions).
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

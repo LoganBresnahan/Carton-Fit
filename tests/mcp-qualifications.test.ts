@@ -181,6 +181,45 @@ describe('every answer arrives qualified', () => {
     expect(report.binding.constraint).toBe('geometry')
   })
 
+  it('says whether the constraint actually BOUND — and on a comfortable fit, that nothing did', async () => {
+    // The dogfood finding of 2026-09-02, verbatim: a fit at 38% of the weight
+    // cap, everything placed, and the note said "the weight cap stopped this".
+    // A 10 mm cube in a 100 mm carton, 1 g against a 2 g cap: weight has the
+    // least headroom (50% vs 0.1% fill), so the core names it — correctly — and
+    // the report must not turn "closest" into "stopped".
+    const report = await estimate({
+      mode: 'fit-check',
+      carton: carton(100),
+      weight: { partWeight: { value: 1, unit: 'g' } },
+      maxWeight: { value: 2, unit: 'g' }
+    })
+    expect(report.outcome).toMatchObject({ mode: 'fit-check', fits: true })
+    expect(report.binding.constraint).toBe('weight')
+    expect(report.binding.bound).toBe(false)
+    expect(report.binding.note).toMatch(/^Nothing bound/)
+    expect(report.binding.note).toMatch(/50% of the weight cap/)
+    expect(report.binding.note).toMatch(/Weight is the closer limit/)
+    expect(report.binding.note).not.toMatch(/stopped/)
+  })
+
+  it('a count is always bound — it is where a constraint stopped it', async () => {
+    const report = await estimate({
+      mode: 'max-quantity',
+      carton: carton(100),
+      weight: { partWeight: { value: 1, unit: 'g' } },
+      maxWeight: { value: 10, unit: 'g' }
+    })
+    expect(report.binding).toMatchObject({ constraint: 'weight', bound: true })
+    expect(report.binding.note).toMatch(/stopped/)
+  })
+
+  it('a non-fit is bound, by the carton', async () => {
+    // A 10 mm cube cannot enter a 5 mm carton.
+    const report = await estimate({ mode: 'fit-check', carton: carton(5) })
+    expect(report.outcome).toMatchObject({ mode: 'fit-check', fits: false })
+    expect(report.binding).toMatchObject({ constraint: 'geometry', bound: true })
+  })
+
   it('names the weight source when one was given', async () => {
     const report = await estimate({
       mode: 'max-quantity',

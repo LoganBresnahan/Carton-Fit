@@ -94,7 +94,15 @@ export interface EstimateReport {
     packedWeight: WeightValue
   }
   outcome: EstimateOutcome
-  binding: { constraint: 'geometry' | 'weight'; note: string }
+  binding: {
+    constraint: 'geometry' | 'weight'
+    /** Whether that constraint actually STOPPED anything. False on a fit where
+     *  everything was placed: `constraint` is then the one with the least
+     *  headroom, which is useful, and `note` says so instead of claiming a
+     *  stop that never happened. */
+    bound: boolean
+    note: string
+  }
   utilization: { fraction: number; percent: string }
   qualifications: EstimateQualifications
   units: OutputUnits
@@ -356,6 +364,43 @@ export interface LiveEstimateContext {
 }
 
 /** Assemble the qualified report for a pack that already ran. */
+/**
+ * Which constraint bound, whether it BOUND AT ALL, and a sentence that does not
+ * overstate either (ADR-0029 phase-2 addendum, amended 2026-09-02).
+ *
+ * The core's `binding` is deliberate: when everything is placed it names the
+ * constraint with the least headroom (extremePointFit.ts). The old note wrapped
+ * that in "the weight cap stopped this" — on a fit at 38% of the cap, with
+ * nothing stopped. Claude read it on first contact and called it what it was:
+ * "exactly the kind of thing someone would repeat in a packaging decision."
+ * So `bound` is structural (the phase-2 rule: a qualification is never prose
+ * only) and the note says what the number means. A max-quantity count is
+ * always bound — it is, by definition, where a constraint stopped it.
+ */
+function bindingOf(result: PackResult, request: PackRequest): EstimateReport['binding'] {
+  const bound = result.mode === 'max-quantity' || !result.fits
+  if (bound) {
+    return {
+      constraint: result.binding,
+      bound: true,
+      note:
+        result.binding === 'weight'
+          ? 'The weight cap stopped this, not the carton — there is room left.'
+          : 'The carton stopped this, not the weight cap.'
+    }
+  }
+  const pct = (fraction: number): string => `${Math.round(fraction * 1000) / 10}%`
+  const placed = result.placements.length
+  const fill = pct(result.utilization)
+  const capApplies = Number.isFinite(request.maxWeightG) && request.maxWeightG > 0
+  const note = capApplies
+    ? `Nothing bound — all ${placed} parts placed at ${pct(packedWeightG(result, request) / request.maxWeightG)} ` +
+      `of the weight cap and ${fill} of the carton. ` +
+      `${result.binding === 'weight' ? 'Weight' : 'Space'} is the closer limit.`
+    : `Nothing bound — all ${placed} parts placed, filling ${fill} of the carton; no weight cap applied.`
+  return { constraint: result.binding, bound: false, note }
+}
+
 export function buildEstimateReport(
   context: LiveEstimateContext,
   outputUnits?: Partial<OutputUnits>
@@ -377,13 +422,7 @@ export function buildEstimateReport(
       packedWeight: fromG(packedWeightG(result, request), units.weight)
     },
     outcome: outcomeOf(result, units),
-    binding: {
-      constraint: result.binding,
-      note:
-        result.binding === 'weight'
-          ? 'The weight cap stopped this, not the carton — there is room left.'
-          : 'The carton stopped this, not the weight cap.'
-    },
+    binding: bindingOf(result, request),
     utilization: {
       fraction: result.utilization,
       percent: `${Math.round(result.utilization * 1000) / 10}%`

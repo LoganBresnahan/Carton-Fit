@@ -81,6 +81,15 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **"Closest limit", not "Limited by", when everything fits.** On a fit where
+  every part was placed, nothing actually stopped the packing — the constraint
+  shown is the one with the least room to spare. The results panel now says
+  so, and the estimate an assistant receives carries a `bound` flag plus a
+  sentence that reads *"Nothing bound — all 18 parts placed at 38% of the
+  weight cap and 26% of the carton"* instead of claiming the weight cap
+  stopped it. Found by Claude on its first session driving the app.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 - **An assistant can now tell you exactly which build answered.** A Carton Fit
   that is not a released build reports its version with the commit appended —
   `1.2.0+4f9f2f8` — the same way `/deploy` names an installer, so a number

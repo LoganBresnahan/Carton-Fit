@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  bindingHeading,
   bindingLabel,
   freeSpaceNote,
   freeSpaceReport,
@@ -93,6 +94,16 @@ describe('verdictHeadline', () => {
     expect(verdictHeadline(fit({ fits: true }))).toBe('Fits')
     expect(verdictHeadline(fit({ fits: false }))).toBe("Doesn't fit")
     expect(verdictHeadline(qty({ count: 1234 }))).toBe('1,234')
+  })
+})
+
+describe('bindingHeading', () => {
+  it('says "Closest limit" on a fit, because nothing bound', () => {
+    expect(bindingHeading(fit({ fits: true, binding: 'weight' }))).toBe('Closest limit')
+  })
+  it('says "Limited by" wherever a constraint actually stopped something', () => {
+    expect(bindingHeading(fit({ fits: false, unplaced: ['plate'] }))).toBe('Limited by')
+    expect(bindingHeading(qty({ count: 3, binding: 'weight' }))).toBe('Limited by')
   })
 })
 

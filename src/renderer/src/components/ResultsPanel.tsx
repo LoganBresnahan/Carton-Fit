@@ -1,5 +1,6 @@
 import { useAppStore } from '../store'
 import {
+  bindingHeading,
   bindingLabel,
   freeSpaceNote,
   openMeshWarning,
@@ -121,7 +122,7 @@ export default function ResultsPanel() {
 
       <dl className="results-facts">
         <div>
-          <dt>Limited by</dt>
+          <dt data-testid="results-binding-heading">{bindingHeading(result)}</dt>
           <dd data-testid="results-binding">{bindingLabel(result.binding)}</dd>
         </div>
         <div>

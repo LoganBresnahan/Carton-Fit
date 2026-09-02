@@ -152,6 +152,16 @@ export function verdictHeadline(result: PackResult): string {
   return result.count.toLocaleString()
 }
 
+/**
+ * The heading over the binding label. On a fit where everything was placed
+ * nothing bound, and "Limited by" would claim a stop that never happened —
+ * the constraint shown is the one with the least headroom (extremePointFit's
+ * convention). Caught by an AI client on first contact (ADR-0029, 2026-09-02).
+ */
+export function bindingHeading(result: PackResult): string {
+  return result.mode === 'fit-check' && result.fits ? 'Closest limit' : 'Limited by'
+}
+
 /** Which hard constraint bound the result — ADR-0004 requires stating it. */
 export function bindingLabel(binding: BindingConstraint): string {
   return binding === 'weight' ? 'weight' : 'space'

@@ -212,7 +212,13 @@ export const estimateOutput = {
       ])
     })
   ]),
-  binding: z.object({ constraint: z.enum(['geometry', 'weight']), note: z.string() }),
+  binding: z.object({
+    constraint: z.enum(['geometry', 'weight']),
+    // Required, not optional: "did anything actually stop this" is the
+    // qualification the note used to overstate (2026-09-02 dogfood finding).
+    bound: z.boolean(),
+    note: z.string()
+  }),
   utilization: z.object({ fraction: z.number(), percent: z.string() }),
   qualifications: z.object({
     heuristic: heuristicQualification,
