@@ -2,11 +2,12 @@ import { app } from 'electron'
 import { existsSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { CONNECT_CLIENT_LABELS, type ClientStatus } from '../../shared/connect'
+import { CONNECT_CLIENT_LABELS, type ClientStatus, type ManualEntry } from '../../shared/connect'
 import {
   chooseConfigDir,
   claudeConfigCandidates,
   claudeConfigFile,
+  entryJson,
   mergeEntry,
   readConfig,
   type ChosenConfigDir
@@ -90,6 +91,27 @@ function currentEntry(): ServerEntry {
   })
 }
 
+/**
+ * Doing it by hand, for the user whose Connect failed or who would rather see
+ * what we would write before we write it.
+ *
+ * Computed even on the happy path: it costs a string, and a fallback that only
+ * appears once something has gone wrong is a fallback nobody can find.
+ */
+function manual(): ManualEntry | undefined {
+  try {
+    return {
+      intro:
+        'In Claude Desktop, open Settings → Developer → Edit Config, and add this inside “mcpServers”:',
+      fields: [{ label: 'claude_desktop_config.json', value: entryJson(currentEntry()), block: true }]
+    }
+  } catch {
+    // The entry could not be derived (a broken install). The rest of the
+    // status is still worth showing, so this is absent rather than fatal.
+    return undefined
+  }
+}
+
 /** Every status this client returns, in the shared shape. */
 function status(
   state: ClientStatus['state'],
@@ -101,7 +123,11 @@ function status(
     displayName: CONNECT_CLIENT_LABELS['claude-desktop'],
     state,
     location: configPath,
-    ...(problem === undefined ? {} : { problem })
+    ...(problem === undefined ? {} : { problem }),
+    ...(() => {
+      const entry = manual()
+      return entry === undefined ? {} : { manual: entry }
+    })()
   }
 }
 

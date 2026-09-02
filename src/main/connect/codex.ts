@@ -4,7 +4,12 @@ import { existsSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
-import { CONNECT_CLIENT_LABELS, MCP_SERVER_KEY, type ClientStatus } from '../../shared/connect'
+import {
+  CONNECT_CLIENT_LABELS,
+  MCP_SERVER_KEY,
+  type ClientStatus,
+  type ManualEntry
+} from '../../shared/connect'
 import {
   codexBinRoot,
   codexHome,
@@ -12,7 +17,7 @@ import {
   parseCodexGet,
   type BinDir
 } from './codexCli'
-import { codexAddArgv, sameEntry, shimEntry, type ServerEntry } from './entry'
+import { codexAddArgv, codexManualFields, sameEntry, shimEntry, type ServerEntry } from './entry'
 import type { ConnectClient } from './index'
 import { resolveAppRoot } from '../mcp/host'
 import { defaultUserDataPath } from '../mcp/pipePath'
@@ -77,13 +82,40 @@ function currentEntry(): ServerEntry {
   })
 }
 
+/**
+ * Doing it by hand, in Codex's own form and its own words.
+ *
+ * The path is the one on screen: Settings → Plugins → MCPs → Add → "Connect
+ * to a custom MCP". The form takes the command in one box and each argument
+ * in its own, which is why `codexManualFields` returns fields rather than a
+ * line to paste — see the ADR's second addendum.
+ *
+ * Offered even when the CLI is missing, which is exactly when it matters
+ * most: `not-detected` is the state where we have no way to write anything,
+ * and the user still has a perfectly good form in front of them.
+ */
+function manual(): ManualEntry | undefined {
+  try {
+    return {
+      intro:
+        'In ChatGPT, open Settings → Plugins → MCPs → Add → “Connect to a custom MCP”, ' +
+        'and enter:',
+      fields: codexManualFields(currentEntry())
+    }
+  } catch {
+    return undefined
+  }
+}
+
 function status(state: ClientStatus['state'], location: string, problem?: string): ClientStatus {
+  const byHand = manual()
   return {
     id: 'codex',
     displayName: CONNECT_CLIENT_LABELS['codex'],
     state,
     location,
-    ...(problem === undefined ? {} : { problem })
+    ...(problem === undefined ? {} : { problem }),
+    ...(byHand === undefined ? {} : { manual: byHand })
   }
 }
 

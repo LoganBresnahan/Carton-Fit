@@ -114,6 +114,42 @@ same objection in Alternatives: it is a GUI a person drives by hand, and the
 audience for this feature is precisely the person who will not. Recorded so a
 later reader knows it was seen and not overlooked.
 
+## Addendum 2, 2026-09-02 (during phase 3): the fallback is fields, not a command line
+
+Decision 2's third mechanism says "show the entry as copyable text… the
+`codex mcp add …` command line for Codex". **That is revised: the fallback is
+the values the client's own form asks for, in that form's own words.**
+
+The maintainer's constraint, stated plainly: *users will be using these GUI
+desktop apps, not a CLI.* A command line to paste into a terminal is an
+instruction most of this app's audience cannot act on — the same audience
+ADR-0029 built a button for rather than asking them to edit JSON. A fallback
+only reachable by people who would not have needed it is not a fallback.
+
+Codex's form settles the shape. Settings → Plugins → MCPs → Add → "Connect to
+a custom MCP" takes **Name**, a **Type** toggle (STDIO / Streamable HTTP),
+**Command to launch** in one box, then **Arguments one box per argument**
+added a row at a time, **Environment variables** as separate Key and Value
+inputs, plus an unused Working directory. A single quoted line is the wrong
+artifact for that form twice over: the user would have to split it by hand at
+the moment they are already stuck, and the paths in it contain the spaces that
+make splitting by hand go wrong.
+
+So `ClientStatus.manual` is a `ManualEntry` — an intro naming the client's own
+menu path, and labelled fields — not a `string`. Claude Desktop, which has no
+custom-server form, gets one `block` field carrying the JSON entry for its
+Settings → Developer → Edit Config route. The seam is unchanged; only the
+payload is richer.
+
+**`quotedCommandLine` and its `CommandLineToArgvW` tokenizer, written in phase
+1 for the old shape, are deleted rather than left unused.** Their Windows
+quoting problem does not arise for a text input: a form field is not a shell,
+and a stray quote there becomes part of the path.
+
+The client's own tooling remains mechanism 1 and is unaffected — the CLI is
+plumbing the user never sees, spawned with no window, and Codex ships it
+inside the desktop app.
+
 ## Decision
 
 **1. One surface, many clients, one seam.** The main process owns a registry

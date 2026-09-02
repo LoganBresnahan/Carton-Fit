@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   codexAddArgv,
-  quotedCommandLine,
+  codexManualFields,
   sameEntry,
   shimEntry,
-  tokenizeCommandLine,
   type ServerEntry
 } from '../src/main/connect/entry'
 import { MCP_SERVER_KEY } from '../src/shared/connect'
@@ -124,61 +123,47 @@ describe('codexAddArgv — the entry as Codex\u2019s own CLI takes it', () => {
   })
 })
 
-describe('quotedCommandLine — the copyable fallback, on the paths Windows really has', () => {
-  // `C:\Program Files` and a username with a space are not edge cases on the
-  // primary target; they are the ordinary install. An unquoted join splits
-  // each of them into two arguments, and what the user then sees is a client
-  // that cannot find a program whose path is right there on their screen.
-  const WINDOWS_ENTRY: ServerEntry = {
+describe('codexManualFields — the values a person retypes into Codex’s own form', () => {
+  // Codex's "Connect to a custom MCP" form takes the command in one box and
+  // EACH ARGUMENT IN ITS OWN, added a row at a time, with environment
+  // variables as separate Key and Value inputs. So the fallback is fields, not
+  // a command line: a user who has to split a quoted line by hand — at the
+  // moment they are already stuck, on paths containing spaces — will get it
+  // wrong, and that is the one moment we cannot afford to make harder.
+  const entry: ServerEntry = {
     command: 'C:\\Program Files\\Carton Fit\\Carton Fit.exe',
-    args: [
-      'C:\\Program Files\\Carton Fit\\resources\\app.asar\\out\\main\\mcp.js',
-      '--mcp',
-      '--user-data-dir=C:\\Users\\Dana Smith\\AppData\\Roaming\\Carton Fit'
-    ],
+    args: ['C:\\Program Files\\Carton Fit\\resources\\app.asar\\out\\main\\mcp.js', '--mcp'],
     env: { ELECTRON_RUN_AS_NODE: '1' }
   }
 
-  it('leaves a token that needs no quoting alone', () => {
-    expect(quotedCommandLine(['codex', 'mcp', 'add', MCP_SERVER_KEY])).toBe(
-      `codex mcp add ${MCP_SERVER_KEY}`
-    )
+  it('gives one field per box the form actually has', () => {
+    expect(codexManualFields(entry)).toEqual([
+      { label: 'Name', value: MCP_SERVER_KEY },
+      { label: 'Type', value: 'STDIO' },
+      { label: 'Command to launch', value: 'C:\\Program Files\\Carton Fit\\Carton Fit.exe' },
+      {
+        label: 'Argument 1',
+        value: 'C:\\Program Files\\Carton Fit\\resources\\app.asar\\out\\main\\mcp.js'
+      },
+      { label: 'Argument 2', value: '--mcp' },
+      { label: 'Environment variable — ELECTRON_RUN_AS_NODE', value: '1' }
+    ])
   })
 
-  it('quotes every token with a space, and nothing else', () => {
-    const line = quotedCommandLine(['codex', ...codexAddArgv(WINDOWS_ENTRY)])
-    expect(line.startsWith(`codex mcp add ${MCP_SERVER_KEY} --env ELECTRON_RUN_AS_NODE=1 -- "C:`)).toBe(
-      true
-    )
-    // The profile flag is one argument, space and all — a naive quoter that
-    // wrapped only the path half would produce `--user-data-dir=C:\\Users\\Dana`
-    // plus a stray `Smith\\...`, and the shim would boot a fresh empty profile.
-    expect(line).toContain('"--user-data-dir=C:\\Users\\Dana Smith\\AppData\\Roaming\\Carton Fit"')
+  it('carries values RAW — no quoting, because a form field is not a shell', () => {
+    // Quoting here would be actively harmful: the user pastes into a text
+    // input, and a stray pair of quotes becomes part of the path.
+    const command = codexManualFields(entry).find((f) => f.label === 'Command to launch')
+    expect(command?.value).not.toContain('"')
+    expect(command?.value).toBe(entry.command)
   })
 
-  it('round-trips a Windows entry back through the tokenizer', () => {
-    // Two independent readings of one documented rule (CommandLineToArgvW)
-    // agreeing. That is all this proves — NOT that any given shell agrees,
-    // which is dogfooding's job (ADR-0030 \u00a77).
-    const tokens = tokenizeCommandLine(quotedCommandLine(codexAddArgv(WINDOWS_ENTRY)))
-    const separator = tokens.indexOf('--')
-    const [command, ...args] = tokens.slice(separator + 1)
-    expect(
-      sameEntry({ command: command ?? '', args, env: { ELECTRON_RUN_AS_NODE: '1' } }, WINDOWS_ENTRY)
-    ).toBe(true)
-  })
-
-  it('survives a trailing backslash, which is what a directory path ends with', () => {
-    // `"C:\dir\"` would escape its own closing quote and swallow the rest of
-    // the line — the classic CommandLineToArgvW trap.
-    const line = quotedCommandLine(['C:\\Program Files\\Carton Fit\\', '--mcp'])
-    expect(tokenizeCommandLine(line)).toEqual(['C:\\Program Files\\Carton Fit\\', '--mcp'])
-  })
-
-  it('survives an embedded quote, the shape no shell agrees on', () => {
-    // Our entries never contain one (see the module header); pinned so a
-    // future one that does fails here rather than in someone's terminal.
-    const line = quotedCommandLine(['say "hi"', 'x'])
-    expect(tokenizeCommandLine(line)).toEqual(['say "hi"', 'x'])
+  it('grows a row when the profile flag is present', () => {
+    const withProfile = { ...entry, args: [...entry.args, '--user-data-dir=C:\\tmp\\p9'] }
+    const labels = codexManualFields(withProfile).map((f) => f.label)
+    expect(labels).toContain('Argument 3')
+    // The flag must travel or the shim answers on the wrong pipe — the same
+    // property `shimEntry` guards, restated where a human does the typing.
+    expect(codexManualFields(withProfile).at(-2)?.value).toBe('--user-data-dir=C:\\tmp\\p9')
   })
 })

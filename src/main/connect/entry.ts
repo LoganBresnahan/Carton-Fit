@@ -7,8 +7,8 @@ import { MCP_SERVER_KEY } from '../../shared/connect'
 // ONE ENTRY, MANY SERIALISERS is the decision this file exists to enforce.
 // Every client receives the same launch: `process.execPath`, the built shim,
 // `--mcp`, the profile flag on a non-default profile, `ELECTRON_RUN_AS_NODE=1`.
-// A client adapter *serialises* it — into JSON for Claude Desktop, into `codex
-// mcp add` argv for Codex, into copyable text for the fallback — and none
+// A client adapter *serialises* it — into `codex mcp add` argv, into JSON for
+// Claude Desktop, into labelled fields for the manual fallback — and none
 // composes one. A second place that decided what to launch would be a second
 // place to get the Windows stdin finding wrong.
 //
@@ -90,97 +90,34 @@ export function codexAddArgv(entry: ServerEntry, key: string = MCP_SERVER_KEY): 
 }
 
 /**
- * Tokens as one command line a person can paste — the copyable fallback
- * (ADR-0030 Decision 2, mechanism 3), which is the one that has to work on the
- * machine we did not anticipate.
+ * The entry as fields a person retypes into a client's own "add a server" form
+ * (ADR-0030 Decision 2, mechanism 3 — revised 2026-09-02, see the ADR's second
+ * addendum).
  *
- * QUOTED FOR `CommandLineToArgvW`, which is Windows' own rule for turning a
- * command line back into an argv: a run of backslashes is literal unless it
- * precedes a quote, in which case it doubles. That is the rule `cmd` hands
- * through and the one PowerShell reproduces for the shapes we emit. The shape
- * neither shell agrees on is an argument containing a literal quote — and ours
- * never does: it is a program path, a script path, `--mcp`, a profile path,
- * and `K=V`. If that ever stops being true this needs a per-shell answer, not
- * a cleverer quoter.
+ * ONE FIELD PER BOX, and that is the whole reason this is not a string. Codex's
+ * form — Settings → Plugins → MCPs → Add → "Connect to a custom MCP" — takes
+ * the command in one box and then EACH ARGUMENT IN ITS OWN, added a row at a
+ * time, with environment variables as separate Key and Value inputs. A pasteable
+ * command line is the wrong artifact for that form: the user would have to split
+ * it by hand, at exactly the moment they are already stuck, and the paths in it
+ * contain the spaces that make splitting it by hand go wrong.
  *
- * The audience is `C:\Program Files\Carton Fit\Carton Fit.exe` and a Windows
- * username with a space in it — the paths that are ordinary on the primary
- * target and that an unquoted join silently splits in two.
+ * The labels are the client's own words, not ours. Someone copying a value is
+ * looking at their screen and at ours, and a mismatch in wording is a reason to
+ * doubt they are in the right place.
  */
-export function quotedCommandLine(tokens: readonly string[]): string {
-  return tokens.map(quoteToken).join(' ')
-}
-
-function quoteToken(token: string): string {
-  if (token.length > 0 && !/[\s"]/.test(token)) return token
-  let quoted = '"'
-  let backslashes = 0
-  for (const char of token) {
-    if (char === '\\') {
-      backslashes += 1
-      continue
-    }
-    if (char === '"') {
-      // Every backslash run before a quote doubles, then the quote escapes.
-      quoted += '\\'.repeat(backslashes * 2 + 1) + '"'
-    } else {
-      quoted += '\\'.repeat(backslashes) + char
-    }
-    backslashes = 0
-  }
-  // A trailing run doubles too, or it would escape the closing quote itself.
-  return `${quoted}${'\\'.repeat(backslashes * 2)}"`
-}
-
-/**
- * A command line back into tokens — `CommandLineToArgvW`'s rule, read the other
- * way.
- *
- * It exists to make `quotedCommandLine` testable against something other than
- * itself: the unit tests round-trip a Windows-shaped entry through both and
- * compare with `sameEntry`. Be clear about what that proves — two independent
- * readings of one documented rule agree. It is NOT proof that a given shell
- * agrees, which is dogfooding's job (ADR-0030 §7).
- */
-export function tokenizeCommandLine(line: string): string[] {
-  const tokens: string[] = []
-  let token = ''
-  let started = false
-  let inQuotes = false
-  let backslashes = 0
-
-  const flushBackslashes = (beforeQuote: boolean): boolean => {
-    // Halve them before a quote; the quote is literal iff the run was odd.
-    token += '\\'.repeat(beforeQuote ? Math.floor(backslashes / 2) : backslashes)
-    const literalQuote = beforeQuote && backslashes % 2 === 1
-    backslashes = 0
-    return literalQuote
-  }
-
-  for (const char of line) {
-    if (char === '\\') {
-      backslashes += 1
-      started = true
-      continue
-    }
-    if (char === '"') {
-      if (flushBackslashes(true)) token += '"'
-      else inQuotes = !inQuotes
-      started = true
-      continue
-    }
-    if (/\s/.test(char) && !inQuotes) {
-      flushBackslashes(false)
-      if (started) tokens.push(token)
-      token = ''
-      started = false
-      continue
-    }
-    flushBackslashes(false)
-    token += char
-    started = true
-  }
-  flushBackslashes(false)
-  if (started) tokens.push(token)
-  return tokens
+export function codexManualFields(
+  entry: ServerEntry,
+  key: string = MCP_SERVER_KEY
+): { label: string; value: string }[] {
+  return [
+    { label: 'Name', value: key },
+    { label: 'Type', value: 'STDIO' },
+    { label: 'Command to launch', value: entry.command },
+    ...entry.args.map((arg, i) => ({ label: `Argument ${i + 1}`, value: arg })),
+    ...Object.entries(entry.env ?? {}).map(([name, value]) => ({
+      label: `Environment variable — ${name}`,
+      value
+    }))
+  ]
 }

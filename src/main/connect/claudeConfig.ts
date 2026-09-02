@@ -213,3 +213,17 @@ export function mergeEntry(
   return `${JSON.stringify(merged, null, 2)}\n`
 }
 
+
+/**
+ * Our entry alone, as JSON to paste inside `mcpServers` — the manual fallback
+ * for a client with no "add a server" form of its own.
+ *
+ * Claude Desktop's own manual route is Settings → Developer → Edit Config,
+ * which opens this file in a text editor. So unlike Codex, whose form takes
+ * discrete fields, the right artifact here IS a block: keyed by our name, so
+ * it drops into an existing `mcpServers` beside a user's other servers rather
+ * than replacing them.
+ */
+export function entryJson(entry: ServerEntry, key: string = MCP_SERVER_KEY): string {
+  return JSON.stringify({ [key]: entry }, null, 2).replace(/^\{\n|\n\}$/g, '')
+}

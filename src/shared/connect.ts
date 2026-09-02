@@ -74,6 +74,37 @@ export type ConnectState =
   /** The config could not be read, parsed, or written. `problem` says why. */
   | 'error'
 
+/** One value a person copies into one box of a client's own form. */
+export interface ManualField {
+  readonly label: string
+  readonly value: string
+  /** A block to paste whole (a JSON entry) rather than a single-line value.
+   *  The panel renders it as a code block with one copy button. */
+  readonly block?: boolean
+}
+
+/**
+ * Setting this client up by hand — the fallback that touches nobody's files
+ * (ADR-0030 Decision 2, mechanism 3).
+ *
+ * It is FIELDS rather than a command line, and that revision is the whole
+ * point of the second addendum to ADR-0030: the audience uses GUI desktop
+ * apps, so the fallback has to be the values their client's own form asks for,
+ * in that form's own words. A `codex mcp add …` line to paste into a terminal
+ * would be an instruction most of this app's users cannot act on — and one
+ * that, for Codex, does not even match the form, which takes each argument in
+ * its own box.
+ *
+ * Always present, whatever the state: a user who wants to see what would be
+ * written is entitled to, and a user whose Connect just failed needs it
+ * immediately rather than after another round trip.
+ */
+export interface ManualEntry {
+  /** Where to go in that client, in its own menu names. */
+  readonly intro: string
+  readonly fields: readonly ManualField[]
+}
+
 export interface ClientStatus {
   readonly id: ConnectClientId
   readonly displayName: string
@@ -87,6 +118,8 @@ export interface ClientStatus {
   readonly location: string
   /** One sentence, already written for a person. Present only for `error`. */
   readonly problem?: string
+  /** How to do it by hand, always available. See `ManualEntry`. */
+  readonly manual?: ManualEntry
 }
 
 export interface ConnectApi {

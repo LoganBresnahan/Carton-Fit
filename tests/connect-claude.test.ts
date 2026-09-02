@@ -4,6 +4,7 @@ import {
   chooseConfigDir,
   claudeConfigCandidates,
   claudeConfigFile,
+  entryJson,
   mergeEntry,
   readConfig
 } from '../src/main/connect/claudeConfig'
@@ -180,5 +181,41 @@ describe('mergeEntry — rule 1: merge, never clobber', () => {
     expect(text.endsWith('}\n')).toBe(true)
     expect(text).toContain('\n  "mcpServers": {')
     expect(Object.keys(JSON.parse(text) as object)).toEqual(['a', 'mcpServers', 'z'])
+  })
+})
+
+describe('entryJson — the manual fallback for a client with no form of its own', () => {
+  // Claude Desktop's own by-hand route is Settings → Developer → Edit Config,
+  // which opens the file in a text editor — so a BLOCK is the right artifact
+  // here, where Codex's discrete form fields are right there. Keyed by our
+  // name so it drops in beside a user's other servers.
+  const entry = {
+    command: 'C:\\Program Files\\Carton Fit\\Carton Fit.exe',
+    args: ['C:\\x\\mcp.js', '--mcp'],
+    env: { ELECTRON_RUN_AS_NODE: '1' }
+  }
+
+  it('is the entry alone, without the wrapping braces a paste would duplicate', () => {
+    const json = entryJson(entry)
+    expect(json.startsWith('  "carton-fit": {')).toBe(true)
+    expect(json.endsWith('  }')).toBe(true)
+    // The outer object's braces must be gone: pasting them inside an existing
+    // `mcpServers` would produce a config Claude Desktop refuses to read —
+    // which is the very failure the whole fallback exists to route around.
+    expect(json).not.toMatch(/^\{/)
+    expect(json).not.toMatch(/\}$\n?\}/)
+  })
+
+  it('round-trips back through the parser it is meant to be pasted into', () => {
+    // The real assertion: wrap it the way a user would and check that
+    // `readConfig` — the same function that reads the file in anger — gets our
+    // entry back out. A fallback nobody can parse is worse than none.
+    const read = readConfig(`{ "mcpServers": {\n${entryJson(entry)}\n} }`)
+    expect(read.ok).toBe(true)
+    expect(read.ok && read.entry).toEqual(entry)
+  })
+
+  it('keeps the env that makes it work on Windows', () => {
+    expect(entryJson(entry)).toContain('ELECTRON_RUN_AS_NODE')
   })
 })
