@@ -87,12 +87,38 @@ export function appHostedLaunch(): { command: string; args: string[] } {
   }
 }
 
+/**
+ * Connect a client, and make the server's own voice visible.
+ *
+ * WHY THE PLUMBING. A server that does not answer produces exactly one symptom
+ * — `MCP error -32001: Request timed out` — which says nothing about whether
+ * the process crashed, exited, or is alive and simply cannot reach stdout. That
+ * is what the first Windows CI run of these specs produced (33582003764): seven
+ * identical timeouts and not one line about why.
+ *
+ * So stderr is PIPED and echoed rather than left to `inherit`, where Playwright's
+ * reporter swallows it; the transport's error and close callbacks are logged;
+ * and the command is echoed so the log says what was actually spawned. All of it
+ * is prefixed, so server output cannot be mistaken for test output.
+ */
 export async function connect(
   launch: { command: string; args: string[] },
   env: Record<string, string>
 ): Promise<Client> {
   const client = new Client({ name: 'e2e', version: '0' })
-  await client.connect(new StdioClientTransport({ ...launch, env }))
+  const transport = new StdioClientTransport({ ...launch, env, stderr: 'pipe' })
+
+  const say = (what: string): void => {
+    process.stderr.write(`[mcp:server] ${what.replace(/\s+$/, '')}\n`)
+  }
+  say(`spawning ${launch.command} ${launch.args.join(' ')}`)
+  transport.stderr?.on('data', (chunk: Buffer) => say(chunk.toString('utf8')))
+  transport.onerror = (err: Error) => say(`transport error: ${err.message}`)
+  // Fires when the child exits. A close BEFORE the handshake is the difference
+  // between "crashed" and "alive but mute" — the question the timeout hides.
+  transport.onclose = () => say('transport closed (the server process ended)')
+
+  await client.connect(transport)
   return client
 }
 

@@ -584,9 +584,41 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         handshake. Composed at build time and living ONLY on that wire, because
         `version.ts` rejects a build suffix by design — stamping the version at
         its source would buy a truthful handshake by silencing the update check.
-      97 packaged e2e, 748 vitest green twice. Next: phase 5 (fable, isolated —
+      **CARRY-IN, found by the first CI run that ever exercised these specs on
+      Windows (33582003764, 2026-09-02): `--mcp-server` — the APP-HOSTED server
+      — does not answer on windows-latest.** Every spec using it times out on
+      the very first request, on both attempts and both retries; 90 others pass.
+      The HEADLESS entry is fine on the same runner (it completed a handshake
+      and listed tools), so this is not the SDK, the schemas, or the stdout
+      claim — those are the same code in both modes. What differs is the
+      process: headless runs under `ELECTRON_RUN_AS_NODE`, app-hosted is a
+      Windows GUI-subsystem binary, and inherited stdio is exactly where those
+      two diverge. **Hypothesis, not yet evidence** — the run captured no
+      stderr from the app, so the next step is to make the e2e client pipe the
+      server's stderr into the log and re-run.
+      Two things stop this being a phase-4 regression: it is phase 3's mode, and
+      release.yml last succeeded at 0496b90 — BEFORE ADR-0029 phase 1 — so no
+      MCP spec had ever run on Windows until now. ci.yml runs the packaged e2e
+      under xvfb, i.e. Linux only, which is why nothing caught it earlier.
+      If the hypothesis holds, **phase 5 is already the fix**: the `--mcp` shim
+      runs headless (the mode that works) and proxies to the app over a named
+      pipe, so the GUI process never owns the protocol stream. That reorders the
+      argument for phase 5 from "launch-order independence" to "the only way
+      this works on the primary target", and sequencing risk 4 — "the pipe
+      behaviour cannot be fully proven on the WSL dev box" — was pointing here
+      the whole time.
+      97 packaged e2e ON LINUX, 750 vitest green twice. Next: phase 5 (fable,
+      isolated —
       the `--mcp` shim and the single-instance pipe, the plan's highest-risk
-      slice, because the lock changes every launch).
+      slice, because the lock changes every launch) — now also the carry-in's
+      likely fix, so diagnose the Windows failure first and let what it says
+      shape the shim.
+      — a second, smaller CI catch, already fixed (5a8a462): the build id asked
+      git twice per build and vite's own transient config file made the two
+      readings disagree, so a CLEAN checkout stamped `+<sha>-dirty`. At a
+      release tag that would have inverted ADR-0027 — the one build entitled to
+      a bare number introducing itself as a snapshot. Unfindable on this dev
+      box, where the tree was dirty and both readings agreed.
 
 ## Later
 
