@@ -9,7 +9,7 @@ import StorageBanner from './components/StorageBanner'
 import ThemeSelect from './components/ThemeSelect'
 import UpdateBanner from './components/UpdateBanner'
 import UnitPicker from './components/UnitPicker'
-import ClaudeConnectPanel from './components/ClaudeConnectPanel'
+import ConnectPanel from './components/ConnectPanel'
 import { ConfigurationsPanel } from './components/ConfigurationsPanel'
 import SavedEstimatesPanel from './components/SavedEstimatesPanel'
 import ViewToggle from './components/ViewToggle'
@@ -58,8 +58,9 @@ export default function App() {
             <SavedEstimatesPanel />
             {/* Last in the column: setup, not an input. Nobody reaches for it
                 while estimating, and it is the one section a user touches once
-                (ADR-0029, slice `connect-to-claude-button`). */}
-            <ClaudeConnectPanel />
+                (ADR-0029, slice `connect-to-claude-button`; one row per MCP
+                client since ADR-0030). */}
+            <ConnectPanel />
           </div>
           <ResultsPanel />
           {/* Last child and absolutely positioned: it overlays the column's

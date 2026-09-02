@@ -98,20 +98,27 @@ row on Linux (Consequence 5) and the renamed Claude e2e green._
       not crash. `connect()` runs `codex mcp add …` then `status()`. Pass
       `CODEX_HOME` through the child env when set. No TOML, no new dependency.
       Depends on: `connect-client-seam`, `shared-shim-entry`, `codex-cli-discovery`.
-- [ ] `copyable-entry-fallback` · medium — `manual: ManualEntry` on `ClientStatus`
+- [x] `copyable-entry-fallback` · medium — `manual: ManualEntry` on `ClientStatus`
       (**revised from `string` by ADR-0030 addendum 2**: the audience uses GUI
       apps, so the fallback is the fields the client's own form asks for, in its
       words — one per box for Codex, one JSON `block` for Claude Desktop), produced
       in main from the shared serialisers (renderer composes nothing). Present in
       every state. **Main half landed (a7b28e8); the JSX lands with the panel.**
       Depends on: `connect-client-seam`, `shared-shim-entry`.
-- [ ] `connect-panel-rows` · medium — `ClaudeConnectPanel.tsx` becomes a panel of
+- [x] `connect-panel-rows` · medium — `ClaudeConnectPanel.tsx` becomes a panel of
       `ClientRow`s over `ClientStatus[]`; `justWrote` keyed by client id; test ids
       gain a `connect-<id>-` prefix; read-only block plus copy button (the
       `navigator.clipboard` pattern from `CopySummaryButton.tsx`) for `manual`.
       Rename the ~8 selectors in `e2e/claude-connect.spec.ts`. Rows keyed by the
       registry's ids so the undetected Codex row renders. Depends on:
       `connect-client-seam`, `claude-adapter-move`, `copyable-entry-fallback`.
+      Landed as `ConnectPanel.tsx` + `ConnectClientRow.tsx` — the old name
+      described one client, and the file now renders a Codex row on a machine
+      with no Claude Desktop on it. Section heading "AI assistants"; every
+      sentence in a row names its own client. `e2e/claude-connect.spec.ts`
+      gained a fifth test for the panel shape itself: both rows present, the
+      by-hand fields readable and copyable in the state where Codex is not
+      installed.
 
 ### 4. E2E coverage: fake CLI, then the conditional real-CLI spec — **opus**
 _Both share the `e2e/fake-codex/` contract and the set-then-delete env pattern;

@@ -870,3 +870,87 @@ input[type='number']::-webkit-outer-spin-button {
 .estimate-more {
   font-size: 0.7rem;
 }
+
+/* The connect panel (ADR-0030): one row per MCP client, in the same scrolling
+   column as the inputs, so it borrows their spacing rather than introducing a
+   second visual language. Rows are separated by a rule rather than boxed —
+   there are two of them, and two boxes at the bottom of a column already
+   carrying a preset list and a receipts list is one border too many. */
+.connect-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.connect-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
+.connect-row + .connect-row {
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+.connect-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+/* The by-hand fallback. Collapsed by default (see ConnectClientRow), so the
+   ordinary case — a button that works — is not buried under eight paths. */
+.connect-manual {
+  width: 100%;
+  font-size: 0.72rem;
+}
+.connect-manual summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.connect-manual summary:hover {
+  color: var(--accent);
+}
+.connect-fields {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.connect-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  align-items: flex-start;
+}
+.connect-field-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+/* A path is long and a panel is 360px. Both value shapes therefore SCROLL or
+   WRAP rather than truncate: an ellipsis in the middle of a command a user is
+   retyping into another program's form is a wrong answer that looks like a
+   right one. */
+.connect-field-value,
+.connect-field-block {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  padding: 0.2rem 0.35rem;
+  font-size: 0.7rem;
+  user-select: all;
+}
+.connect-field-value {
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.connect-field-block {
+  white-space: pre-wrap;
+  word-break: break-all;
+}

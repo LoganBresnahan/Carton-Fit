@@ -25,6 +25,11 @@ import { appModeEnv, callStructured, connect, stopSpawnedApp } from './mcpClient
  * Claude Desktop is never touched. `CLAUDE_DESKTOP_CONFIG_DIR` points main at
  * a temp directory, the same seam ADR-0021 gives the update check, and a
  * dogfooder's real config is never opened by a test run.
+ *
+ * ADR-0030 turned the panel into a list, so the selectors here are
+ * `connect-claude-desktop-*` — one client's row among several — and the last
+ * test asserts the panel shape itself. Codex's own behaviour belongs with its
+ * fake CLI, not here.
  */
 
 interface ConfigFile {
@@ -78,12 +83,14 @@ test('the button writes an invocation that actually reaches this window', async 
     // below an assertion about THIS window rather than about any app.
     await importSample(app.page, CUBE_STL.file)
 
-    await app.page.click('[data-testid="claude-connect"]')
-    await app.page.waitForSelector('[data-testid="claude-connected"]')
+    await app.page.click('[data-testid="connect-claude-desktop-connect"]')
+    await app.page.waitForSelector('[data-testid="connect-claude-desktop-connected"]')
     // The restart line is the feature, not a footnote: Claude Desktop reads
     // its config at startup, so a correct write connects nothing until it is
     // restarted, and without this sentence success looks like failure.
-    await expect(app.page.locator('[data-testid="claude-connected"]')).toContainText('Restart')
+    await expect(
+      app.page.locator('[data-testid="connect-claude-desktop-connected"]')
+    ).toContainText('Restart')
 
     const written = JSON.parse(readFileSync(configPath(dir), 'utf8')) as ConfigFile
     expect(written['globalShortcut']).toBe('Alt+Space')
@@ -130,8 +137,10 @@ test('the button writes an invocation that actually reaches this window', async 
   // half of the feature is untested.
   app = await launchWith(dir, profile)
   try {
-    await app.page.waitForSelector('[data-testid="claude-connected"]')
-    await expect(app.page.locator('[data-testid="claude-connect"]')).toHaveText('Reconnect')
+    await app.page.waitForSelector('[data-testid="connect-claude-desktop-connected"]')
+    await expect(
+      app.page.locator('[data-testid="connect-claude-desktop-connect"]')
+    ).toHaveText('Reconnect')
   } finally {
     await app.app.close()
   }
@@ -158,11 +167,13 @@ test('an entry naming a different copy of the app is offered as a reconnect', as
 
   const app = await launchWith(dir, profile)
   try {
-    await app.page.waitForSelector('[data-testid="claude-outdated"]')
+    await app.page.waitForSelector('[data-testid="connect-claude-desktop-outdated"]')
     // Offered as a fix, not reported as a fault: one click re-points it here.
-    await expect(app.page.locator('[data-testid="claude-connect"]')).toHaveText('Connect to Claude')
-    await app.page.click('[data-testid="claude-connect"]')
-    await app.page.waitForSelector('[data-testid="claude-connected"]')
+    await expect(
+      app.page.locator('[data-testid="connect-claude-desktop-connect"]')
+    ).toHaveText('Connect to Claude Desktop')
+    await app.page.click('[data-testid="connect-claude-desktop-connect"]')
+    await app.page.waitForSelector('[data-testid="connect-claude-desktop-connected"]')
 
     // REPLACED, not accumulated — the key is stable across installs precisely
     // so a move leaves one entry rather than a dead one beside a live one.
@@ -187,8 +198,8 @@ test('a config we cannot parse is refused, loudly, and left byte-for-byte alone'
 
   const app = await launchWith(dir, profile)
   try {
-    await app.page.click('[data-testid="claude-connect"]')
-    const error = app.page.locator('[data-testid="claude-error"]')
+    await app.page.click('[data-testid="connect-claude-desktop-connect"]')
+    const error = app.page.locator('[data-testid="connect-claude-desktop-error"]')
     await error.waitFor()
     // Loud AND specific: it names the file, because the user's next move is to
     // go and look at it (build-plan sequencing risk 5).
@@ -210,11 +221,49 @@ test('no Claude Desktop: the panel says so and writes nothing', async () => {
 
   const app = await launchWith(dir, profile)
   try {
-    await app.page.waitForSelector('[data-testid="claude-not-found"]')
+    await app.page.waitForSelector('[data-testid="connect-claude-desktop-not-detected"]')
     // No button to press: nothing would enable it, and an offer that cannot
     // work is worse than a sentence explaining why.
-    await expect(app.page.locator('[data-testid="claude-connect"]')).toHaveCount(0)
+    await expect(app.page.locator('[data-testid="connect-claude-desktop-connect"]')).toHaveCount(0)
     expect(existsSync(dir)).toBe(false)
+  } finally {
+    await app.app.close()
+  }
+})
+
+test('the panel renders one row per registered client, each with by-hand fields', async () => {
+  test.setTimeout(120_000)
+  // A real Claude Desktop config directory, so its row is in an ordinary state
+  // and the assertions below are about the PANEL rather than about an error.
+  const dir = claudeDir()
+  const profile = mkdtempSync(join(tmpdir(), 'pe-claude-profile-'))
+
+  const app = await launchWith(dir, profile)
+  try {
+    // BOTH ROWS, and the second one is the point (ADR-0030 Consequence 5): on
+    // this machine Codex is almost certainly not installed, and a panel that
+    // dropped undetected clients would say nothing at all about a client the
+    // user came here to set up. The row's STATE is deliberately not asserted —
+    // a developer with Codex on their PATH is not a broken build.
+    await expect(app.page.locator('[data-testid="connect-claude-desktop-row"]')).toBeVisible()
+    await expect(app.page.locator('[data-testid="connect-codex-row"]')).toBeVisible()
+
+    // The by-hand fallback is present WHATEVER the state — including the
+    // not-detected one, which is exactly when we cannot write anything and the
+    // user still has a working form in front of them (ADR-0030 addendum 2).
+    await app.page.click('[data-testid="connect-codex-manual"] summary')
+    // Field 0 is Codex's own "Name" box, and its value is the key we would have
+    // written ourselves — the fallback and the button describe one entry.
+    const codexName = app.page.locator('[data-testid="connect-codex-field-0"]')
+    await expect(codexName).toContainText(MCP_SERVER_KEY)
+    await app.page.click('[data-testid="connect-codex-copy-0"]')
+    await expect(app.page.locator('[data-testid="connect-codex-copy-0"]')).toHaveText('Copied ✓')
+
+    // Claude Desktop has no custom-server form, so its fallback is the JSON
+    // block for Settings → Developer → Edit Config — one field, not eight.
+    await app.page.click('[data-testid="connect-claude-desktop-manual"] summary')
+    const claudeBlock = app.page.locator('[data-testid="connect-claude-desktop-field-0"]')
+    await expect(claudeBlock).toContainText(MCP_SERVER_KEY)
   } finally {
     await app.app.close()
   }
