@@ -137,6 +137,43 @@ test('the button writes an invocation that actually reaches this window', async 
   }
 })
 
+test('an entry naming a different copy of the app is offered as a reconnect', async () => {
+  test.setTimeout(120_000)
+  const dir = claudeDir()
+  const profile = mkdtempSync(join(tmpdir(), 'pe-claude-profile-'))
+
+  // Our key, somebody else's binary — what an app that MOVED looks like (a
+  // reinstall, a different checkout, a drive letter that changed). Reporting
+  // this as connected would leave a user staring at a working button and a
+  // Claude Desktop that reaches a path with nothing at it.
+  writeFileSync(
+    configPath(dir),
+    JSON.stringify(
+      { mcpServers: { [CLAUDE_SERVER_KEY]: { command: '/gone/carton-fit', args: ['/gone/mcp.js'] } } },
+      null,
+      2
+    ),
+    'utf8'
+  )
+
+  const app = await launchWith(dir, profile)
+  try {
+    await app.page.waitForSelector('[data-testid="claude-outdated"]')
+    // Offered as a fix, not reported as a fault: one click re-points it here.
+    await expect(app.page.locator('[data-testid="claude-connect"]')).toHaveText('Connect to Claude')
+    await app.page.click('[data-testid="claude-connect"]')
+    await app.page.waitForSelector('[data-testid="claude-connected"]')
+
+    // REPLACED, not accumulated — the key is stable across installs precisely
+    // so a move leaves one entry rather than a dead one beside a live one.
+    const written = JSON.parse(readFileSync(configPath(dir), 'utf8')) as ConfigFile
+    expect(Object.keys(written.mcpServers ?? {})).toEqual([CLAUDE_SERVER_KEY])
+    expect(written.mcpServers?.[CLAUDE_SERVER_KEY]?.command).not.toBe('/gone/carton-fit')
+  } finally {
+    await app.app.close()
+  }
+})
+
 test('a config we cannot parse is refused, loudly, and left byte-for-byte alone', async () => {
   test.setTimeout(120_000)
   const dir = claudeDir()
