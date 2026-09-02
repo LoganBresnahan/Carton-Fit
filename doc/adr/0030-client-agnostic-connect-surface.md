@@ -1,8 +1,10 @@
 # ADR-0030: A client-agnostic connect surface — each client's config through the mechanism its owner supports
 
 Date: 2026-09-02
-Status: Proposed (every open detail below has a named resolution path; the
-facts in Context were established on the requesting machine, not assumed)
+Status: Accepted 2026-09-02 (Proposed the same day; every open detail below
+has a named resolution path, and the facts in Context were established on the
+requesting machine, not assumed). Sequenced ahead of ADR-0031: smaller,
+touches none of the same code, and has a waiting dogfooder.
 
 Extends ADR-0029 (phase-6 addendum: the Connect to Claude button). Supersedes
 nothing — it generalises a surface that was built for one client into one that

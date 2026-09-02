@@ -438,8 +438,14 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       ordered (part, orientation, position) sequence the viewport can animate.
       That witness is the product payoff, and it survives even when the fill gain
       over tier 2 is small.
-      **This is the frontier, but it is gated twice and neither gate is ours to
-      wave through:**
+      **Reaffirmed 2026-09-02: tier 3 is a must, not a maybe.** The maintainer
+      committed to it in the same session that sequenced items 22 and 23 ahead
+      of it — so the second gate below (dogfood evidence) no longer decides
+      *whether*, only *what the goldens must contain*. The first gate stands:
+      the five open details need resolving and the ADR needs its flip before
+      `adr-plan`. Order: item 22 → item 23 → this. ADR-0031's stage seam must
+      leave room for tier 3 as a stage-1 strategy that never touches stage 2.
+      **This was the frontier, gated twice:**
       - the ADR is Proposed, not Accepted — its five **open details** (voxel
         resolution + memory bounds, the insertability model, the move set, where
         the ratchet cache lives, and WASM/Rust vs. worker-side TypeScript, which
@@ -722,7 +728,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       place it is most likely to be quoted. Deserves its own pass with the
       export spec, not a silent widening of this one.
 
-- [ ] 22. A client-agnostic connect surface — **ADR-0030, Proposed 2026-09-02.**
+- [ ] 22. A client-agnostic connect surface — **ADR-0030, Accepted 2026-09-02**
+      (Proposed the same morning). Sequenced first of the three open items:
+      smallest, disjoint code, a dogfooder waiting.
       "The same for ChatGPT" turned out to mean OpenAI Codex (the Store
       package's binary is `ChatGPT.exe`), which speaks stdio MCP, keeps a
       *non*-virtualised `~/.codex/config.toml` — TOML, not JSON — and ships
@@ -733,8 +741,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       the client's tooling first, its file (read-merge-write) only when there
       is none, and the entry as copyable text as the fallback that touches
       nobody's files. No TOML parser; one `ConnectClient` seam in main; the
-      Claude adapter is phase-6 code moved, not rewritten. `adr-plan` after
-      the flip to Accepted. Open details worth reading before starting: Codex's
+      Claude adapter is phase-6 code moved, not rewritten. Build plan:
+      `doc/plans/adr-0030-connect-build-plan.md` (11 slices, 5 phases, all
+      opus, no adversarial verify warranted). Open details worth reading before starting: Codex's
       10 s startup timeout vs. a cold Electron boot (measure first), and the
       fact that Codex is verified only by dogfooding — no CI runner has it.
 
