@@ -37,7 +37,12 @@ type Outcome = { state: AppStateReport; estimate: DriveOutcome['estimate'] }
 test('no app running: the shim boots one, hidden, and serves the full surface', async () => {
   test.setTimeout(120_000)
   const shim = shimLaunch()
-  const client = await connect(shim, nodeModeEnv())
+  // Timed, not asserted: this is THE cold path — no app running, so the shim
+  // spawns one and answers the handshake only once that app's pipe does. It is
+  // the measurement ADR-0030's open detail 1 needs against Codex's 10-second
+  // startup timeout, and it accumulates from here so the numbers exist on both
+  // platforms by the time that detail has to close.
+  const client = await connect(shim, nodeModeEnv(), 'cold connect')
   try {
     // The full surface — v1, drive, data — because a real app with a real
     // database answers, not the v1-only standalone entry.

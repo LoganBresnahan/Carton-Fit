@@ -177,7 +177,8 @@ export function appHostedLaunch(): { command: string; args: string[] } {
  */
 export async function connect(
   launch: { command: string; args: string[] },
-  env: Record<string, string>
+  env: Record<string, string>,
+  label?: string
 ): Promise<Client> {
   const client = new Client({ name: 'e2e', version: '0' })
   const transport = new StdioClientTransport({ ...launch, env, stderr: 'pipe' })
@@ -192,7 +193,17 @@ export async function connect(
   // between "crashed" and "alive but mute" — the question the timeout hides.
   transport.onclose = () => say('transport closed (the server process ended)')
 
+  // The stopwatch, when the caller says what it is timing (ADR-0030 open
+  // detail 1). Codex initialises a stdio server with a 10-second default and
+  // no flag to raise it, while a cold connect here spawns an Electron app and
+  // waits for its pipe — so the question "is that comfortably under 10 s on
+  // both platforms?" is decided by a number nobody has yet, and it costs one
+  // line to start collecting it. NO ASSERTION: a threshold here would fail on
+  // a loaded CI runner and say nothing about a user's disk. The number goes to
+  // stderr, which CI and the release logs already keep, and phase 5 reads it.
+  const started = performance.now()
   await client.connect(transport)
+  if (label !== undefined) say(`${label}: ${Math.round(performance.now() - started)} ms`)
   return client
 }
 

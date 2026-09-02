@@ -62,7 +62,7 @@ each._
       argv, and the same as a quoted command line for the copyable fallback. Unit
       test round-trips both back to `sameEntry`, including the Windows-spaces cases
       (risk 2). Depends on: none.
-- [ ] `shim-cold-boot-timing` · low — Wrap the cold spawn-and-connect already in
+- [x] `shim-cold-boot-timing` · low — Wrap the cold spawn-and-connect already in
       `e2e/mcp-shim.spec.ts` (via `e2e/mcpClient.ts` `connect()`) in
       `performance.now()` and print one `[mcp:server] cold connect: N ms` line to
       stderr; CI and release logs surface it. No assertion. Start early so numbers
