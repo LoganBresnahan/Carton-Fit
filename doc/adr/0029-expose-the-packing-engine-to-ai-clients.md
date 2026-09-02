@@ -647,6 +647,51 @@ the assumption. Dogfooding on a real machine is what ADR-0005 puts at the top
 of the pyramid for exactly this class of finding, and it earned its place here
 inside an hour of the build being staged.
 
+### Phase-6 addendum, part 3 (2026-09-02) — the dialect on the wire
+
+**The second dogfood finding, an hour after the first, and it answers the
+question the first left open:** the Store Claude Desktop DOES spawn the shim.
+The handshake succeeded, all fifteen tools listed (proxied as
+`mcp__remote-devices__carton-fit__*`) — and every call was rejected before it
+reached the app:
+
+> Tool 'get_app_state' has an invalid outputSchema: JSON Schema declares an
+> unsupported dialect ("$schema": "http://json-schema.org/draft-07/schema#").
+> The default validator supports JSON Schema 2020-12 only.
+
+**The cause is the SDK, and the SDK offers no switch.** `registerTool`
+converts our zod shapes with zod's `toJSONSchema` at a target the SDK
+hardcodes to draft-7 (`mapMiniTarget(undefined)`), and 1.30.0 — the latest
+1.x, byte-identical in that file — exposes no option to change it. Current
+clients validate 2020-12 only. This is the ecosystem's known break
+(typescript-sdk#2532 and #745; claude-code#86142; SEP-1613 makes 2020-12 the
+protocol's default dialect), not a property of our schemas.
+
+**Why 763 green tests shipped it:** every MCP test here talks through the
+SDK's own client, and that client tolerates draft-07. A suite cannot catch a
+disagreement between two parties when it only ever plays one of them.
+`tests/mcp-schema-dialect.test.ts` reads the label instead of tolerating it.
+
+**The fix is one label, and that it is ONLY a label was measured.** The SDK
+accepts either a raw shape or an object instance; a raw shape it rebuilds into
+a fresh `z.object` (discarding metadata), an instance it passes through
+untouched — and zod lets root metadata override the `$schema` it would stamp.
+So `wire(shape)` returns `z.object(shape).meta({ $schema: <2020-12> })`, and
+every registration goes through it. Same shape, same validation (the SDK now
+parses through this very instance), one label. Before/after `tools/list` was
+diffed with the `$schema` lines removed: identical. And for every shape on the
+surface, zod's draft-07 and 2020-12 bodies are byte-identical — pinned per
+shape, so a future construct where the dialects genuinely differ fails the
+test rather than shipping mislabelled.
+
+**Rejected on the way:** dropping `outputSchema` (the thirty-second unblock the
+client itself suggested) — it is what enforces requiredness on the wire, the
+mechanical half of "an unqualified answer is our bug" (phase-2 addendum);
+hand-converting to JSON Schema and passing that — SDK 1.30 treats a plain
+JSON object as "no schema" and validates only zod; `patch-package` on the
+SDK's default — correct but a new build dependency and a postinstall hook to
+fix what one line of our own code fixes; upgrading — nothing to upgrade to.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

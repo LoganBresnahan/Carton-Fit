@@ -24,6 +24,41 @@ import { z } from 'zod'
 // Changing anything here is an ADR-0020 surface change: additive is a minor
 // version, anything a caller could be relying on is a major.
 
+/**
+ * The JSON Schema dialect every tool declares on the wire.
+ *
+ * Found by dogfooding on the first Store Claude Desktop (2026-09-02): the
+ * handshake succeeded, all 15 tools listed, and every call was rejected before
+ * it reached the app — "JSON Schema declares an unsupported dialect
+ * (draft-07)… the default validator supports 2020-12 only". The MCP SDK (1.x,
+ * latest included) stamps draft-07 on every schema it converts and exposes no
+ * option to change it, while current clients validate 2020-12 only
+ * (typescript-sdk#2532, SEP-1613 makes 2020-12 the protocol default). Our own
+ * suite was green because the SDK's *client* still accepts draft-07 — which is
+ * why `tests/mcp-schema-dialect.test.ts` now pins the label directly.
+ */
+export const JSON_SCHEMA_DIALECT = 'https://json-schema.org/draft/2020-12/schema'
+
+/**
+ * A tool schema as it must be HANDED to `registerTool`.
+ *
+ * The SDK accepts a raw shape or an object instance. A raw shape it rebuilds
+ * into a fresh `z.object` — discarding any metadata — and then converts with
+ * zod's `toJSONSchema` at the SDK's hardcoded draft-7 target. An object
+ * INSTANCE passes through untouched, and zod lets root metadata override the
+ * `$schema` it would otherwise stamp. So this is the whole fix: same shape,
+ * same validation (the SDK parses through this very instance), one label.
+ *
+ * It is a label change and nothing more, and that was measured rather than
+ * assumed: for every schema on this surface the draft-07 and 2020-12 bodies
+ * zod emits are byte-identical. If a future schema uses a construct where the
+ * two dialects genuinely differ, the dialect test's body comparison is what
+ * says so.
+ */
+export function wire<T extends z.ZodRawShape>(shape: T) {
+  return z.object(shape).meta({ $schema: JSON_SCHEMA_DIALECT })
+}
+
 export const lengthUnit = z.enum(['mm', 'in'])
 export const weightUnit = z.enum(['g', 'kg', 'lb'])
 export const volumeUnit = z.enum(['mm3', 'in3'])

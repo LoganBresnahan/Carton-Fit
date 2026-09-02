@@ -11,6 +11,7 @@ import type { SetInputsRequest } from './inputs'
 import { inspectParts } from './inspect'
 import { toG } from './wire'
 import {
+  wire,
   captureViewInput,
   driveOutcomeOutput,
   estimateInput,
@@ -129,8 +130,8 @@ export function createCartonFitServer(options: ServerOptions): McpServer {
         'bounding box, enclosed volume, and whether each mesh is closed. Call this before ' +
         'estimating with a density — an open mesh makes a density-derived weight wrong ' +
         'rather than approximate.',
-      inputSchema: inspectInput,
-      outputSchema: inspectOutput
+      inputSchema: wire(inspectInput),
+      outputSchema: wire(inspectOutput)
     },
     async ({ path, outputUnits }) => {
       try {
@@ -160,8 +161,8 @@ export function createCartonFitServer(options: ServerOptions): McpServer {
         'it. Placement is heuristic: a positive result is a concrete arrangement that was ' +
         'found, a count is a floor, and neither is a proof that nothing better exists. ' +
         BULK_GUIDANCE,
-      inputSchema: estimateInput,
-      outputSchema: estimateOutput
+      inputSchema: wire(estimateInput),
+      outputSchema: wire(estimateOutput)
     },
     async ({ path, outputUnits, ...rest }) => {
       try {
@@ -211,8 +212,8 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'Load a CAD file (.step, .stp, .stl) into the running Carton Fit window, exactly as if ' +
         'it were dropped there — the person at the screen sees what you loaded. ' +
         SETTLED,
-      inputSchema: loadModelInput,
-      outputSchema: driveOutcomeOutput
+      inputSchema: wire(loadModelInput),
+      outputSchema: wire(driveOutcomeOutput)
     },
     async ({ path, outputUnits }) => {
       try {
@@ -245,8 +246,8 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'current value. Auto-run recomputes immediately, and the change lands on the app’s ' +
         'undo stack like a person’s edit (one call = one Ctrl+Z step). ' +
         SETTLED,
-      inputSchema: setInputsInput,
-      outputSchema: driveOutcomeOutput
+      inputSchema: wire(setInputsInput),
+      outputSchema: wire(driveOutcomeOutput)
     },
     async ({ outputUnits, unitPart, ...input }) => {
       try {
@@ -273,8 +274,8 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'density-derived weight — use it when someone has actually weighed the part, which also ' +
         'retires the open-mesh warning for that kind. Pass null to clear. ' +
         SETTLED,
-      inputSchema: setPartWeightInput,
-      outputSchema: driveOutcomeOutput
+      inputSchema: wire(setPartWeightInput),
+      outputSchema: wire(driveOutcomeOutput)
     },
     async ({ kind, weight, outputUnits }) => {
       try {
@@ -302,8 +303,8 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'warnings. If a recompute is in flight, this waits for it rather than answering from ' +
         'the previous inputs. ' +
         BULK_GUIDANCE,
-      inputSchema: getEstimateInput,
-      outputSchema: estimateOutput
+      inputSchema: wire(getEstimateInput),
+      outputSchema: wire(estimateOutput)
     },
     async ({ outputUnits }) => {
       try {
@@ -330,8 +331,8 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'The running app’s state: which file is loaded, every input as the app understands it, ' +
         'mode, tier, display units, and this build’s version. Does not wait for an in-flight ' +
         'recompute — the estimate field says one is running instead.',
-      inputSchema: getAppStateInput,
-      outputSchema: driveOutcomeOutput
+      inputSchema: wire(getAppStateInput),
+      outputSchema: wire(driveOutcomeOutput)
     },
     async ({ outputUnits }) => {
       try {
@@ -352,7 +353,7 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'A PNG of the running app’s 3D viewport — the packed carton once an estimate exists, or ' +
         'the model. This is the same scene the person at the window sees; use it to check an ' +
         'arrangement rather than imagining one.',
-      inputSchema: captureViewInput
+      inputSchema: wire(captureViewInput)
     },
     async ({ view }) => {
       try {
@@ -394,8 +395,8 @@ function registerDataTools(
       description:
         'The named input presets saved in this app — the same list its preset picker shows. ' +
         'Apply one with apply_preset.',
-      inputSchema: listPresetsInput,
-      outputSchema: presetsOutput
+      inputSchema: wire(listPresetsInput),
+      outputSchema: wire(presetsOutput)
     },
     async () => {
       try {
@@ -414,8 +415,8 @@ function registerDataTools(
         'Save the app’s CURRENT inputs — carton, clearances, weight cap, mode, tier, units — ' +
         'under a name, so they can be recalled later. Saves what is on screen, so set the ' +
         'inputs first. An existing preset of the same name is replaced.',
-      inputSchema: savePresetInput,
-      outputSchema: presetsOutput
+      inputSchema: wire(savePresetInput),
+      outputSchema: wire(presetsOutput)
     },
     async ({ name }) => {
       try {
@@ -439,8 +440,8 @@ function registerDataTools(
         'so a preset written by an older build cannot blank out a field it never knew about. ' +
         'One call = one Ctrl+Z step. ' +
         SETTLED,
-      inputSchema: applyPresetInput,
-      outputSchema: driveOutcomeOutput
+      inputSchema: wire(applyPresetInput),
+      outputSchema: wire(driveOutcomeOutput)
     },
     async ({ name, outputUnits }) => {
       try {
@@ -461,8 +462,8 @@ function registerDataTools(
         'The estimates someone chose to keep, newest first, each with the one-line receipt the ' +
         'app’s own list shows. These are RECEIPTS, not a cache: restore_estimate re-applies a ' +
         'row’s inputs and the engine computes the answer again (ADR-0016).',
-      inputSchema: listSavedEstimatesInput,
-      outputSchema: savedEstimatesOutput
+      inputSchema: wire(listSavedEstimatesInput),
+      outputSchema: wire(savedEstimatesOutput)
     },
     async ({ limit }) => {
       try {
@@ -481,8 +482,8 @@ function registerDataTools(
         'Keep the estimate the app is showing right now, with the inputs that produced it. ' +
         'Explicit by design: the app records nothing automatically, because only the person ' +
         'asking knows which estimate was an answer rather than a keystroke (ADR-0016).',
-      inputSchema: saveEstimateInput,
-      outputSchema: savedEstimatesOutput
+      inputSchema: wire(saveEstimateInput),
+      outputSchema: wire(savedEstimatesOutput)
     },
     async () => {
       try {
@@ -506,8 +507,8 @@ function registerDataTools(
         'file’s answer under those inputs. Per-part weight overrides come back too, pruned to ' +
         'the kinds the loaded file actually has. ' +
         SETTLED,
-      inputSchema: restoreEstimateInput,
-      outputSchema: driveOutcomeOutput
+      inputSchema: wire(restoreEstimateInput),
+      outputSchema: wire(driveOutcomeOutput)
     },
     async ({ id, outputUnits }) => {
       try {
@@ -534,8 +535,8 @@ function registerDataTools(
         'table; summary is the paste-into-a-quote block. Both carry every warning the screen ' +
         'carries: an answer that is qualified in the app stays qualified once it leaves it ' +
         '(ADR-0017).',
-      inputSchema: exportEstimateInput,
-      outputSchema: exportEstimateOutput
+      inputSchema: wire(exportEstimateInput),
+      outputSchema: wire(exportEstimateOutput)
     },
     async ({ format }) => {
       try {

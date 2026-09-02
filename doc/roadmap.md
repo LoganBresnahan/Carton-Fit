@@ -699,6 +699,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       The defect was not a wrong constant but an unexamined assumption that a
       program has ONE config location — which is why no test caught it: every
       test agreed with the assumption. ADR-0029 phase-6 addendum part 2.
+      — **second dogfood finding, an hour later: the Store Claude Desktop DOES
+      spawn the shim** (15 tools listed) — and every call was rejected
+      client-side: our schemas declared draft-07 and the client validates
+      2020-12 only. SDK default with no switch (typescript-sdk#2532); our
+      suite was green because the SDK's own client tolerates draft-07 — a
+      suite can't catch a disagreement between two parties when it only plays
+      one. Fixed with one label (`wire()` in schemas.ts: pass an object
+      instance whose root meta overrides `$schema`), proven to be ONLY a label
+      by diffing tools/list before and after, and pinned by
+      `tests/mcp-schema-dialect.test.ts` on the full surface. ADR-0029
+      phase-6 addendum part 3.
 
 - [ ] 22. A client-agnostic connect surface — **ADR-0030, Proposed 2026-09-02.**
       "The same for ChatGPT" turned out to mean OpenAI Codex (the Store
