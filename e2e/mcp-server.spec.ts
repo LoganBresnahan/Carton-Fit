@@ -94,6 +94,12 @@ test('headless estimate matches the hand-computed golden', async () => {
 })
 
 test('the app launched with --mcp-server serves the full surface from main', async () => {
+  // The GUI process never receives stdin on Windows (ADR-0029's Windows
+  // finding, pinned by the probe run: stdout markers flowed, the initialize
+  // never arrived), so THIS transport cannot exist there — the drive tier
+  // reaches Windows through the --mcp shim instead (mcp-shim.spec.ts). On
+  // Linux the stdio mode remains real and stays proven here.
+  test.skip(process.platform === 'win32', 'GUI-subsystem Electron never receives stdin on Windows')
   const client = await connect(appHostedLaunch(), appModeEnv())
   try {
     expect(client.getServerVersion()).toMatchObject({

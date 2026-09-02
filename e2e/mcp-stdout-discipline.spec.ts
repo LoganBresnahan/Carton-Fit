@@ -1,6 +1,13 @@
 import { expect, test } from '@playwright/test'
 import { spawn } from 'node:child_process'
-import { appHostedLaunch, appModeEnv, headlessLaunch, nodeModeEnv } from './mcpClient'
+import {
+  appHostedLaunch,
+  appModeEnv,
+  headlessLaunch,
+  nodeModeEnv,
+  shimLaunch,
+  stopSpawnedApp
+} from './mcpClient'
 
 /**
  * STDOUT CARRIES THE PROTOCOL AND NOTHING ELSE (ADR-0029, slice
@@ -98,8 +105,28 @@ test('the headless entry puts only protocol frames on stdout', async () => {
 
 test('the app-hosted server puts only protocol frames on stdout', async () => {
   test.setTimeout(60_000)
-  // The one that fails on Windows. A whole Electron app boots behind this
-  // stream — the hard case the slice exists for.
+  // On Windows this transport does not exist to discipline: the GUI process
+  // never receives stdin (the probe this spec ran as, 2026-09-02: both write
+  // paths flowed, the initialize never arrived), so no reply can ever join
+  // the boot noise on its stdout. The Windows discipline claim is the SHIM
+  // case below — the stream Claude Desktop actually reads.
+  test.skip(process.platform === 'win32', 'GUI-subsystem Electron never receives stdin on Windows')
+  // A whole Electron app boots behind this stream — the hard case the slice
+  // exists for.
   const { out, err } = await rawStdout(appHostedLaunch(), appModeEnv())
   expectProtocolOnly(out, err)
+})
+
+test('the --mcp shim puts only protocol frames on stdout', async () => {
+  test.setTimeout(60_000)
+  // The stream that reaches Claude Desktop on every platform: shim spawns a
+  // hidden app, proxies its pipe — and everything the app boot prints must
+  // land on stderr, never inside this stream.
+  const shim = shimLaunch()
+  try {
+    const { out, err } = await rawStdout(shim, nodeModeEnv())
+    expectProtocolOnly(out, err)
+  } finally {
+    await stopSpawnedApp(shim.profile)
+  }
 })

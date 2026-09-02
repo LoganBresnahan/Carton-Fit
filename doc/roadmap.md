@@ -584,44 +584,51 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         handshake. Composed at build time and living ONLY on that wire, because
         `version.ts` rejects a build suffix by design — stamping the version at
         its source would buy a truthful handshake by silencing the update check.
-      **CARRY-IN — `--mcp-server`, the APP-HOSTED server, does not work on
-      Windows, and this is now evidence rather than suspicion.** Found by the
-      first CI run that ever exercised these specs on Windows (33582003764,
-      2026-09-02); diagnosed over two further runs by making the harness read
-      the protocol stream raw (33584136244, 33585707659).
-      **What the stream actually contains: `"\r\n"`. That is all of it.** One
-      CRLF, no protocol frame, ever — and stderr completely empty, so nothing
-      crashed and nothing complained. The client's `Unexpected end of JSON
-      input` was it choking on that empty first line.
-      The HEADLESS entry speaks perfectly on the same runner, in the same run,
-      from the same bytes. The two differ in exactly one way: headless runs
-      under `ELECTRON_RUN_AS_NODE`, while `--mcp-server` is a Windows
-      GUI-subsystem process. So a GUI-subsystem Electron main process on
-      Windows cannot deliver its stdout to the parent that spawned it — which
-      makes hosting MCP on that process's stdio unworkable on the primary
-      target, not merely untested there.
-      Not a phase-4 regression: it is phase 3's mode, and release.yml last
-      succeeded at 0496b90 — BEFORE ADR-0029 phase 1 — so no MCP spec had ever
-      run on Windows. ci.yml runs the packaged e2e under xvfb, i.e. Linux only,
-      which is why nothing caught it for three phases.
-      **Phase 5 is already the fix, and this reorders why it exists.** The
-      `--mcp` shim runs headless — the mode that demonstrably works on Windows —
-      and proxies to the app over a named pipe, so the GUI process never owns
-      the protocol stream. That was designed for launch-order independence; it
-      turns out to be the only way the drive tier works on Windows at all.
-      Sequencing risk 4 ("the pipe behaviour cannot be fully proven on the WSL
-      dev box") was pointing here the whole time.
-      Worth one experiment before accepting the shim as the only route: whether
-      `fs.writeSync(1, …)` reaches the pipe where `process.stdout.write` does
-      not. Something wrote that CRLF, so the handle is not simply dead.
-      `e2e/mcp-stdout-discipline.spec.ts` is the permanent guard and the
-      diagnostic in one — it names the offending bytes rather than timing out.
-      97 packaged e2e ON LINUX, 750 vitest green twice. Next: phase 5 (fable,
-      isolated —
-      the `--mcp` shim and the single-instance pipe, the plan's highest-risk
-      slice, because the lock changes every launch) — now also the carry-in's
-      likely fix, so diagnose the Windows failure first and let what it says
-      shape the shim.
+      ~~**CARRY-IN — `--mcp-server`, the APP-HOSTED server, does not work on
+      Windows.**~~ — **resolved by phase 5** (below), after a fourth CI run
+      (33644585849, the probe branch) CORRECTED the diagnosis: it is stdin,
+      not stdout. A raw probe showed the GUI process's stdout carrying both a
+      stream-written and an fs.writeSync frame to the parent perfectly, while
+      the initialize written to its stdin was never delivered — a GUI-subsystem
+      Electron main process on Windows can speak but never hears. The stray
+      CRLF the first three runs fixated on is boot noise. The headless entry
+      works because run-as-node is a plain Node process. So no stdio hosting
+      can work there in either direction that matters, and the shim — headless,
+      where stdin works — is the mechanism, not a workaround. The app-hosted
+      stdio spec is skipped on win32 with the finding as its stated reason;
+      the same drive behaviours run on Windows through the shim.
+      **Phase 5 landed 2026-09-02** (the fable batch B slice,
+      `mcp-shim-single-instance` — the plan's highest-risk slice, and after
+      the Windows finding its most load-bearing):
+      - `--mcp` on the headless entry is the SHIM: a dumb byte proxy from the
+        client's stdio to the app's per-profile pipe, spawning a hidden app
+        when none is listening (detached — it must outlive the shim) and
+        passing its own argv through to it. Races settled by not entering
+        them: racing shims both spawn, the apps race the single-instance
+        lock, the loser exits, both retry loops land on the winner. Mutation
+        testing showed the redundancy is real — an always-spawn mutant still
+        converges to the person's instance through the lock.
+      - EVERY launch serves the pipe (launch-order runs both directions: open
+        the app, then ask Claude, and Claude reaches the window you are
+        looking at — pinned by a spec that loads a part through the UI and
+        reads it back through the shim). One instance per profile via
+        Electron's lock; a second manual launch reveals the hidden window,
+        focused, and exits.
+      - Quit policy (the ADR's punt, answered): the shim's life is the
+        client's; the app's is its own. Quit mid-session → shim EOF → next
+        question boots fresh. A server-mode app quits ITSELF when its last
+        stay-alive reason goes (stdio client, pipe sessions, visible window —
+        event-driven), closing its listener first so a shim dialing
+        mid-teardown gets refused and spawns fresh; a revealed window keeps
+        it alive on purpose (a person may be reading what Claude did). A
+        60 s backstop covers a shim that died before connecting.
+      - The drive/data e2e specs now ride the shim — the transport users get,
+        and the one that exists on Windows. Server-mode apps write
+        `<userData>/mcp-server.pid` so the harness can stop a detached app.
+      103 packaged e2e, 763 vitest green twice on Linux; the Windows verdict
+      is the release.yml run for this sha. Next: phase 6, the Connect to
+      Claude button — the config it writes is exactly the shim invocation
+      these specs drive.
       — a second, smaller CI catch, already fixed (5a8a462): the build id asked
       git twice per build and vite's own transient config file made the two
       readings disagree, so a CLEAN checkout stamped `+<sha>-dirty`. At a

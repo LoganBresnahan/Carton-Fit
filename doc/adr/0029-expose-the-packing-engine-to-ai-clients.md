@@ -436,29 +436,95 @@ covered; the show in between is a dogfooding check.
 ### Windows finding (2026-09-02) — the app-hosted server cannot own stdio there
 
 The first CI run ever to exercise the MCP specs on Windows found that
-`--mcp-server` does not work on the primary target. Three runs narrowed it
-(33582003764 → 33584136244 → 33585707659), and the answer is not ambiguous:
-**the GUI process's entire stdout is `"\r\n"`.** One CRLF, no frame, ever,
-with stderr empty — nothing crashed, nothing complained, and the client's
-`Unexpected end of JSON input` was it parsing that empty first line. The
-headless entry speaks perfectly on the same runner, in the same run, from the
-same bytes; the two differ only in that headless runs under
-`ELECTRON_RUN_AS_NODE` while `--mcp-server` is a Windows GUI-subsystem process.
+`--mcp-server` does not work on the primary target. Four runs narrowed it
+(33582003764 → 33584136244 → 33585707659 → the probe branch's 33644585849),
+and the last one **corrected the diagnosis the first three suggested**: it is
+not the writing side. A raw probe with markers showed the GUI process's stdout
+carrying both a `process.stdout.write` frame and an `fs.writeSync(1)` frame to
+the parent perfectly — but the `initialize` written to its stdin was never
+delivered (the probe's stdin listener never fired), so the server never had
+anything to answer. **A GUI-subsystem Electron main process on Windows can
+speak but never hears: stdin does not deliver.** The stray `"\r\n"` the
+earlier runs fixated on is boot noise — real, but a bystander. The headless
+entry works because `ELECTRON_RUN_AS_NODE` is a plain Node process with
+ordinary stdio.
 
 This does not change the ADR's decision, but it does change which half of it
-carries the weight. §"Launch-order independence" specified a `--mcp` shim plus a
-single-instance pipe so a client could connect whether or not the app was
-already running. That shim runs HEADLESS and proxies to the app over a named
-pipe — meaning the GUI process never owns the protocol stream. Designed for
-launch order, it turns out to be the only arrangement in which the drive tier
-works on Windows at all. Phase 5 is therefore not polish; it is the mechanism.
+carries the weight. §"Launch-order independence" specified a `--mcp` shim plus
+a single-instance pipe so a client could connect whether or not the app was
+already running. That shim runs HEADLESS — where stdin works — and proxies to
+the app over a pipe, meaning the GUI process never owns a protocol stream in
+either direction. Designed for launch order, it turns out to be the only
+arrangement in which the drive tier works on Windows at all. Phase 5 is
+therefore not polish; it is the mechanism.
 
-Two consequences worth stating plainly. The v1 tier is unaffected — the headless
-entry is exactly what Claude Desktop is pointed at today, and it works on
-Windows. And the property `stdout-protocol-discipline` claims is now guarded by
-a spec that reads the pipe raw and prints what it found
+Three consequences worth stating plainly. The v1 tier was never affected — the
+headless entry works on Windows. The property `stdout-protocol-discipline`
+claims is guarded by a spec that reads the pipe raw and prints what it found
 (`e2e/mcp-stdout-discipline.spec.ts`), because a timeout says only "no answer"
-while three CI cycles were spent asking "answer to what?".
+while three CI cycles were spent asking "answer to what?". And the app-hosted
+STDIO specs are `test.skip`ped on win32 with this finding as the stated reason
+— not because the behaviour is unproven there but because the transport they
+exercise cannot exist there; the same behaviours run on Windows through the
+shim, which is the transport users actually get.
+
+### Phase-5 addendum (2026-09-02) — the shim, the pipe, and one instance per profile
+
+The plan's highest-risk slice, and after the Windows finding its most
+load-bearing one. Three pieces, each with the decision that shaped it:
+
+**The pipe is per-profile, listening on every launch.** `mcp/pipePath.ts`
+derives the endpoint from the userData path — a named pipe on Windows (kernel
+cleans up), a socket under `XDG_RUNTIME_DIR`-else-tmpdir elsewhere (never
+inside userData: profile paths have no length budget and socket paths cap near
+104 bytes) — hashed, normalized, case-folded on win32, so the app (asking
+Electron) and the shim (resolving an argument or restating Electron's default
+rule) cannot derive two names for one profile. EVERY launch serves it, not
+just server mode: the launch-order promise runs both directions, and a person
+who opened the app first then asked Claude must reach the window they are
+looking at. Stale socket files — the crash leftover that would hold
+EADDRINUSE forever — are probed before they are unlinked: a REFUSED probe is a
+corpse, an ACCEPTED one is a live instance whose socket must not be stolen.
+
+**The shim is a dumb byte proxy, and its races are settled by not entering
+them.** `--mcp` on the headless entry: try the pipe; nothing there means no
+app, so spawn one (`--mcp-server --mcp-spawned`, detached, stdio ignored,
+argv passed through — the harness's GL flags ride the same mechanism a power
+user's config would) and retry until it listens. Two shims racing both spawn;
+the two apps race the single-instance lock; the loser exits; both retry loops
+land on whichever instance holds the pipe. Mutation-testing found this
+redundancy is REAL: a mutant shim that always spawns still converges to the
+person's running instance through the lock — connect-first is the polite fast
+path, not the correctness mechanism. Framing, backpressure and EOF are
+preserved by `pipe()` end to end: bytes are never inspected, a slow reader
+pauses the writer, and a hangup travels as end() in both directions.
+
+**Quit policy — the question the ADR punted, answered.** The shim's life is
+the client's (stdin EOF → exit); the app's life is its own. Quit the app
+mid-session and the shim sees EOF and exits: quit means quit, and the next
+question boots a fresh hidden app. The spawned app's converse: a server-mode
+process stays alive for exactly three reasons — a stdio client, pipe
+sessions, a visible window — and when the last goes, it quits itself
+(event-driven, no polling; before quitting it closes its pipe listener so a
+shim dialing mid-teardown gets REFUSED and correctly spawns fresh, rather
+than a session into a corpse). A window a drive call revealed keeps the app
+alive deliberately: a person may be reading what Claude did, and the app is
+theirs until they close it. A spawned app whose shim died before ever
+connecting quits on a 60-second backstop. Manual second launch routes through
+Electron's single-instance lock: the second process delivers "show me the
+app" — the hidden window reveals, focused — and exits.
+
+**Verification.** 763 vitest, 103 packaged e2e — the drive and data specs now
+ride the SHIM, the transport users actually get, which is also what lets them
+run on Windows CI at all; one stdio-hosted spec stays as the Linux-only proof
+of the direct mode. Mutation-tested: deleting the second-instance reveal fails
+exactly the second-launch spec; deleting the idle self-quit fails exactly the
+never-revealed assertion; the always-spawn mutant survives by architecture
+(documented above). Server-mode processes write `<userData>/mcp-server.pid`
+so the harness can stop a detached app it owns neither end of. Multiple
+simultaneous pipe sessions share the drive bridge's global serialization —
+two clients cannot interleave a settle window, though they can of course
+observe each other's edits, the same as two people at one machine would.
 
 ## Alternatives considered
 

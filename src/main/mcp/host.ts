@@ -1,9 +1,12 @@
 import { readFileSync } from 'node:fs'
+import type { Server } from 'node:net'
 import { join, resolve, sep } from 'node:path'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { createCartonFitServer, type ServerOptions } from './server'
+export type { ServerOptions } from './server'
 import { buildId } from './buildId'
+import { servePipe } from './pipeServer'
 import { claimStdoutForProtocol } from './stdout'
 
 // The server HOST (ADR-0029, build-plan slice `mcp-server-host-in-main`).
@@ -43,6 +46,42 @@ export async function serveStdio(options: ServerOptions): Promise<McpServer> {
   const server = createCartonFitServer(options)
   await server.connect(new StdioServerTransport(process.stdin, claimStdoutForProtocol()))
   return server
+}
+
+/**
+ * Serve MCP sessions on a local pipe — the transport the `--mcp` shim dials
+ * (slice `mcp-shim-single-instance`), and on Windows the only one that works
+ * at all (ADR-0029's Windows finding: a GUI-subsystem process cannot deliver
+ * its stdio, so the protocol must ride something that is not stdio).
+ *
+ * One CONNECTION is one SESSION is one fresh server instance: MCP's
+ * initialize handshake is per-connection state, and the SDK's transports are
+ * single-connection by design — sharing one server across sockets would share
+ * one handshake. The tools stay stateless and the drive bridge serializes
+ * globally, so per-session servers cost an object, not a behaviour.
+ * `StdioServerTransport` is misleadingly named but exactly right here: it
+ * speaks newline-delimited JSON-RPC over any (Readable, Writable) pair, and a
+ * socket is both halves.
+ *
+ * `hooks` exist for the caller's lifecycle arithmetic (index.ts quits a
+ * spawned, never-revealed app when its last session ends); the session close
+ * is keyed on the SOCKET closing, which covers a clean client exit and a
+ * killed one identically.
+ */
+export function servePipeSessions(
+  path: string,
+  options: ServerOptions,
+  hooks: { onSessionStart(): void; onSessionEnd(): void }
+): Promise<Server> {
+  return servePipe(path, (socket) => {
+    hooks.onSessionStart()
+    const server = createCartonFitServer(options)
+    socket.once('close', () => {
+      void server.close().catch(() => undefined)
+      hooks.onSessionEnd()
+    })
+    void server.connect(new StdioServerTransport(socket, socket)).catch(() => socket.destroy())
+  })
 }
 
 /** Where the app root is, seen from `out/main` — the Electron-free twin of

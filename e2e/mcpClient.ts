@@ -14,7 +14,7 @@ import { REPO_ROOT, SOFTWARE_GL } from './harness'
 const packaged = process.env.PACKAGED_APP
 
 /** The dev Electron binary — the same resolution `_electron.launch()` uses. */
-function electronBinary(): string {
+export function electronBinary(): string {
   return createRequire(__filename)('electron') as string
 }
 
@@ -73,6 +73,80 @@ export function headlessLaunch(): { command: string; args: string[] } {
     }
   }
   return { command: electronBinary(), args: [join(REPO_ROOT, 'out', 'main', 'mcp.js')] }
+}
+
+export interface ShimLaunch {
+  command: string
+  args: string[]
+  /** The throwaway profile this shim (and any app it spawns) runs under —
+   *  needed afterwards, because the spawned app is DETACHED by design and
+   *  `stopSpawnedApp` is the only way a spec can put it away. */
+  profile: string
+}
+
+/**
+ * Launch the `--mcp` shim — the transport Claude Desktop actually uses, and on
+ * Windows the only one that can carry the drive tier at all (ADR-0029's
+ * Windows finding: a GUI-subsystem Electron process never receives stdin, so
+ * the app cannot be spoken to over stdio; the shim runs under
+ * ELECTRON_RUN_AS_NODE, where stdio works, and proxies to the app's pipe).
+ *
+ * The GL flags ride the shim's argv: it forwards every argument it does not
+ * own to the app it spawns, which is the same mechanism a power user's config
+ * would use. Use `nodeModeEnv()` — the shim itself runs as Node.
+ */
+export function shimLaunch(existingProfile?: string): ShimLaunch {
+  const profile = existingProfile ?? mkdtempSync(join(tmpdir(), 'pe-shim-'))
+  const extras = [`--user-data-dir=${profile}`, ...SOFTWARE_GL]
+  if (packaged) {
+    return {
+      command: packaged,
+      args: [
+        join(dirname(packaged), 'resources', 'app.asar', 'out', 'main', 'mcp.js'),
+        '--mcp',
+        ...extras
+      ],
+      profile
+    }
+  }
+  return {
+    command: electronBinary(),
+    args: [join(REPO_ROOT, 'out', 'main', 'mcp.js'), '--mcp', ...extras],
+    profile
+  }
+}
+
+/**
+ * Stop the app a shim spawned, if one is still running.
+ *
+ * The app records its pid at `<userData>/mcp-server.pid` precisely for this:
+ * the spec owns neither end of a detached process, and an app whose window a
+ * drive call revealed deliberately OUTLIVES its client (a person may be
+ * reading what Claude did), so cleanup must reach past the shim. A pid that is
+ * already gone — the never-revealed app quits itself when its last session
+ * ends — is the good case, not an error.
+ */
+export async function stopSpawnedApp(profile: string): Promise<void> {
+  let pid: number
+  try {
+    pid = Number(readFileSync(join(profile, 'mcp-server.pid'), 'utf8').trim())
+  } catch {
+    return // never spawned, or cleaned up after itself
+  }
+  if (!Number.isFinite(pid) || pid <= 0) return
+  try {
+    process.kill(pid)
+  } catch {
+    return // already gone
+  }
+  for (let attempt = 0; attempt < 40; attempt++) {
+    try {
+      process.kill(pid, 0)
+    } catch {
+      return // exited
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250))
+  }
 }
 
 export function appHostedLaunch(): { command: string; args: string[] } {

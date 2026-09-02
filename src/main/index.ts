@@ -1,7 +1,10 @@
 import { app, BrowserWindow, screen } from 'electron'
+import { mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
+import type { Server } from 'node:net'
 import { join } from 'path'
-import { resolveServerOptions, serveStdio } from './mcp/host'
+import { resolveServerOptions, servePipeSessions, serveStdio, type ServerOptions } from './mcp/host'
 import { createDriveBridge } from './mcp/driveBridge'
+import { pipePath } from './mcp/pipePath'
 import { claimStdoutForProtocol } from './mcp/stdout'
 import { registerStorageIpc, closeStorage, storageForTools } from './storage'
 import { registerExportIpc } from './exportFile'
@@ -31,6 +34,14 @@ import {
 //     an app taking over the screen unasked. Everything below marked "server
 //     mode" follows from those two.
 const MCP_SERVER_MODE = process.argv.includes('--mcp-server')
+// SPAWNED BY THE SHIM (slice `mcp-shim-single-instance`): same hidden server
+// mode, with two differences that both follow from who launched it. Its stdio
+// goes nowhere (the shim connected it to 'ignore', and on Windows a GUI
+// process's stdio goes nowhere regardless — the finding that made the shim
+// the mechanism), so serving stdio is skipped rather than served into a void;
+// and no person chose to start it, so nobody would ever choose to stop it —
+// it quits itself when idle instead (see maybeQuitIdleServer).
+const MCP_SPAWNED = process.argv.includes('--mcp-spawned')
 if (MCP_SERVER_MODE) claimStdoutForProtocol()
 
 // The display name has a space; the userData directory must not (ADR-0019).
@@ -38,6 +49,15 @@ if (MCP_SERVER_MODE) claimStdoutForProtocol()
 // userData on its first line (ADR-0014) — so this runs at module load, ahead of
 // whenReady, rather than anywhere it could be beaten to the path.
 app.setName('Carton-Fit')
+
+// ONE INSTANCE PER PROFILE (slice `mcp-shim-single-instance`). The pipe below
+// makes this load-bearing rather than polite: the pipe's name is derived from
+// the profile, so two instances on one profile would be two apps disputing one
+// identity — and the person double-clicking the icon while a hidden server
+// runs MEANS "show me the app", not "start a second one". The lock is
+// userData-scoped (Electron's own rule), so e2e profiles and a dogfooder's
+// real profile never contend.
+const SINGLE_INSTANCE = app.requestSingleInstanceLock()
 
 /** The window, or null between a close and the next `ensureWindow`. In server
  *  mode a closed window is not the end of the process, so this is genuinely
@@ -141,6 +161,9 @@ function createWindow(): BrowserWindow {
       mainWindow = null
       windowPainted = false
     }
+    // In server mode a closed window may have been the last thing keeping the
+    // process meaningful — see the lifecycle arithmetic above whenReady.
+    maybeQuitIdleServer()
   })
 
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -169,7 +192,46 @@ function ensureWindow(): BrowserWindow {
   return win
 }
 
+// ── Server-mode lifecycle arithmetic (slice `mcp-shim-single-instance`) ──────
+//
+// A server-mode process has up to three reasons to stay alive: a stdio client
+// (stdin still open), pipe sessions (shim-connected clients), and a window a
+// person can see. When the LAST of them goes, staying alive is not
+// persistence, it is an orphan — the exact thing mcpEntry's exit-on-close
+// avoids for the headless entry, arriving here with more moving parts.
+// Event-driven on purpose: nothing polls, every count change re-evaluates.
+let pipeSessions = 0
+let stdioClientPresent = false
+let pipeServer: Server | null = null
+
+function maybeQuitIdleServer(): void {
+  if (!MCP_SERVER_MODE) return // normal launches quit via window-all-closed
+  if (pipeSessions > 0 || stdioClientPresent) return
+  const win = mainWindow
+  if (win !== null && !win.isDestroyed() && win.isVisible()) return
+  // Nobody is connected and nobody can see it. A visible window survives this
+  // check deliberately: a drive call revealed it, so a person may be reading
+  // what Claude did — the app is theirs now, and it lives until they close it
+  // (at which point the 'closed' handler brings us back here).
+  //
+  // STOP ACCEPTING FIRST. A shim dialing during teardown must get REFUSED —
+  // its retry loop then spawns a fresh app, which is the recovery that works —
+  // rather than a connection to a process already half-gone, which is a dead
+  // session it cannot distinguish from a working one until it times out.
+  pipeServer?.close()
+  pipeServer = null
+  app.quit()
+}
+
+/** Where the server-mode pid is recorded — `<userData>/mcp-server.pid`. For a
+ *  human asking "is one running", and for the e2e harness, which must be able
+ *  to stop a detached app the shim started (it owns neither end of it). */
+function pidFile(): string {
+  return join(app.getPath('userData'), 'mcp-server.pid')
+}
+
 app.whenReady().then(() => {
+  if (!SINGLE_INSTANCE) return // quitting; see the lock above
   // Before the window: the client is already waiting on the handshake, and
   // nothing the server needs waits on the renderer — v1 tools answer from disk
   // and core alone. Options come from the same __dirname derivation the
@@ -178,21 +240,76 @@ app.whenReady().then(() => {
   // `app.getVersion()` is also just wrong in an e2e launch). A failure to
   // serve is reported and NOT fatal: the person launched an app, and the app
   // half still works.
-  if (MCP_SERVER_MODE) {
-    // The drive bridge is what makes this mode more than the headless entry:
-    // the v2/v3 tools reach the renderer's store through it (ADR-0029). Its
-    // first call waits for the window's drive host to announce itself, so
-    // starting the server ahead of createWindow() is safe.
-    serveStdio({
-      ...resolveServerOptions(__dirname),
-      drive: createDriveBridge({ ensureWindow }),
-      // The v3 data tier reads presets and saved estimates straight from
-      // main's own database — the same connection the renderer's IPC uses, so
-      // a list cannot disagree with what the panel shows.
-      storage: storageForTools
-    }).catch((err: unknown) => {
-      console.error('carton-fit mcp server failed to start:', err)
+  // The drive bridge is what makes an in-app server more than the headless
+  // entry: the v2/v3 tools reach the renderer's store through it (ADR-0029).
+  // Its first call waits for the window's drive host to announce itself, so
+  // starting servers ahead of createWindow() is safe. ONE options object for
+  // every transport, so a stdio client and a pipe client cannot be answered by
+  // servers that disagree about anything.
+  const serverOptions: ServerOptions = {
+    ...resolveServerOptions(__dirname),
+    drive: createDriveBridge({ ensureWindow }),
+    // The v3 data tier reads presets and saved estimates straight from
+    // main's own database — the same connection the renderer's IPC uses, so
+    // a list cannot disagree with what the panel shows.
+    storage: storageForTools
+  }
+
+  if (MCP_SERVER_MODE && !MCP_SPAWNED) {
+    stdioClientPresent = true
+    serveStdio(serverOptions)
+      .then((server) => {
+        // stdin closing is the stdio client hanging up — one of the three
+        // stay-alive reasons gone.
+        server.server.onclose = () => {
+          stdioClientPresent = false
+          maybeQuitIdleServer()
+        }
+      })
+      .catch((err: unknown) => {
+        stdioClientPresent = false
+        console.error('carton-fit mcp server failed to start:', err)
+      })
+  }
+
+  // EVERY launch listens on the profile's pipe, not just server mode — the
+  // ADR's launch-order promise runs both directions: a person who opened the
+  // app first, then asked Claude, connects to the app they are looking at.
+  // Failure is reported and non-fatal for the same reason stdio's is: the
+  // person launched an app, and the app half still works.
+  servePipeSessions(pipePath(app.getPath('userData')), serverOptions, {
+    onSessionStart: () => {
+      pipeSessions += 1
+    },
+    onSessionEnd: () => {
+      pipeSessions -= 1
+      maybeQuitIdleServer()
+    }
+  })
+    .then((server) => {
+      pipeServer = server
     })
+    .catch((err: unknown) => {
+      console.error('carton-fit mcp pipe failed to start:', err)
+    })
+
+  if (MCP_SERVER_MODE) {
+    // Best-effort on both ends: a pidfile that cannot be written costs the
+    // harness its cleanup, never the user their app.
+    try {
+      mkdirSync(app.getPath('userData'), { recursive: true })
+      writeFileSync(pidFile(), `${process.pid}\n`, 'utf8')
+    } catch {
+      // Nothing to do.
+    }
+  }
+
+  if (MCP_SPAWNED) {
+    // The orphan backstop: spawned to serve a shim that then never connected
+    // (killed between spawn and dial, crashed, gave up). Sessions arriving or
+    // a reveal make this timer a no-op; without either, a process nobody knows
+    // exists should not wait for a reboot to find that out.
+    setTimeout(maybeQuitIdleServer, 60_000)
   }
   // Registers handlers only — the database itself opens on first use, so a
   // storage problem cannot delay or prevent the window appearing (ADR-0007).
@@ -212,6 +329,28 @@ app.whenReady().then(() => {
   })
 })
 
+if (!SINGLE_INSTANCE) {
+  // Some other process owns this profile. Electron has already delivered the
+  // 'second-instance' event to it — this process's only job was to carry that
+  // message, and lingering would mean two apps disputing one pipe and one
+  // database. (A second --mcp-server launch on the SAME profile also lands
+  // here and its client gets nothing; the shim route never does this — it
+  // connects to the existing instance instead of launching a rival.)
+  app.quit()
+}
+
+app.on('second-instance', () => {
+  // A person launched the app while an instance — perhaps a hidden server —
+  // already owned this profile. They mean "show me the app": reveal the
+  // window the running instance has, or build one if Claude's session closed
+  // it. Guarded on ready because the event can in principle race our own
+  // boot, and ensureWindow needs `screen`.
+  if (!app.isReady()) return
+  const win = ensureWindow()
+  if (win.isMinimized()) win.restore()
+  win.focus()
+})
+
 app.on('window-all-closed', () => {
   // SERVER MODE NEVER QUITS ON A CLOSED WINDOW. The process belongs to the MCP
   // client as much as to the person: quitting here would kill a server Claude
@@ -225,4 +364,13 @@ app.on('window-all-closed', () => {
 
 // Checkpoint the WAL and release the file rather than leaving it to process
 // teardown.
-app.on('will-quit', closeStorage)
+app.on('will-quit', () => {
+  closeStorage()
+  if (MCP_SERVER_MODE) {
+    try {
+      unlinkSync(pidFile())
+    } catch {
+      // Never written, or already gone — either way, done.
+    }
+  }
+})

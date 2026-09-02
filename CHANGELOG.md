@@ -49,12 +49,21 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
 
 - **In server mode the window waits until it is needed.** Claude Desktop starts
-  its servers when *it* starts, so Carton Fit launched with `--mcp-server` now
-  stays out of sight until the first tool call actually drives it — then it
-  appears, so you can watch. Closing that window no longer quits the app while
-  an assistant is still connected; the next tool call opens a fresh one. A
-  Carton Fit launched normally is completely unchanged: it shows its window and
-  quits when you close it.
+  its servers when *it* starts, so a Carton Fit started for an assistant stays
+  out of sight until the first tool call actually drives it — then it appears,
+  so you can watch. Closing that window no longer quits the app while an
+  assistant is still connected; the next tool call opens a fresh one. And an
+  invisible Carton Fit nobody is talking to quits itself rather than linger. A
+  Carton Fit launched normally is unchanged: it shows its window and quits when
+  you close it.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+- **One Carton Fit per profile, and the second launch finds the first.** Open
+  the app while a hidden assistant-started one is running and you get that
+  instance's window, shown and focused — not a second app quietly disputing
+  your saved data with the first. Ask Claude about the app you already have
+  open, and it connects to exactly that window: the part you loaded is the part
+  it sees.
   ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
 
 ### Changed

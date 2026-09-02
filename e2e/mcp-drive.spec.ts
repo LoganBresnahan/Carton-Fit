@@ -7,16 +7,24 @@ import type { AppStateReport } from '../src/main/mcp/appState'
 import type { EstimateReport } from '../src/main/mcp/estimate'
 import { SAMPLES } from './harness'
 import {
-  appHostedLaunch,
-  appModeEnv,
   callStructured,
   connect,
-  expectedServerVersion
+  expectedServerVersion,
+  nodeModeEnv,
+  shimLaunch,
+  stopSpawnedApp
 } from './mcpClient'
 
 /**
  * The v2 drive tier (ADR-0029, slice `v2-drive-tools`): Claude's half of the
- * conversation with the RUNNING app, over the same stdio the host specs prove.
+ * conversation with the RUNNING app — connected the way Claude Desktop
+ * actually connects, through the `--mcp` shim and the app's pipe (slice
+ * `mcp-shim-single-instance`). These specs rode the app's own stdio until the
+ * first Windows CI run showed that transport cannot exist there (a GUI
+ * process never receives stdin — ADR-0029's Windows finding), which also made
+ * the shim the only route these behaviours can be proven on for the primary
+ * target. Each spec's shim spawns a detached, hidden app; the drive calls
+ * reveal it, so `stopSpawnedApp` must put it away afterwards.
  *
  * The assertion that earns this file its place is the SETTLE RACE: set_inputs
  * changes the carton and the very same reply must carry the estimate for the
@@ -50,7 +58,8 @@ function goldenNamed(name: string): (typeof GOLDEN_PACKS)[number] {
 
 test('a drive journey: every reply carries the estimate for ITS OWN inputs', async () => {
   test.setTimeout(120_000)
-  const client = await connect(appHostedLaunch(), appModeEnv())
+  const shim = shimLaunch()
+  const client = await connect(shim, nodeModeEnv())
   try {
     const loaded = await loadCube(client)
     expect(loaded.state.file).toMatchObject({ loaded: true, name: CUBE_STL.file, parts: 1 })
@@ -117,12 +126,14 @@ test('a drive journey: every reply carries the estimate for ITS OWN inputs', asy
     expect(state.state.version).toBe(expectedServerVersion())
   } finally {
     await client.close()
+    await stopSpawnedApp(shim.profile)
   }
 })
 
 test('capture_view returns the packed scene as a real image', async () => {
   test.setTimeout(120_000)
-  const client = await connect(appHostedLaunch(), appModeEnv())
+  const shim = shimLaunch()
+  const client = await connect(shim, nodeModeEnv())
   try {
     await loadCube(client)
     const small = goldenNamed('cube max-quantity in a 3 in carton (slack on the far faces)')
@@ -155,12 +166,14 @@ test('capture_view returns the packed scene as a real image', async () => {
     expect(bytes.byteLength).toBeGreaterThan(10_000)
   } finally {
     await client.close()
+    await stopSpawnedApp(shim.profile)
   }
 })
 
 test('set_part_weight drives the ADR-0018 overrides, and refuses unknown kinds helpfully', async () => {
   test.setTimeout(120_000)
-  const client = await connect(appHostedLaunch(), appModeEnv())
+  const shim = shimLaunch()
+  const client = await connect(shim, nodeModeEnv())
   try {
     await loadCube(client)
 
@@ -199,5 +212,6 @@ test('set_part_weight drives the ADR-0018 overrides, and refuses unknown kinds h
     expect(report.qualifications.weightInput).toMatchObject({ overriddenKinds: ['cube-10x10'] })
   } finally {
     await client.close()
+    await stopSpawnedApp(shim.profile)
   }
 })

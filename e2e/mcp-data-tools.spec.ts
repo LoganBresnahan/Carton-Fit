@@ -5,7 +5,7 @@ import { CUBE_STL, GOLDEN_PACKS } from '../samples/goldens'
 import type { AppStateReport } from '../src/main/mcp/appState'
 import type { DriveOutcome } from '../src/shared/mcpDrive'
 import { SAMPLES } from './harness'
-import { appHostedLaunch, appModeEnv, callStructured, connect } from './mcpClient'
+import { callStructured, connect, nodeModeEnv, shimLaunch, stopSpawnedApp } from './mcpClient'
 
 /**
  * The v3 DATA tier end to end (ADR-0029, slice `v3-data-tools`).
@@ -21,6 +21,9 @@ import { appHostedLaunch, appModeEnv, callStructured, connect } from './mcpClien
  * preset that saved but did not restore, or restored without re-estimating,
  * would pass every unit test in this repo: the count only changes if the whole
  * chain ran.
+ *
+ * Connected through the `--mcp` shim — the route Claude Desktop uses, and on
+ * Windows the only one that exists (ADR-0029's Windows finding).
  *
  * PACKAGED ONLY, like `storage.spec.ts` and `native-module.spec.ts`:
  * better-sqlite3 is compiled for whichever ABI packaged last and `npm test`
@@ -66,7 +69,8 @@ test.describe('the data tier against a real database', () => {
 
   test('a preset journey: save what is on screen, change it, get it back', async () => {
     test.setTimeout(180_000)
-    const client = await connect(appHostedLaunch(), appModeEnv())
+    const shim = shimLaunch()
+    const client = await connect(shim, nodeModeEnv())
     try {
       // Nothing yet — an empty database is an empty list, not an error. The
       // distinction matters: "presets are broken" and "you have no presets"
@@ -115,12 +119,14 @@ test.describe('the data tier against a real database', () => {
       expect(missing.isError).toBe(true)
     } finally {
       await client.close()
+      await stopSpawnedApp(shim.profile)
     }
   })
 
   test('an estimate journey: save a receipt, restore its inputs, export the answer', async () => {
     test.setTimeout(180_000)
-    const client = await connect(appHostedLaunch(), appModeEnv())
+    const shim = shimLaunch()
+    const client = await connect(shim, nodeModeEnv())
     try {
       // Saving before there is anything to save must refuse WITH A REASON —
       // the renderer's own guard returns a quiet false, which is right for a
@@ -184,6 +190,7 @@ test.describe('the data tier against a real database', () => {
       expect(unknown.isError).toBe(true)
     } finally {
       await client.close()
+      await stopSpawnedApp(shim.profile)
     }
   })
 })

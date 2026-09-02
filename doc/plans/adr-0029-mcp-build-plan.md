@@ -305,7 +305,7 @@ freely._
 _Deliberately isolated: the highest-risk slice in the plan. Follow with a
 normal-launch dogfood pass and a Windows CI check._
 
-- [ ] `mcp-shim-single-instance` · high · **verify** — Genuine lifecycle/IPC
+- [x] `mcp-shim-single-instance` · high · **verify** — Genuine lifecycle/IPC
       reasoning: the shim's connect-vs-lock decision races concurrent launches; the
       pipe must work as both a Windows named pipe and a Unix socket (stale-socket
       cleanup, userData-scoped naming); stdio proxying must preserve MCP framing,
@@ -316,6 +316,32 @@ normal-launch dogfood pass and a Windows CI check._
       high because the lock and pipe listener change the normal desktop launch path
       for every user. See sequencing risk 4.
       Depends on: `mcp-server-host-in-main`, `hidden-launch-show-on-drive`.
+      **Shipped 2026-09-02** — and promoted from convenience to mechanism by
+      the Windows finding's correction (probe run 33644585849): a GUI-subsystem
+      Electron process's stdin NEVER DELIVERS on Windows (stdout works — the
+      probe's markers flowed; the initialize never arrived), so stdio hosting
+      cannot exist there and the shim is the only route to the drive tier.
+      The slice's named risks, as they landed:
+      — connect-vs-lock races: settled by not entering them — racing shims
+        both spawn, apps race the lock, retry loops land on the winner.
+        Mutation-tested with a surprise: the always-spawn mutant SURVIVES by
+        architecture (converges through the lock), documented rather than
+        chased — connect-first is the fast path, the lock is the correctness.
+      — pipe as named pipe / Unix socket: `mcp/pipePath.ts`, per-profile
+        hashed name (win32 case-folded; socket under XDG_RUNTIME_DIR else
+        tmpdir, never userData — the ~104-byte cap); stale sockets probed
+        before unlinked, a live one refused rather than stolen. 13 unit
+        cases, including a real SIGKILLed owner for the crash leftover.
+      — framing/backpressure/EOF: `pipe()` end to end, bytes never inspected.
+      — manual second launch: Electron's single-instance lock + reveal;
+        mutation kills exactly that spec.
+      — quit-while-shim-held: quit wins, shim exits on EOF, next question
+        boots fresh; idle server self-quits (listener closed BEFORE quit so a
+        racing dial is refused, not orphaned), revealed windows keep the app
+        alive on purpose, 60 s backstop for a shim that died pre-connect.
+      Drive/data specs switched to the shim transport (what users get, and
+      what Windows can run); one stdio spec stays Linux-only with the finding
+      as its skip reason. 103 packaged e2e, 763 vitest.
 
 ### 6. Connect to Claude button — **opus**
 _Last on purpose: the config entry it writes IS the shim's launch contract._
