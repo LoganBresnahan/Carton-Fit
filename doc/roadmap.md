@@ -738,6 +738,23 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       10 s startup timeout vs. a cold Electron boot (measure first), and the
       fact that Codex is verified only by dogfooding — no CI runner has it.
 
+- [ ] 23. Skid stage — **ADR-0031, Proposed 2026-09-02.** A program manager
+      at a die-casting plant, via their quality manager: take a saved carton estimate to a skid
+      build-out — three skid sizes (48×45, 26×26, 40×48 in) plus custom,
+      column or interlock stacking, overhang flagged as non-functional, pieces
+      per skid, gross weight, overall dimensions, and a picture. Narrowed by
+      the requester herself from four patterns to two. The ADR generalises
+      rather than bolts on: packing gets *stages*, a container gets *faces*
+      (signed tolerance per face; a carton is all-zero), and a pattern is a
+      repeating per-layer orientation sequence (column `[A]`, interlock
+      `[A,B]`, custom any). Product answers recorded from chat: stack cap as
+      layers and/or height, one signed overhang number (negative = inset),
+      carton tare as a stage-1 input — which makes the carton weight cap
+      gross, a user-visible change. Deck height and tare are preset fields
+      with visible defaults because nobody has asked the requester theirs yet.
+      `adr-plan` after the flip to Accepted; roughly item 7 in size.
+      Independent of item 22 — either can go first.
+
 ## Later
 
 - [x] 14. Slim the packaged app, second pass — **shipped 2026-07-26: Windows

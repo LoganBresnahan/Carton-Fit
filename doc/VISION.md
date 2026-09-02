@@ -120,12 +120,34 @@ the app that writes Claude Desktop's config — the audience is non-technical.
 There is deliberately **no chat UI inside Carton Fit**: the conversation lives in
 the AI client, next to the user's other context.
 
+## Skid stage (ADR-0031)
+
+Packing has **stages**: parts into a carton (everything above), then cartons
+onto a skid, through the same engine — a carton is a unit with two allowed
+orientations, a skid is a container with an open top and an overhang tolerance
+on its sides. The user saves a carton estimate they like and takes it to the
+skid build-out: pick a skid preset (48×45, 26×26, 40×48 in, or custom — each
+with its deck height and tare), a stacking pattern (**column** or
+**interlock**, or a hand-written per-layer orientation sequence), a signed
+overhang tolerance (0 flush, negative inset), and a stack cap as layers and/or
+height. Output: pieces per skid, gross skid weight (carton tare is a new stage-1
+input, and the carton weight cap becomes gross), overall dimensions, and the
+skid picture in the same viewport. Overhang beyond the tolerance is rejected
+during the search, not warned about afterward — a non-functional layout is one
+the user is never offered. Every qualification from stage 1 (open mesh,
+truncated layout) travels through to the skid numbers.
+
 ## Non-goals for v1
 
 - True shape nesting (tier 3) — designed for, not implemented.
 - Mixing *different* parts to optimize a single carton's contents (fit check handles the
   parts a file contains; it does not search combinations).
-- Pallet/stack planning, box selection/recommendation, cost estimation — all future.
+- Box selection/recommendation, cost estimation — all future. (Pallet/stack
+  planning was on this line until 2026-09-02; the first customer request after
+  the AI surface was exactly that, so it became the skid stage below — ADR-0031.)
+- Mixed cartons on one skid ("custom mixed stacking") and chimney/pinwheel
+  layouts — the two patterns the requester said they do not use. Named here so
+  the omission stays a decision (ADR-0031 revisit triggers).
 - Bulk/random-dump quantity estimation — "how many fit if I pour them in loose."
   There is no deterministic answer, only heuristics that a physical fill trial beats
   in twenty minutes (ADR-0028). If it ever ships, it is a labeled estimate range plus
