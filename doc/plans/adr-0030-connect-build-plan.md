@@ -98,11 +98,13 @@ row on Linux (Consequence 5) and the renamed Claude e2e green._
       not crash. `connect()` runs `codex mcp add …` then `status()`. Pass
       `CODEX_HOME` through the child env when set. No TOML, no new dependency.
       Depends on: `connect-client-seam`, `shared-shim-entry`, `codex-cli-discovery`.
-- [ ] `copyable-entry-fallback` · medium — `manual: string` on `ClientStatus`,
-      produced in main from the shared serialisers (renderer composes nothing): the
-      JSON block for Claude Desktop, the `codex mcp add …` line for Codex. Offered
-      whenever a write fails or a client is not detected. Depends on:
-      `connect-client-seam`, `shared-shim-entry`.
+- [ ] `copyable-entry-fallback` · medium — `manual: ManualEntry` on `ClientStatus`
+      (**revised from `string` by ADR-0030 addendum 2**: the audience uses GUI
+      apps, so the fallback is the fields the client's own form asks for, in its
+      words — one per box for Codex, one JSON `block` for Claude Desktop), produced
+      in main from the shared serialisers (renderer composes nothing). Present in
+      every state. **Main half landed (a7b28e8); the JSX lands with the panel.**
+      Depends on: `connect-client-seam`, `shared-shim-entry`.
 - [ ] `connect-panel-rows` · medium — `ClaudeConnectPanel.tsx` becomes a panel of
       `ClientRow`s over `ClientStatus[]`; `justWrote` keyed by client id; test ids
       gain a `connect-<id>-` prefix; read-only block plus copy button (the

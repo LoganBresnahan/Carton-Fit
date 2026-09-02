@@ -579,7 +579,9 @@ user staring at a working button and a broken Claude. The key
 a re-connect replaces one entry instead of accumulating one per install.
 `claude-not-found` (no config directory) shows a sentence and **no button**:
 writing a config for an absent program is litter under a name its owner never
-chose.
+chose. *(ADR-0030 renamed this state `not-detected` and made Claude Desktop one
+client of two behind a registry; `shared/claudeConnect.ts` became
+`shared/connect.ts`. The four-states reasoning is unchanged.)*
 
 **Failure is loud, which inverts ADR-0021 deliberately.** The update check
 answers every failure with silence because the app started it; this the user

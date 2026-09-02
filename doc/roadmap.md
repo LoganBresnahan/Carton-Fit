@@ -664,8 +664,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         machine-specific path into an ordinary install's config).
       - four states plus a loud error, because three would lie: `outdated` —
         our key naming a different binary, i.e. the app moved — is offered as
-        Reconnect rather than reported as connected. `claude-not-found` shows a
-        sentence and NO button; a config for an absent program is litter.
+        Reconnect rather than reported as connected. `claude-not-found` (now
+        `not-detected`, per ADR-0030) shows a sentence and NO button; a config
+        for an absent program is litter.
         Failure is loud and names the path, deliberately inverting ADR-0021's
         silence rule: the update check is something the app decided to do, this
         is something the user just asked for.

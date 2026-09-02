@@ -6,7 +6,8 @@ import {
   shimEntry,
   type ServerEntry
 } from '../src/main/connect/entry'
-import { MCP_SERVER_KEY } from '../src/shared/connect'
+import { pickClient, type ConnectClient } from '../src/main/connect/registry'
+import { MCP_SERVER_KEY, type ClientStatus } from '../src/shared/connect'
 
 // The client-neutral launch entry and its two serialisers (ADR-0030 Decision
 // 5), pinned at the unit layer.
@@ -165,5 +166,35 @@ describe('codexManualFields — the values a person retypes into Codex’s own f
     // The flag must travel or the shim answers on the wrong pipe — the same
     // property `shimEntry` guards, restated where a human does the typing.
     expect(codexManualFields(withProfile).at(-2)?.value).toBe('--user-data-dir=C:\\tmp\\p9')
+  })
+})
+
+describe('pickClient — the one line that keeps ADR-0029’s security property', () => {
+  // `connect(id)` is the only argument the renderer ever sends across this
+  // surface. It must select from what MAIN registered and nothing else: never
+  // a path, never a command, never content. A registry that fell back to
+  // "something" for an unknown id would be a registry page content could steer.
+  const fake = (id: ConnectClient['id']): ConnectClient => ({
+    id,
+    displayName: id,
+    status: async (): Promise<ClientStatus> => ({ id, displayName: id, state: 'not-detected', location: '' }),
+    connect: async (): Promise<ClientStatus> => ({ id, displayName: id, state: 'connected', location: '' })
+  })
+  const clients = [fake('claude-desktop'), fake('codex')]
+
+  it('returns the registered client for a registered id', () => {
+    expect(pickClient(clients, 'codex').id).toBe('codex')
+  })
+
+  it('REFUSES anything else, including near-misses and non-strings', () => {
+    for (const bad of ['bogus', 'Codex', '', undefined, null, 0, {}, ['codex']]) {
+      expect(() => pickClient(clients, bad), `accepted ${JSON.stringify(bad)}`).toThrow(
+        /Unknown connect client/
+      )
+    }
+  })
+
+  it('refuses rather than defaulting when nothing is registered', () => {
+    expect(() => pickClient([], 'claude-desktop')).toThrow()
   })
 })

@@ -13,7 +13,7 @@ import {
   type ChosenConfigDir
 } from './claudeConfig'
 import { sameEntry, shimEntry, type ServerEntry } from './entry'
-import type { ConnectClient } from './index'
+import type { ConnectClient } from './registry'
 import { resolveAppRoot } from '../mcp/host'
 import { defaultUserDataPath } from '../mcp/pipePath'
 
