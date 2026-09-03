@@ -172,6 +172,13 @@ the binding constraint (geometry vs weight) attributed right? Any surprise gets
 written down immediately as a carry-in on the relevant `doc/roadmap.md` item —
 dogfood findings evaporate if they only live in chat.
 
+**For the MCP surface, the handoff is a document, not a paragraph.** Point the
+user at `doc/dogfood/mcp-session.md` — the paste-able brief `/dogfood` maintains
+(ADR-0032) — and name the build's `+<sha>` so the report that comes back can be
+matched to it. Do not summarise the brief's stations into the handoff, and do
+not mention the expected numbers: the brief withholds them deliberately, and a
+handoff that leaks them turns the pass into a confirmation exercise.
+
 ### When the build touched the connect panel (ADR-0029, ADR-0030)
 
 The MCP clients are the one surface where **no machine check substitutes for

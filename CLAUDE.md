@@ -83,6 +83,12 @@ when scope changes.
   A build that is not at its release tag is staged as `…+<sha>.exe` (ADR-0027):
   electron-builder names output from `package.json`, so between releases every
   build wears the last release's number.
+- `/dogfood` — the MCP surface's tier 3 (ADR-0032): hand the user
+  `doc/dogfood/mcp-session.md` to paste into Claude Desktop or ChatGPT (Codex),
+  then verify the report that comes back and pin what survives. **The brief
+  withholds the expected numbers on purpose** — a reader told the answer finds
+  the answer, and every defect this surface has shipped was a sentence no test
+  was asserting.
 - `adr-plan` workflow (`.claude/workflows/adr-plan.js`) — decompose an accepted ADR into
   an effort-ranked, dependency-ordered build checklist before implementing it.
 
