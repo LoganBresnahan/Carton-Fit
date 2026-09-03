@@ -104,17 +104,27 @@ when scope changes.
 - `npm run build` — electron-vite production build → `out/`
 - `npm run package` — build + `electron-builder --linux dir` → `release/linux-unpacked`
   (the e2e smoke target)
-- `npm run e2e` — Playwright-Electron specs against `out/`
+- `npm run e2e` — Playwright-Electron specs against `out/`. **Quiet by default**:
+  on Linux `scripts/e2e.mjs` runs the suite under `xvfb-run`, so the ~115 windows
+  the app opens go to a virtual display instead of stealing focus for four
+  minutes. `npm run e2e:visible` is the old behaviour, for when watching the
+  window is the point. The mode is printed at startup and never silent; on
+  Windows and macOS nothing is wrapped, which is why the script decides rather
+  than the npm script hardcoding it (the release workflow runs this suite on
+  `windows-latest`). Missing `xvfb-run` with a display present downgrades to
+  visible with a warning; with no display it fails and prints the apt line.
 - `npm run e2e:packaged` — the same specs against the packaged binary. **This is the
   deploy gate**: dev-mode green does not count (ADR-0005), because packaged builds
   fail in packaged-only ways — `file://` asset paths, WASM loading, workers.
+  `e2e:packaged:visible` is its watchable twin.
 - `PACKAGED_APP=<binary> npm run e2e:compliance` — the ADR-0011 licence checks in
   `e2e-compliance/`. Separate config on purpose: these specs **corrupt the packaged
   build** to prove the LGPL relink guarantee, so they must never join an ordinary
   e2e run. They restore it afterwards.
 
-E2E needs a display and software GL (ADR-0005): WSLg supplies the display locally,
-CI uses `xvfb-run`, and the SwiftShader flags live in `e2e/harness.ts` —
+E2E needs a display and software GL (ADR-0005): locally `xvfb` supplies one (WSLg
+only when you ask for `:visible`), CI takes the same path through the same npm
+script, and the SwiftShader flags live in `e2e/harness.ts` —
 harness-only, never in shipped code. The harness also **clears Playwright's
 `prefers-color-scheme` emulation** on every launch: it forces light by default and
 outranks `nativeTheme.themeSource`, so without that line a themed app tests as

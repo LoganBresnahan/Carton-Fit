@@ -72,8 +72,13 @@ jobs:
       - name: Allow the Chromium sandbox
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 
+      # No `xvfb-run` here any more: `npm run e2e:packaged` wraps itself on Linux
+      # (scripts/e2e.mjs), so the runner and a developer's box take the exact
+      # same path. The Ensure-xvfb step above is what that wrapping depends on —
+      # without it the script fails loudly here rather than opening windows on a
+      # display the runner does not have.
       - name: E2E against the packaged build
-        run: xvfb-run -a npm run e2e:packaged
+        run: npm run e2e:packaged
 
       # trace: 'retain-on-failure' + screenshot: 'only-on-failure' are already
       # configured, so these are empty on a green run and worth having on a red one.
