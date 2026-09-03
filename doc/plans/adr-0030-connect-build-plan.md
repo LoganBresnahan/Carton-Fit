@@ -149,7 +149,7 @@ at the end of this phase for the dogfood pass._
       `tests/connect-codex-cli.test.ts`, and Consequence 4 already delegates
       Codex-on-Windows to dogfooding. Five tests, mutation-tested by dropping
       the `--` from `codexAddArgv` (three fail).
-- [ ] `real-codex-conditional-spec` · medium — Skips unless a real `codex` is
+- [x] `real-codex-conditional-spec` · medium — Skips unless a real `codex` is
       discovered AND `CODEX_CLI` is unset. Against a throwaway `CODEX_HOME`: add →
       get --json → remove, asserting the same fields the fake pins. Never touches
       the real `~/.codex`. Plus the `/deploy` SKILL.md section-4 edit: Codex
@@ -157,6 +157,16 @@ at the end of this phase for the dogfood pass._
       `codex mcp add` created in the real home, note whether newest-by-mtime
       `codex.exe` and the desktop app agree). Depends on: `codex-cli-discovery`,
       `codex-adapter`, `fake-codex-cli-e2e`.
+      Shipped as `e2e/codex-real-cli.spec.ts`, discovering through
+      `findCodexCli` itself so it can never pass against a `codex` the app
+      would not choose. Idempotence is asserted through a second `get` rather
+      than by counting entries in `list --json`, whose shape the ADR never
+      recorded — and a duplicate cannot hide anyway, since TOML forbids the
+      same table twice. Its body was run green with the fake installed on
+      `PATH` as `codex`; what waits for a real machine is only the recording's
+      fidelity. `/deploy` SKILL.md section 4 gained the connect-panel dogfood
+      list (both clients, the real-home side effects, newest-by-mtime
+      agreement, and the normalised-args fix-up).
 
 ### 5. Recipe + docs reconciliation — **opus**
 _Pure prose that can only be accurate once everything above exists. `/shipshape`'s

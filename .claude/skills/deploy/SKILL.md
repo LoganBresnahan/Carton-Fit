@@ -172,6 +172,34 @@ the binding constraint (geometry vs weight) attributed right? Any surprise gets
 written down immediately as a carry-in on the relevant `doc/roadmap.md` item —
 dogfood findings evaporate if they only live in chat.
 
+### When the build touched the connect panel (ADR-0029, ADR-0030)
+
+The MCP clients are the one surface where **no machine check substitutes for
+this pass**. Claude Desktop's config path was wrong for a Store install and
+every test agreed with the assumption; Codex is verified by *nothing* on CI —
+no runner has it, so `e2e/codex-connect.spec.ts` drives a fake built from a
+contract we wrote down, and `e2e/codex-real-cli.spec.ts` skips everywhere but a
+machine with the real thing. Ask for:
+
+- **Claude Desktop** — click Connect, restart it, confirm the Carton Fit tools
+  are listed and one of them answers about the part that is open.
+- **ChatGPT (Codex)** — same, and the restart is of the *desktop app*, not the
+  CLI: `codex mcp list` will already show the entry while ChatGPT still does
+  not, which is the confusing case the panel's restart line exists for.
+- **What `codex mcp add` created in the real home.** In a throwaway `CODEX_HOME`
+  it declined to write PATH aliases and helper binaries; in `~/.codex` it
+  presumably writes them. It is a write nobody asked for, so record what
+  appeared (ADR-0030 open detail 2).
+- **Whether the newest `codex.exe` and the desktop app agree.** Discovery picks
+  the newest directory under `%LOCALAPPDATA%\OpenAI\Codex\bin` by mtime, which
+  is a heuristic. If they ever disagree about `config.toml`'s location, `codex
+  mcp get` reports the entry exists while ChatGPT never sees it — the one
+  failure this design cannot detect from inside (ADR-0030 open detail 3).
+- **Anything the real CLI normalises.** If it rewrites our args or env, the
+  panel will read `outdated` forever however many times Connect is pressed.
+  That is the ADR's budgeted fix-up, and it looks like a button that never
+  finishes the job.
+
 ## 5. Report
 
 ```
