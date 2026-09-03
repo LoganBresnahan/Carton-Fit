@@ -36,6 +36,13 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   quote. It now carries a Result note saying exactly what the screen says.
   ([ADR-0017](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
 
+- **An assistant is told where a weight came from, not just which mode was set.**
+  Price one part kind by hand and ask how many fit, and the answer said the
+  weight came from the material density — true of the setting, false of the
+  number it counted. It now names what actually produced the grams behind the
+  answer.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 - **An AI assistant is no longer told the carton has room when it doesn't.**
   When the weight cap limited a count, the answer sent to the assistant added
   "not the carton — there is room left" — a claim nothing had checked, and

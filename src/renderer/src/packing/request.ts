@@ -116,8 +116,13 @@ export function openMeshParts(
  * (ADR-0003), so a selection narrows it. A selection naming a part the current
  * file does not have falls back to the whole file rather than packing nothing:
  * the picker is a convenience, never a way to get a misleading empty answer.
+ *
+ * Exported because two things outside this module must answer questions about
+ * "the parts this answer actually weighed" — the open-mesh warning above and
+ * the MCP surface's weight provenance — and both would be WRONG in the same
+ * way if they re-derived the selection themselves and drifted from it.
  */
-function partsForRequest(
+export function partsForRequest(
   parts: readonly ImportedPart[],
   settings: PackingSettings,
   unitPartName: string | null

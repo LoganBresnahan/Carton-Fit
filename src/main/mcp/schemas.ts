@@ -238,8 +238,19 @@ export const estimateOutput = {
     weightInput: z.union([
       z.object({
         supplied: z.literal(true),
-        source: z.enum(['direct', 'density']),
-        overriddenKinds: z.array(z.string())
+        source: z
+          .enum(['direct', 'density'])
+          .describe('The weight MODE that was set. An input, not a claim about this answer.'),
+        overriddenKinds: z.array(z.string()),
+        // The 2026-09-03 finding: `source` described the setting while a script
+        // reading it drew a conclusion about the answer. Scoped to the parts
+        // this pack actually weighed.
+        countedWeightFrom: z
+          .enum(['direct', 'density', 'override', 'mixed'])
+          .describe(
+            'Where the grams behind THIS answer came from: override when every counted part ' +
+              'was priced by hand, mixed when some were, else the mode that derived them.'
+          )
       }),
       z.object({ supplied: z.literal(false), note: z.string() })
     ]),

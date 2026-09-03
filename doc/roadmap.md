@@ -759,10 +759,12 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       again with the cap lifted. `geometryBound` can only prove the carton FULL;
       the positive direction needs an arrangement, not a bound. Needs the
       double-pack cost measured before it can be accepted.
-      — still open from this run: `weightInput.source` reports the mode that was
-      set rather than what produced the counted grams — it says `density` when a
-      hand override supplied every gram, while the summary's prose gets it right.
-      Structural fix, not a rewording; unstarted.
+      — (f) `weightInput.countedWeightFrom` — `source` reported the mode that was
+      set, and was being read as a claim about the answer: `density` beside a
+      count whose every gram came from a hand override. `source` keeps its
+      meaning (an input) and the new field names the provenance of the grams
+      actually counted, scoped by the same `partsForRequest` selection the pack
+      used. Fixed in the same round; mutation-tested.
 
 - [ ] 22. A client-agnostic connect surface — **ADR-0030, Accepted 2026-09-02**
       (Proposed the same morning). Sequenced first of the three open items:

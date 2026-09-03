@@ -330,9 +330,47 @@ describe('every answer arrives qualified', () => {
     expect(report.qualifications.weightInput).toEqual({
       supplied: true,
       source: 'direct',
-      overriddenKinds: []
+      overriddenKinds: [],
+      // With nothing overridden the two agree — which is why the disagreement
+      // below went unnoticed for as long as it did.
+      countedWeightFrom: 'direct'
     })
     expect(report.binding.constraint).toBe('weight')
+  })
+
+  it('says where the counted grams came from, not just which mode was set', async () => {
+    // THE 2026-09-03 FINDING. A max-quantity count replicates ONE unit; price
+    // that unit by hand and no density is involved in the answer, however the
+    // mode is set. `source` said "density" and a script reading it would have
+    // recorded a derived weight for a number that was typed in.
+    const report = await estimate({
+      path: AS1,
+      mode: 'max-quantity',
+      carton: carton(24, 'in'),
+      weight: { densityGPerCm3: 7.85 },
+      unitPart: 'plate',
+      overrides: [{ kind: 'plate', weight: { value: 10, unit: 'lb' } }]
+    })
+    if (report.qualifications.weightInput.supplied !== true) throw new Error('supplied')
+    // The setting is reported honestly, and is now clearly labelled as such…
+    expect(report.qualifications.weightInput.source).toBe('density')
+    // …while the answer's own provenance is the hand-entered number.
+    expect(report.qualifications.weightInput.countedWeightFrom).toBe('override')
+  })
+
+  it('calls it mixed when only some counted parts were priced by hand', async () => {
+    // Fit-check weighs the whole file, so one override among five kinds is
+    // genuinely a mixture — and flattening that to either extreme would be a
+    // worse answer than naming it.
+    const report = await estimate({
+      path: AS1,
+      mode: 'fit-check',
+      carton: carton(24, 'in'),
+      weight: { densityGPerCm3: 7.85 },
+      overrides: [{ kind: 'plate', weight: { value: 10, unit: 'lb' } }]
+    })
+    if (report.qualifications.weightInput.supplied !== true) throw new Error('supplied')
+    expect(report.qualifications.weightInput.countedWeightFrom).toBe('mixed')
   })
 
   it('reports a density weight over an open mesh as unreliable, and says what to do', async () => {

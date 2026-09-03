@@ -847,6 +847,19 @@ mistakes; it is a missing field.**
    None of these is a behaviour change — each is documented in the code and was
    invisible on the wire, which is the definition of a surface gap.
 
+5. **`weightInput` says where the counted grams came from.** `source` reported
+   the MODE that was set, which is honest about the input and was being read as
+   a statement about the answer: a max-quantity count whose one unit part was
+   priced by hand came back `source: "density"`, with the summary export's prose
+   getting it right and the structured field — the one a script reads — not.
+   `source` keeps its meaning and its enum (changing a wire value's semantics is
+   not additive under ADR-0020) and gains a label saying it is an input;
+   `countedWeightFrom` is new and scoped to the parts the pack actually weighed,
+   via the same `partsForRequest` selection the engine and the open-mesh warning
+   use. It reports `override`, `mixed`, or the mode that derived them — and
+   `mixed` is a real state, not a rounding: a fit-check weighing five kinds with
+   one priced by hand is neither.
+
 **Deferred, deliberately: the space-only rerun.** Amendment 2 can prove the
 carton is FULL (a rigorous geometry bound meeting the count) but never that it
 has ROOM, because a bound above the count proves nothing. Both sessions wanted

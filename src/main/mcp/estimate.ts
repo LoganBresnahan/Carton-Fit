@@ -7,8 +7,8 @@ import {
   type PackResult,
   type QualityTier
 } from '../../renderer/src/core/packing/types'
-import { buildPackRequest, openMeshParts } from '../../renderer/src/packing/request'
-import type { PartWeightOverrides } from '../../renderer/src/packing/kinds'
+import { buildPackRequest, openMeshParts, partsForRequest } from '../../renderer/src/packing/request'
+import { overrideForPart, type PartWeightOverrides } from '../../renderer/src/packing/kinds'
 import type { PackingSettings } from '../../renderer/src/packing/settings'
 import { DEFAULT_MAX_WEIGHT_G } from '../../renderer/src/core/units'
 import {
@@ -173,7 +173,21 @@ export interface EstimateQualifications {
   /** Whether a weight was supplied at all — with none, the cap cannot bind and
    *  `binding` says "geometry" for a reason the caller did not choose. */
   weightInput:
-    | { supplied: true; source: 'direct' | 'density'; overriddenKinds: string[] }
+    | {
+        supplied: true
+        /** The MODE that was set — `direct` or `density`. It is an input, not
+         *  a description of the answer: a per-kind override reaches the engine
+         *  whatever this says. */
+        source: 'direct' | 'density'
+        overriddenKinds: string[]
+        /** Where the grams this answer actually counted came from (2026-09-03
+         *  dogfood). `source` alone said `density` for a max-quantity count
+         *  whose one unit part was priced by hand — true about the setting,
+         *  false about the answer, and this is the field a script reads.
+         *  `override` when every counted part was priced by hand, `mixed` when
+         *  some were, otherwise the mode that derived them. */
+        countedWeightFrom: 'direct' | 'density' | 'override' | 'mixed'
+      }
     | { supplied: false; note: string }
   /** Clearances as honored. Negative and non-finite gaps clamp to zero
    *  (`sanitizeClearances`); saying so beats silently answering a different
@@ -317,6 +331,36 @@ function outcomeOf(
   }
 }
 
+/**
+ * Where the weights behind THIS answer came from, as opposed to which mode the
+ * caller set.
+ *
+ * Scoped to the parts the engine actually weighed — `partsForRequest`, the same
+ * selection the pack used — because a max-quantity count replicates ONE unit,
+ * and the density mode of four kinds it never counted says nothing about it.
+ * That was the finding: `source: "density"` beside a count whose every gram came
+ * from a hand override on the unit part.
+ *
+ * Fit-check counts the whole file rather than only the placed parts: every
+ * part's weight took part in deciding what fit, and a provenance that changed
+ * depending on which parts happened to be placed would be a moving answer to a
+ * question about inputs.
+ */
+function countedWeightFrom(
+  context: LiveEstimateContext
+): 'direct' | 'density' | 'override' | 'mixed' {
+  const { parts, settings, overrides } = context
+  const names = new Set(parts.map((part) => part.name))
+  const counted = partsForRequest(parts, settings, context.unitPart)
+  if (counted.length === 0) return settings.weightMode
+  const overridden = counted.filter(
+    (part) => overrideForPart(part, names, overrides) !== null
+  ).length
+  if (overridden === counted.length) return 'override'
+  if (overridden === 0) return settings.weightMode
+  return 'mixed'
+}
+
 function qualificationsOf(
   context: LiveEstimateContext,
   units: OutputUnits
@@ -346,7 +390,8 @@ function qualificationsOf(
       ? {
           supplied: true,
           source: settings.weightMode,
-          overriddenKinds: Object.keys(overrides)
+          overriddenKinds: Object.keys(overrides),
+          countedWeightFrom: countedWeightFrom(context)
         }
       : {
           supplied: false,
