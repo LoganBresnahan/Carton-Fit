@@ -6,8 +6,10 @@ import { join } from 'node:path'
 import { CUBE_STL } from '../samples/goldens'
 import type { AppStateReport } from '../src/main/mcp/appState'
 import type { DriveOutcome } from '../src/shared/mcpDrive'
-import { importSample, launchApp, launchTarget } from './harness'
+import { shimEntry } from '../src/main/connect/entry'
+import { REPO_ROOT, importSample, launchApp, launchTarget } from './harness'
 import {
+  callStructured,
   connect,
   electronBinary,
   expectedServerVersion,
@@ -33,6 +35,61 @@ import {
  */
 
 type Outcome = { state: AppStateReport; estimate: DriveOutcome['estimate'] }
+
+test('the entry launches from nothing but the environment it declares', async () => {
+  test.setTimeout(120_000)
+  // THE REGRESSION FOR ADR-0030's ADDENDUM 3, and the test that would have
+  // caught it before a dogfooder did.
+  //
+  // OpenAI documents that Codex hands a stdio MCP child ONLY the variables its
+  // entry declares — not the user's environment. Claude Desktop inherits, so
+  // for one client the entry could get away with naming a single variable, and
+  // for the other the same entry produced a server that ChatGPT listed as
+  // enabled and that advertised no tools at all: the app the shim spawns
+  // inherits the shim's environment, cannot start without a display or a home,
+  // and the shim then exits 1 having written nothing to stdout.
+  //
+  // So the launch below is given what `shimEntry` declares and nothing we add
+  // — the client contract, executed. Mutation-tested by reverting the entry to
+  // `ELECTRON_RUN_AS_NODE` alone: it then reaches the 20-second deadline and
+  // returns no tools, which is the dogfooded bug exactly.
+  //
+  // ONE HONEST GAP: the MCP SDK's stdio transport folds a small inherited set
+  // (HOME, PATH, SHELL, TERM, USER, LOGNAME) in beneath what it is given, so
+  // this environment is a little more generous than Codex's. That makes the
+  // test WEAKER than the real client, never stronger — it still fails without
+  // the variables the entry now carries, because the missing one here is the
+  // display.
+  const launch = shimLaunch()
+  // Only the env is taken from here; the launch itself is `shimLaunch`, which
+  // the rest of this suite already drives. `appPath` feeds the args, which are
+  // not used, and the profile is the one the launch already carries.
+  const declared = shimEntry({
+    execPath: launch.command,
+    appPath: REPO_ROOT,
+    userData: launch.profile,
+    defaultUserData: launch.profile,
+    platform: process.platform,
+    env: process.env
+  }).env
+  expect(declared?.['ELECTRON_RUN_AS_NODE']).toBe('1')
+
+  const client = await connect(launch, { ...declared } as Record<string, string>)
+  try {
+    const { tools } = await client.listTools()
+    // The whole surface, not merely a handshake: a client that connects and
+    // lists nothing is the exact shape of the failure this pins.
+    expect(tools.length).toBeGreaterThan(1)
+    expect(tools.map((tool) => tool.name)).toContain('get_app_state')
+    // And it can actually be driven — which proves the app really booted
+    // behind the pipe rather than the shim answering on its own.
+    const state = await callStructured<{ state: AppStateReport }>(client, 'get_app_state', {})
+    expect(state.state).toBeDefined()
+  } finally {
+    await client.close()
+    await stopSpawnedApp(launch.profile)
+  }
+})
 
 test('no app running: the shim boots one, hidden, and serves the full surface', async () => {
   test.setTimeout(120_000)

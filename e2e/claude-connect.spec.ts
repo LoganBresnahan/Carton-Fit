@@ -106,7 +106,12 @@ test('the button writes an invocation that actually reaches this window', async 
     // way. The variable is a WINDOWS requirement (ADR-0029's finding: a
     // GUI-subsystem process never receives stdin), so on this machine only an
     // explicit check — and tests/claude-connect.test.ts's — can carry it.
-    expect(entry.env).toEqual({ ELECTRON_RUN_AS_NODE: '1' })
+    expect(entry.env?.['ELECTRON_RUN_AS_NODE']).toBe('1')
+    // The entry also carries the session variables the app needs to start at
+    // all (ADR-0030 addendum 3). Claude Desktop passes its own environment
+    // through, so this client would work without them — which is exactly how
+    // the requirement stayed invisible until ChatGPT, which does not.
+    expect(entry.env?.['HOME']).toBe(process.env['HOME'])
 
     // RUN WHAT WAS WRITTEN. The child's environment starts WITHOUT
     // ELECTRON_RUN_AS_NODE (appModeEnv deletes it) and gets only what the

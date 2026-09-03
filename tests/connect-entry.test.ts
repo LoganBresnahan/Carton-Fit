@@ -3,6 +3,7 @@ import {
   codexAddArgv,
   codexManualFields,
   sameEntry,
+  sessionEnvKeys,
   shimEntry,
   type ServerEntry
 } from '../src/main/connect/entry'
@@ -20,11 +21,14 @@ import { MCP_SERVER_KEY, type ClientStatus } from '../src/shared/connect'
 // program, as "the client doesn't see Carton Fit".
 
 describe('shimEntry — the launch line every client will run', () => {
+  const session = { HOME: '/home/o', DISPLAY: ':0', PATH: '/usr/bin', IRRELEVANT: 'x' }
   const base = {
     execPath: '/opt/Carton Fit/carton-fit',
     appPath: '/opt/Carton Fit/resources/app.asar',
     userData: '/home/o/.config/Carton-Fit',
-    defaultUserData: '/home/o/.config/Carton-Fit'
+    defaultUserData: '/home/o/.config/Carton-Fit',
+    platform: 'linux' as NodeJS.Platform,
+    env: session as NodeJS.ProcessEnv
   }
 
   it('runs the built shim entry under run-as-node', () => {
@@ -37,7 +41,41 @@ describe('shimEntry — the launch line every client will run', () => {
     // The whole Windows finding rides on this variable: without it Claude
     // Desktop launches a GUI process whose stdin never arrives, and the
     // session hangs forever with no error anywhere.
-    expect(entry.env).toEqual({ ELECTRON_RUN_AS_NODE: '1' })
+    expect(entry.env?.['ELECTRON_RUN_AS_NODE']).toBe('1')
+  })
+
+  it('carries what the session supplies, and nothing it does not', () => {
+    // The ADR-0030 addendum-3 invariant: THE ENTRY MUST LAUNCH FROM AN EMPTY
+    // ENVIRONMENT, because Codex hands a stdio child only what the entry
+    // declares. Reproduced before the fix as a ChatGPT that listed Carton Fit
+    // and advertised no tools.
+    const entry = shimEntry(base)
+    expect(entry.env?.['HOME']).toBe('/home/o')
+    expect(entry.env?.['DISPLAY']).toBe(':0')
+    // Not ours to carry: an entry is a launch, not a copy of someone's shell.
+    expect(entry.env?.['IRRELEVANT']).toBeUndefined()
+  })
+
+  it('skips a variable the session does not set, rather than blanking it', () => {
+    // A key present-but-empty would satisfy `sameEntry`'s presence check while
+    // being exactly as useless as an absent one — and on Windows an empty TEMP
+    // is worse than none.
+    const entry = shimEntry({ ...base, env: { HOME: '/home/o', DISPLAY: '' } })
+    expect(entry.env?.['DISPLAY']).toBeUndefined()
+    expect('DISPLAY' in (entry.env ?? {})).toBe(false)
+  })
+
+  it('asks each platform for its own session variables', () => {
+    // Windows needs its system root and profile paths; Linux needs a display.
+    // Neither list can be tested on the other's machine, so the list itself is
+    // what a test can hold.
+    expect(sessionEnvKeys('win32')).toContain('SystemRoot')
+    expect(sessionEnvKeys('win32')).toContain('APPDATA')
+    expect(sessionEnvKeys('linux')).toContain('DISPLAY')
+    // Reason 2 in the module: these decide where the pipe lives, so a shim
+    // without them looks for a rendezvous the running app never opened.
+    expect(sessionEnvKeys('linux')).toContain('XDG_RUNTIME_DIR')
+    expect(sessionEnvKeys('darwin')).toContain('HOME')
   })
 
   it('omits the profile flag on the default profile and adds it otherwise', () => {
@@ -52,10 +90,9 @@ describe('shimEntry — the launch line every client will run', () => {
     // installed app, in a checkout node_modules/electron — so one rule covers
     // both and only appPath differs.
     const entry = shimEntry({
+      ...base,
       execPath: '/repo/node_modules/electron/dist/electron',
-      appPath: '/repo',
-      userData: '/home/o/.config/Carton-Fit',
-      defaultUserData: '/home/o/.config/Carton-Fit'
+      appPath: '/repo'
     })
     expect(entry.args[0]).toBe('/repo/out/main/mcp.js')
   })
@@ -70,7 +107,31 @@ describe('sameEntry — connected vs. outdated', () => {
     // the UI offers to fix, rather than `connected`, which it would not.
     expect(sameEntry(entry, { ...entry, command: '/b' })).toBe(false)
     expect(sameEntry(entry, { ...entry, args: ['/a/out/main/mcp.js'] })).toBe(false)
-    expect(sameEntry(entry, { ...entry, env: {} })).toBe(false)
+    expect(sameEntry(entry, { command: '/a', args: entry.args, env: { X: '2' } })).toBe(false)
+  })
+
+  it('reads an entry written before the session variables as outdated', () => {
+    // THE UPGRADE PATH, and the reason the check is by presence rather than by
+    // equality of the whole map. Every entry written before ADR-0030 addendum 3
+    // carries ELECTRON_RUN_AS_NODE alone — the shape that reaches ChatGPT as a
+    // server with no tools. It must read `outdated` so the panel offers the one
+    // click that fixes it.
+    const old = { command: '/a', args: ['/a/out/main/mcp.js', '--mcp'], env: { E: '1' } }
+    const now = { ...old, env: { E: '1', HOME: '/home/o', DISPLAY: ':0' } }
+    expect(sameEntry(old, now)).toBe(false)
+    expect(sameEntry(now, now)).toBe(true)
+  })
+
+  it('ignores a variable the user added, and a PATH that has moved on', () => {
+    const ours = { command: '/a', args: [], env: { E: '1', PATH: '/usr/bin', HOME: '/home/o' } }
+    // Somebody's own addition in their client's form. Reporting that as
+    // outdated would offer to overwrite their work every time the panel opens.
+    expect(sameEntry({ ...ours, env: { ...ours.env, THEIRS: 'x' } }, ours)).toBe(true)
+    // PATH grows whenever anything is installed; nagging on it would train a
+    // user to ignore the one state that means something.
+    expect(sameEntry({ ...ours, env: { ...ours.env, PATH: '/usr/bin:/opt/x' } }, ours)).toBe(true)
+    // Present is still required, though: a PATH-less entry is not this launch.
+    expect(sameEntry({ ...ours, env: { E: '1', HOME: '/home/o' } }, ours)).toBe(false)
   })
 })
 

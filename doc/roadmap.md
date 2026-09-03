@@ -747,6 +747,22 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       opus, no adversarial verify warranted). Open details worth reading before starting: Codex's
       10 s startup timeout vs. a cold Electron boot (measure first), and the
       fact that Codex is verified only by dogfooding — no CI runner has it.
+      — **first ChatGPT dogfood, 2026-09-03, and the finding phase 4 could not
+      have caught:** the entry was written correctly (the client's own settings
+      screen showed command, both arguments and `ELECTRON_RUN_AS_NODE`), the
+      server was listed and enabled, and it advertised NO TOOLS. Codex hands a
+      stdio child only the variables its entry declares; Claude Desktop
+      inherits and passes its environment along, so one client's generosity had
+      been hiding the other's requirement. Reproduced locally by launching the
+      shim with that one variable — the app never starts, the shim times out
+      after 20 s and writes nothing to stdout, which from the client's side is
+      exactly "no tools". Fixed by `sessionEnvKeys`/`shimEntry` capturing what
+      the launch needs (ADR-0030 addendum 3), an asymmetric `sameEntry` that
+      reads every older entry as `outdated` so one Reconnect repairs it, and a
+      shim timeout message that now names the environment it was handed.
+      Pinned by `e2e/mcp-shim.spec.ts` launching from the declared env alone.
+      **Windows values are reasoned, not measured** — the next dogfood pass
+      confirms or corrects them, and the new message makes that one glance.
 
 - [ ] 23. Skid stage — **ADR-0031, Proposed 2026-09-02.** A program manager
       at a die-casting plant, via their quality manager: take a saved carton estimate to a skid

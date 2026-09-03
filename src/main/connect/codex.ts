@@ -78,7 +78,11 @@ function currentEntry(): ServerEntry {
     execPath: process.execPath,
     appPath,
     userData: app.getPath('userData'),
-    defaultUserData: defaultUserDataPath()
+    defaultUserData: defaultUserDataPath(),
+    // The live session's environment — this is where the entry stops depending
+    // on the client passing one along (ADR-0030 addendum 3).
+    platform: process.platform,
+    env: process.env
   })
 }
 

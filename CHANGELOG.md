@@ -10,6 +10,16 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- **ChatGPT (Codex) now actually gets Carton Fit's tools.** Connecting worked
+  and the server showed up in ChatGPT's list, but no tools appeared: ChatGPT
+  starts a connected app with only the settings its own entry names, and ours
+  named one. It now carries what the app needs to start, so the tools arrive.
+  If ChatGPT already lists Carton Fit, the panel will show it as pointing at an
+  older setup — press **Reconnect** once and restart ChatGPT.
+  ([ADR-0030](doc/adr/0030-client-agnostic-connect-surface.md))
+
 ### Added
 
 - **Carton Fit can now answer an AI assistant's questions directly.** The app

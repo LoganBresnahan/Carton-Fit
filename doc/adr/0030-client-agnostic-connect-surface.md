@@ -150,6 +150,74 @@ The client's own tooling remains mechanism 1 and is unaffected — the CLI is
 plumbing the user never sees, spawned with no window, and Codex ships it
 inside the desktop app.
 
+## Addendum 3, 2026-09-03 (first ChatGPT dogfood): the entry must launch from an empty environment
+
+The first real ChatGPT dogfood produced a state no test had a name for:
+**Carton Fit appeared in ChatGPT's MCP list, enabled, and advertised no
+tools.** The settings screen showed exactly what we had written — the command,
+both arguments, `ELECTRON_RUN_AS_NODE = 1` — so every part of this ADR's write
+path was correct. What was missing was not in our entry; it was everything
+*around* it.
+
+OpenAI documents the mechanism: **Codex hands a stdio MCP child only the
+variables its entry declares** (`env`), or names for forwarding (`env_vars` —
+the "Environment variable passthrough" box in its own form). It does not pass
+the user's environment. Its settings form has a `cwd` box for the same reason.
+Claude Desktop, by contrast, inherits its own environment and passes it along,
+so for the first client an entry naming one variable was sufficient — and the
+requirement stayed invisible until a client that does not inherit met it.
+
+Reproduced on Linux before anything was changed, by launching the shim with
+nothing but `ELECTRON_RUN_AS_NODE=1`: the app it spawns cannot start, the shim
+reaches its 20-second deadline, exits 1, and writes **nothing at all to
+stdout**. From the client's side that is indistinguishable from a server that
+started and had no tools to offer — which is exactly what the dogfooder saw.
+The minimum this machine needs proved to be `HOME` and `DISPLAY`; `PATH` was
+not required.
+
+**Decision: `shimEntry` captures the session variables the launch needs, at
+write time, and declares them in the entry.** The invariant is stated as a
+sentence because it is testable as one: *the entry must launch from an empty
+environment.* `sessionEnvKeys(platform)` is the per-platform list, and a
+variable earns its place for one of two reasons — the app cannot start without
+it (`HOME`, `DISPLAY`; `SystemRoot` and the profile paths on Windows), or the
+shim and the app must agree on the pipe (`XDG_RUNTIME_DIR` and `TMPDIR` locate
+the socket, `APPDATA` locates the userData directory that names it). The second
+is the subtler failure: a shim lacking what a desktop-launched app has computes
+a different rendezvous, spawns a second instance, loses the single-instance
+race, and then waits out its deadline against a socket nobody will ever open.
+
+Consequences worth stating:
+
+- **Values, not names.** `env` is the one mechanism both clients speak.
+  Codex's `env_vars` would age better — a captured value goes stale if the
+  user's profile moves — but Claude Desktop has no equivalent and the recorded
+  `codex mcp add` grammar has `--env` and no flag for it. A revisit trigger
+  below covers the day it grows one. The *by-hand* fallback does use the
+  passthrough box, because nobody should retype eleven paths into a form.
+- **`sameEntry` becomes asymmetric.** It asks whether the entry a client holds
+  carries everything *we* would write: keys must be present, values must agree,
+  and extra variables somebody added by hand are left alone. `PATH` is required
+  to be present but not to match — it grows whenever anything is installed, and
+  an `outdated` badge that appears for that reason teaches a user to ignore the
+  one state that means something. The presence check is also the upgrade path:
+  every entry written before today reads as `outdated`, and one Reconnect
+  writes the entry that works.
+- **The shim now says what it was given.** Its timeout message lists the
+  variable *names* in its environment and points at the panel. The old message
+  ended at "is the installation broken?", which sent an hour of screenshots
+  after the wrong question.
+- **Pinned by `e2e/mcp-shim.spec.ts`**, which launches the shim with what the
+  entry declares and nothing we add, and fails at the deadline when the entry
+  is reverted to one variable. The MCP SDK's stdio transport folds a small
+  inherited set in beneath what it is given, so that test is slightly more
+  generous than Codex — weaker than the real client, never stronger.
+
+What this does NOT establish is that the Windows list is right. `SystemRoot`,
+the profile paths and `TEMP` are there on reasoning, not measurement, because
+the only machine that can measure them is a dogfooder's. The shim's new
+message is what makes the next attempt one glance instead of an hour.
+
 ## Decision
 
 **1. One surface, many clients, one seam.** The main process owns a registry
@@ -347,3 +415,10 @@ ways, and the split is stated because it is a real limitation:
 - Anthropic's `.mcpb` gains a way to reference an already-installed host
   application rather than shipping the server: the discovery objection to the
   bundle route disappears, and it becomes the better Claude mechanism.
+- `codex mcp add` grows a flag for `env_vars` (forward-by-name) or `cwd`:
+  prefer forwarding to capturing for the session variables — a name cannot go
+  stale — and set the working directory explicitly rather than inheriting
+  whatever the client defaults to (addendum 3).
+- A client appears that passes neither the environment nor the entry's `env`:
+  the entry cannot fix that, and the answer is the client's own tooling or the
+  by-hand fallback, not a third mechanism here.

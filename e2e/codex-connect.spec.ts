@@ -147,22 +147,29 @@ test('the button runs Codex’s own CLI, and what it stored actually reaches thi
     // constant this spec composed from the same helper under test. The `--` is
     // load-bearing and asserted by position: without it our own `--mcp` and
     // `--user-data-dir=` are Codex's flags to parse rather than the server's.
-    expect(entry.rawArgv?.slice(0, 6)).toEqual([
-      'mcp',
-      'add',
-      MCP_SERVER_KEY,
-      '--env',
-      'ELECTRON_RUN_AS_NODE=1',
-      '--'
-    ])
-    expect(entry.rawArgv?.slice(6)).toEqual([entry.command, ...entry.args])
+    const argv = entry.rawArgv ?? []
+    const separator = argv.indexOf('--')
+    expect(argv.slice(0, 3)).toEqual(['mcp', 'add', MCP_SERVER_KEY])
+    expect(separator).toBeGreaterThan(2)
+    // Between the name and the separator: `--env K=V` pairs and nothing else.
+    // Their count is not pinned — it is one plus however many variables this
+    // session supplies (ADR-0030 addendum 3) — but their SHAPE is.
+    for (let i = 3; i < separator; i += 2) expect(argv[i]).toBe('--env')
+    expect(argv.slice(separator + 1)).toEqual([entry.command, ...entry.args])
 
     // ASSERTED, NOT INFERRED, for the same reason as the Claude spec: the
     // round trip below still passes on Linux without `ELECTRON_RUN_AS_NODE`,
     // because stdio works either way here. It is a WINDOWS requirement
     // (ADR-0029: a GUI-subsystem Electron process never receives its stdin),
     // and on this machine only an explicit check can carry it.
-    expect(entry.env).toEqual({ ELECTRON_RUN_AS_NODE: '1' })
+    expect(entry.env?.['ELECTRON_RUN_AS_NODE']).toBe('1')
+    // AND THE SESSION IT NEEDS (ADR-0030 addendum 3): Codex hands a stdio child
+    // only what the entry declares, so an entry naming one variable produced a
+    // server ChatGPT listed with no tools. `mcp-shim.spec.ts` proves the
+    // declared set is sufficient by launching from it; here we check the write
+    // path actually carried it through the CLI to the store.
+    expect(Object.keys(entry.env ?? {}).length).toBeGreaterThan(1)
+    expect(entry.env?.['HOME']).toBe(process.env['HOME'])
     expect(entry.args).toContain('--mcp')
     expect(entry.args).toContain(`--user-data-dir=${profile}`)
 

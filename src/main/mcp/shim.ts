@@ -168,9 +168,25 @@ export async function runShim(entryDir: string, argv: readonly string[]): Promis
     socket = await connectUntil(pipe, SPAWN_CONNECT_DEADLINE_MS)
   }
   if (socket === null) {
+    // NAME WHAT WE WERE GIVEN. This message used to end at "is the installation
+    // broken?", and a dogfooder met it as a ChatGPT that listed Carton Fit as
+    // an enabled server with no tools — an hour of screenshots away from the
+    // actual cause, which was that Codex hands a stdio child only the variables
+    // its entry declares (ADR-0030 addendum 3). The app we spawn inherits this
+    // process's environment, so when that environment is bare the app cannot
+    // start and nothing anywhere says why. Printing the names it did get turns
+    // that into one glance: an environment of one or two variables is the
+    // diagnosis. Names only — values are another program's business and some
+    // are paths a user may not want in a shared log.
+    const given = Object.keys(process.env).sort()
     process.stderr.write(
       `carton-fit --mcp: the app did not start listening on ${pipe} within ` +
-        `${SPAWN_CONNECT_DEADLINE_MS / 1000}s — is the installation broken?\n`
+        `${SPAWN_CONNECT_DEADLINE_MS / 1000}s.\n` +
+        `carton-fit --mcp: the environment this shim was launched with holds ` +
+        `${given.length} variable(s): ${given.join(', ') || '(none)'}\n` +
+        `carton-fit --mcp: if that list is short, the MCP client is passing only ` +
+        `what its server entry declares — reconnect from Carton Fit's ` +
+        `"AI assistants" panel to write an entry that carries what the app needs.\n`
     )
     process.exit(1)
   }
