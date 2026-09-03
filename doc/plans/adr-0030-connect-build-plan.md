@@ -125,7 +125,7 @@ _Both share the `e2e/fake-codex/` contract and the set-then-delete env pattern;
 write together. Both must pass under `npm run e2e:packaged` (ADR-0005). `/deploy`
 at the end of this phase for the dogfood pass._
 
-- [ ] `fake-codex-cli-e2e` · medium — `e2e/fake-codex/`: a ~100-line Node script
+- [x] `fake-codex-cli-e2e` · medium — `e2e/fake-codex/`: a ~100-line Node script
       over a JSON store keyed by `CODEX_HOME` implementing the recorded 0.152.1
       contract (exit 1 + `No MCP server named '…' found.` on unknown `get`; in-place
       replace on re-`add`; `get --json` → `{transport:{command,args,env},enabled}`).
@@ -136,6 +136,19 @@ at the end of this phase for the dogfood pass._
       fidelity is delegated to the real spec and dogfooding. Depends on:
       `codex-cli-discovery`, `codex-adapter`, `copyable-entry-fallback`,
       `connect-panel-rows`.
+      **Shipped without the `.cmd` shim, and that half of the slice text is
+      withdrawn rather than deferred:** since the fix for CVE-2024-27980
+      (Node 18.20.2 / 20.12.2) spawning a `.bat`/`.cmd` without `shell: true`
+      throws `EINVAL`, and the adapter spawns through `execFile` with no shell
+      — correctly, since the real target is an `.exe`. The alternatives were a
+      `shell: true` in production code existing only for a test, or a
+      Windows-only `node.exe` + `NODE_OPTIONS` trick unverifiable from our only
+      machine. So `e2e/codex-connect.spec.ts` skips on win32: everything it
+      asserts is platform-independent (argv assembly, `--json` parsing, state
+      mapping), discovery's Windows shapes are unit-tested in
+      `tests/connect-codex-cli.test.ts`, and Consequence 4 already delegates
+      Codex-on-Windows to dogfooding. Five tests, mutation-tested by dropping
+      the `--` from `codexAddArgv` (three fail).
 - [ ] `real-codex-conditional-spec` · medium — Skips unless a real `codex` is
       discovered AND `CODEX_CLI` is unset. Against a throwaway `CODEX_HOME`: add →
       get --json → remove, asserting the same fields the fake pins. Never touches
