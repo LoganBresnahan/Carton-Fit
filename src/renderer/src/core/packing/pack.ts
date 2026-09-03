@@ -381,6 +381,25 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
   if (Number.isFinite(bounds.geometry)) {
     result.geometryBound = Math.max(bounds.geometry, winner.count)
   }
+  // ADR-0033: when the cap stopped the count and the geometry bound has not
+  // already proven the carton full, ask the carton on its own. This is the same
+  // pack with ONE field changed — no second engine, no cheaper approximation —
+  // so the two counts are comparable, and a strictly higher one is an
+  // arrangement we hold, not a bound we computed. Measured 2026-09-03: a whole
+  // thorough-tier estimate round-trip is ~150–250 ms on the plate case, so the
+  // second pack is affordable under auto-run, not only on the wire.
+  //
+  // Recursion terminates by construction: the rerun has no finite cap, so its
+  // binding is 'geometry' and this branch is not entered again.
+  const settledByBound = result.geometryBound !== undefined && result.geometryBound <= winner.count
+  if (winner.binding === 'weight' && Number.isFinite(request.maxWeightG) && !settledByBound) {
+    const uncapped = maxQuantity({ ...request, maxWeightG: Infinity }, provider)
+    // ≥ count by construction (a capped count is min(geometry, weight) and the
+    // uncapped search starts from the same grid), clamped for the same float
+    // discipline as the bounds above: the wording layer reads EQUALITY here as
+    // "the carton stops it too", and a dip below the count would say so falsely.
+    result.spaceOnlyCount = Math.max(uncapped.count, winner.count)
+  }
   return result
 }
 

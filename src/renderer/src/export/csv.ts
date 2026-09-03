@@ -1,6 +1,7 @@
 import { lengthUnitLabel, volumeUnitLabel } from '../core/units'
 import {
   bindingLabel,
+  bindingReport,
   freeSpaceReport,
   packedWeightG,
   utilizationPercent,
@@ -108,6 +109,13 @@ export function buildCsv(input: EstimateExport): string {
   // is how a hedge becomes ignorable.
   lines.push(row(['Result note', verdictCaption(result)]))
   lines.push(row(['Limited by', bindingLabel(result.binding)]))
+  // `Limited by` keeps its name — a field a script already reads must not be
+  // renamed — and gains the two rows that stop it overstating: whether that
+  // limit BOUND anything (a comfortable fit says no), and the sentence the
+  // panel and the wire carry for it (ADR-0017 §2, second addendum).
+  const binding = bindingReport(result, request)
+  lines.push(row(['Limit bound', binding.bound ? 'yes' : 'no']))
+  lines.push(row(['Limit note', binding.note]))
   lines.push(row(['Fill', utilizationPercent(result.utilization)]))
   lines.push(row([`Carton inner (${length})`, dimsText(request.carton, units)]))
   lines.push(

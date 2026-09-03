@@ -252,6 +252,9 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'source, mode, tier, display units — as a PARTIAL update: anything omitted keeps its ' +
         'current value. Auto-run recomputes immediately, and the change lands on the app’s ' +
         'undo stack like a person’s edit (one call = one Ctrl+Z step). ' +
+        'To run with NO weight at all (a space-only answer, as the stateless estimate gives ' +
+        'when weight is omitted), set partWeight to 0 — an empty weight object changes ' +
+        'nothing, because omitted means keep. ' +
         SETTLED,
       inputSchema: wire(setInputsInput),
       outputSchema: wire(driveOutcomeOutput)

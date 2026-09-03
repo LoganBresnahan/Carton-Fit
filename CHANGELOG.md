@@ -36,6 +36,20 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   quote. It now carries a Result note saying exactly what the screen says.
   ([ADR-0017](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
 
+- **The packed view no longer shows an empty carton for a whole-assembly count.**
+  Ask how many copies of the *entire file* fit — max quantity with no unit
+  part chosen — and the count was right while the 3D view drew the carton and
+  nothing in it. It now shows the assembly where it was placed.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+- **Exports say whether a limit actually bound, and why.** The summary and the
+  CSV wrote "Limited by: weight" flat — including on a comfortable fit where
+  nothing bound, and beside answers the app itself hedged. The summary now says
+  "Closest limit" when nothing bound and carries the same sentence the screen
+  shows; the CSV keeps its `Limited by` row and adds `Limit bound` and
+  `Limit note`.
+  ([ADR-0017](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+
 - **An assistant is told where a weight came from, not just which mode was set.**
   Price one part kind by hand and ask how many fit, and the answer said the
   weight came from the material density — true of the setting, false of the
@@ -54,6 +68,15 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
 
 ### Added
+
+- **When the weight cap limits a count, the app now says whether the carton
+  would have held more — by trying.** It packs a second time with the cap
+  lifted: if more fit, it tells you how many the carton itself would take; if
+  the count does not move, it says the carton stops it too, labelled as what
+  the search found rather than a proof. Before this, a weight-limited answer
+  said only that the question was not established — while the same app, asked
+  with a higher cap, would answer it.
+  ([ADR-0033](doc/adr/0033-prove-the-carton-has-room.md))
 
 - **Carton Fit can now answer an AI assistant's questions directly.** The app
   hosts an MCP server — the protocol Claude Desktop and other Claude clients

@@ -320,6 +320,29 @@ describe('pack — upperBound field', () => {
     expect(r.geometryBound).toBe(8)
   })
 
+  // ADR-0033: the lifted-cap rerun, computed only where the question exists.
+  it('packs again with the cap lifted when weight bound an unsettled count', () => {
+    // Five 1 kg cubes under a 5 kg cap; the carton takes a thousand. The bound
+    // (1000) cannot prove room; the rerun places it.
+    const r = pack(req([cubePart('u', [10, 10, 10], 1000)], [100, 100, 100], 5000))
+    if (r.mode !== 'max-quantity') throw new Error('mode')
+    expect(r.binding).toBe('weight')
+    expect(r.spaceOnlyCount).toBe(1000)
+  })
+
+  it('does not rerun when the bound already settled it, or when space bound the count', () => {
+    // Tie: 8 by geometry, 8 by weight — the rigorous bound proves it, no search.
+    const tie = pack(req([cubePart('u', [10, 10, 10], 1000)], [25, 25, 25], 8000))
+    if (tie.mode !== 'max-quantity') throw new Error('mode')
+    expect(tie.geometryBound).toBe(8)
+    expect('spaceOnlyCount' in tie).toBe(false)
+    // Geometry-bound: the cap was never the limit, so lifting it is no question.
+    const roomy = pack(req([cubePart('u', [10, 10, 10], 1)], [25, 25, 25], 1_000_000))
+    if (roomy.mode !== 'max-quantity') throw new Error('mode')
+    expect(roomy.binding).toBe('geometry')
+    expect('spaceOnlyCount' in roomy).toBe(false)
+  })
+
   it('is absent exactly when no finite geometric bound exists', () => {
     const flat = pack(req([cubePart('sheet', [10, 10, 0])], [100, 100, 100]))
     if (flat.mode !== 'max-quantity') throw new Error('mode')

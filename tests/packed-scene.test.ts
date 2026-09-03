@@ -20,6 +20,7 @@ import { viewportPalette } from '../src/renderer/src/viewport/palette'
 import { applyMat3 } from '../src/renderer/src/core/packing/orientations'
 import type { Mat3, Placement, Vec3 } from '../src/renderer/src/core/packing/types'
 import type { ImportedPart } from '../src/renderer/src/workers/import-protocol'
+import { fusedUnitName } from '../src/renderer/src/core/packing/unit'
 
 // The packed view's matrix convention is the "renders plausibly while silently
 // wrong" spot of item 4: our Mat3 is row-major (v' = M·v) while three stores
@@ -45,6 +46,37 @@ const R345: Mat3 = [0.36, -0.8, 0.48, 0.48, 0.6, 0.64, -0.8, 0, 0.6]
 function placement(rotation: Mat3, translation: Vec3, partName = 'p'): Placement {
   return { partName, rotation, translation, boxMin: [0, 0, 0], boxMax: [1, 1, 1] }
 }
+
+describe('the fused whole-file unit', () => {
+  // 2026-09-03 dogfood, both clients: max-quantity with no unit part selected
+  // reported count 1 and rendered an EMPTY carton. The unit's placement is
+  // named for the composition ("18 parts"), matched no real part, and the
+  // stale-data guard dropped it. The picture disagreed with the number, and
+  // the picture was wrong.
+  it('renders every part at the unit’s transform', () => {
+    const parts = [part('a'), part('b'), part('c')]
+    const unit = placement(R345, [5, 6, 7], fusedUnitName(parts.length))
+    const scene = buildPackedScene(parts, [unit], [100, 100, 100], false)
+    const meshes = scene.children.filter((c) => c.type === 'Mesh') as InstancedMesh[]
+    expect(meshes.map((m) => m.name).sort()).toEqual(['a', 'b', 'c'])
+    const expected = placementMatrix(unit)
+    for (const mesh of meshes) {
+      expect(mesh.count).toBe(1)
+      const got = new Matrix4()
+      mesh.getMatrixAt(0, got)
+      // Instance matrices live in a Float32Array, so 0.36 comes back as
+      // 0.36000001430511475 — compare to f32 precision, not bit-for-bit.
+      got.elements.forEach((value, i) => expect(value).toBeCloseTo(expected.elements[i], 6))
+    }
+    disposeObject(scene)
+  })
+
+  it('still skips a placement that names nothing this file holds', () => {
+    const scene = buildPackedScene([part('a')], [placement(R345, [0, 0, 0], 'ghost')], [10, 10, 10], false)
+    expect(scene.children.filter((c) => c.type === 'Mesh')).toHaveLength(0)
+    disposeObject(scene)
+  })
+})
 
 describe('placementMatrix', () => {
   it('transforms exactly as the engine does: rotation then translation', () => {

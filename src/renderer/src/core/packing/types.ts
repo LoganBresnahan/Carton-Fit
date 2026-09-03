@@ -246,6 +246,14 @@ export interface MaxQuantityResult extends PackResultBase {
    *  the other direction, because a bound is allowed to be loose. Absent
    *  exactly when a finite one does not exist. */
   geometryBound?: number
+  /** How many the same search places with the weight cap LIFTED (ADR-0033).
+   *  The half of the question `geometryBound` cannot answer: a bound above the
+   *  count proves nothing, but an arrangement of more copies is a constructive
+   *  proof that the carton has room — and equality is honest heuristic
+   *  evidence that it does not, which is a weaker claim and must be worded as
+   *  one. Computed only where the question exists: a weight-bound count that
+   *  the geometry bound did not already settle. Always ≥ `count`. */
+  spaceOnlyCount?: number
 }
 
 export type PackResult = FitCheckResult | MaxQuantityResult

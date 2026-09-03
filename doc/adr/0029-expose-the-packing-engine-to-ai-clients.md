@@ -875,6 +875,45 @@ said so itself — "the engine is not the problem". Three sessions, three times
 the same result. The suite proves the mechanism and has never once proven the
 prose.
 
+### Phase-2 contract amendment 4 (2026-09-03) — the second two-client run, and the wording leaves this file
+
+Same brief, same afternoon, both clients again, on a build that carried
+amendment 2 but not amendment 3. What survived verification:
+
+1. **ADR-0033 is accepted and built** — see its addendum for the measurement
+   and the "one call away" finding that made it urgent. `otherConstraint`
+   gains `evidence`, the outcome gains `spaceOnlyCount`, and the `known: false`
+   reason no longer asserts what its bound merely fails to exclude.
+2. **`bindingReport` now lives in `packing/verdict.ts`**, not here. Both
+   exports were writing "Limited by: weight" flat beside an answer this layer
+   refused to make — the item-21 carry-in, with sharper evidence than when it
+   was deferred. The summary uses the panel's heading ("Closest limit" on a
+   fit) and carries the sentence; the CSV keeps `Limited by` for the scripts
+   that read it and adds `Limit bound` and `Limit note` (ADR-0017, second
+   addendum).
+3. **"Space is the closer limit" stops ranking against a weight nobody gave.**
+   Third session to flag it. With every part weightless the note says so
+   instead of comparing a real percentage to a placeholder.
+4. **`utilization` names its basis** — `bounding-boxes`. A reader could not
+   act on 34.3% without asking whether it was material or boxes; now the field
+   says. Additive.
+5. **`set_inputs` documents how to run with no weight** (`partWeight: 0`),
+   because `weight: {}` is "keep", and a reader found the live app and the
+   stateless tool unequally capable at the one station that cross-checks them.
+6. **The packed view rendered nothing for the fused whole-file unit.** Not
+   prose — the first wrong *picture*. `composeUnit` names the unit "18 parts",
+   and the scene builder's stale-data guard skipped the name. One client saw
+   the empty carton at count 1; the other saw a correct three-plate render at
+   count 3; both were right, and the pair of reports is what located it. The
+   convention is now exported from `unit.ts` and the view renders every part
+   at the unit's transform.
+
+**What this run says about the tier**, in addition to what the last one did:
+two independent readers on the same build disagreed about the viewport, and
+the disagreement was the diagnosis. Where they agreed it was the app; where
+they differed it was the input — and that is a property one reader cannot
+have.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

@@ -123,6 +123,28 @@ got this wrong in.** As the client that found it put it, a CSV is the thing most
 likely to be pasted into a quote — the moment the answer can no longer defend
 itself, which is the moment §2 exists for.
 
+## Addendum 2, 2026-09-03 (same day): the binding line was the other half of the same defect
+
+The first addendum fixed the CSV dropping the count's qualification. The same
+afternoon's second run found the exports' binding line doing the same thing one
+row up: "Limited by: weight" — flat, in both formats — beside an answer whose
+wire form said *"whether the carton has room for one more is not established
+here"*. The quote asserted what the app would not.
+
+The cause was architectural, and it is why this addendum exists rather than a
+one-line fix: the binding sentence lived in the MCP layer, so it had one
+consumer, and the exports had nothing to read. `bindingReport` now lives in
+`packing/verdict.ts` beside `verdictCaption` — the shared module §1 named as
+the reason the exports read presentation rather than re-deriving it — and the
+exports carry it: the summary with the panel's heading ("Closest limit" on a
+comfortable fit, which closes roadmap item 21's carry-in) and the sentence
+beneath; the CSV keeping `Limited by` for the scripts that already read it and
+adding `Limit bound` (yes/no) and `Limit note`.
+
+The rule §2 states was never wrong. It was applied to warnings and not to the
+sentence that explains the answer, and the sentence is the more quotable of the
+two.
+
 ## Alternatives considered
 
 - **Export saved rows directly** — rejected above; it would create a second

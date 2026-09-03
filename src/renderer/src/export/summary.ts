@@ -1,6 +1,8 @@
 import { lengthUnitLabel } from '../core/units'
 import {
+  bindingHeading,
   bindingLabel,
+  bindingReport,
   freeSpaceNote,
   packedWeightG,
   upperBoundLabel,
@@ -114,7 +116,13 @@ export function buildSummary(input: EstimateExport): string {
     `Result: ${verdictHeadline(result)}${result.mode === 'max-quantity' ? ' fit' : ''}` +
       `${bound ? ` (${bound})` : ''}`,
     verdictCaption(result),
-    `Limited by: ${bindingLabel(result.binding)}`,
+    // The heading the panel uses ("Closest limit" on a fit where nothing bound
+    // — the item-21 carry-in, closed here) and the sentence behind the label.
+    // "Limited by: weight" on its own was flat exactly where the wire refused
+    // to be (2026-09-03, both clients): a quote carried a claim the app itself
+    // would not make.
+    `${bindingHeading(result)}: ${bindingLabel(result.binding)}`,
+    bindingReport(result, request).note,
     `Fill: ${utilizationPercent(result.utilization)}`,
     '',
     ...cartonLines(input),

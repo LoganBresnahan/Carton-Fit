@@ -9,6 +9,7 @@ import {
   truncatedLayout,
   upperBoundLabel,
   utilizationPercent,
+  bindingReport,
   verdictCaption,
   verdictHeadline
 } from '../src/renderer/src/packing/verdict'
@@ -107,6 +108,64 @@ describe('verdictCaption', () => {
   it('handles the empty and none cases', () => {
     expect(verdictCaption(fit({ fits: true }))).toBe('Nothing to pack.')
     expect(verdictCaption(qty({ count: 0 }))).toBe('None fit in this carton.')
+  })
+})
+
+describe('bindingReport', () => {
+  // The prose layer moved here from the MCP module on 2026-09-03 so the panel,
+  // both exports and the wire read one sentence. Every branch below is a claim
+  // the phase-2 amendments once found wrong on a real part, pinned by the
+  // FIELD that now backs it — the evidence kind is the point of each case.
+  const request = (maxWeightG: number, weightG = 1): PackRequest => ({
+    mode: 'max-quantity',
+    tier: 'fast',
+    carton: [100, 100, 100],
+    clearances: { betweenParts: 0, wall: 0 },
+    maxWeightG,
+    parts: [{ name: 'p', positions: new Float32Array(0), weightG }]
+  })
+
+  it('proves the carton full only from the bound', () => {
+    const r = bindingReport(qty({ count: 8, binding: 'weight', geometryBound: 8 }), request(8))
+    expect(r.otherConstraint).toEqual({ known: true, atLimit: true, evidence: 'bound' })
+    expect(r.note).toMatch(/Both limits land on 8/)
+  })
+
+  it('proves the carton has room only from an arrangement', () => {
+    const r = bindingReport(
+      qty({ count: 3, binding: 'weight', geometryBound: 5, spaceOnlyCount: 6 }),
+      request(30)
+    )
+    expect(r.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arrangement' })
+    expect(r.note).toMatch(/carton itself would take 6/)
+  })
+
+  it('reports the lifted-cap search as evidence, in different words from the proof', () => {
+    const r = bindingReport(
+      qty({ count: 3, binding: 'weight', geometryBound: 5, spaceOnlyCount: 3 }),
+      request(30)
+    )
+    expect(r.otherConstraint).toEqual({ known: true, atLimit: true, evidence: 'search' })
+    expect(r.note).toMatch(/as far as this search can tell/)
+    expect(r.note).not.toMatch(/Both limits land/)
+  })
+
+  it('stays silent when it has only a loose bound, and calls the bound a ceiling', () => {
+    const r = bindingReport(qty({ count: 3, binding: 'weight', geometryBound: 5 }), request(30))
+    expect(r.otherConstraint).toMatchObject({ known: false })
+    if (r.otherConstraint.known) throw new Error('known')
+    // Not "might hold as many as" — a bound only fails to exclude.
+    expect(r.otherConstraint.reason).toMatch(/ceiling and not a placement/)
+    expect(r.otherConstraint.reason).not.toMatch(/might hold/)
+    expect(r.note).toMatch(/not established/)
+  })
+
+  it('drops the closer-limit ranking when every part is weightless', () => {
+    const r = bindingReport(fit({ fits: true, placements: [placement] }), request(1000, 0))
+    expect(r.bound).toBe(false)
+    expect(r.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arrangement' })
+    expect(r.note).toMatch(/No part weight was given/)
+    expect(r.note).not.toMatch(/closer limit/)
   })
 })
 

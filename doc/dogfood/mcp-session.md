@@ -41,6 +41,8 @@ Work through the stations in order. Keep a running note; the report format is at
 the end. Do not stop at the first problem — finish the itinerary and report
 everything together.
 
+stp file here: C:\Users\tarsier\Documents\carton fit files
+
 ### Station 0 — identity
 
 Call `get_app_state`.
@@ -52,6 +54,15 @@ client you are, its version, and your operating system.
 
 If the version has no `+<sha>` and is not a tagged release, say so — it means the
 build cannot be identified, which is itself worth reporting.
+
+**Then read the rest of that state before deriving anything, and reset what you
+did not set.** The app keeps its inputs between sessions — an earlier run left
+a hand-typed plate weight and a cleared unit part behind, and a reader that had
+not looked would have derived every station-4 number against inputs it never
+chose. Clear per-kind overrides (`set_part_weight` with `weight: null`) and set
+the unit part yourself when you get to station 4. State what you found and
+what you cleared; inherited state is a finding about the workflow, not about
+the app.
 
 ### Station 1 — inspect a model
 

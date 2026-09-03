@@ -186,6 +186,182 @@ export function bindingLabel(binding: BindingConstraint): string {
   return binding === 'weight' ? 'weight' : 'space'
 }
 
+/**
+ * What the constraint that did NOT get named was doing, with the KIND of
+ * evidence behind the claim — because two of the four answers below are
+ * proofs and one is a search, and a reader who cannot tell them apart will
+ * repeat the search as a proof (ADR-0033's revisit trigger, pre-empted).
+ *
+ *   bound        the rigorous geometry-only bound meets the count: no
+ *                arrangement anywhere fits another copy. A proof.
+ *   arrangement  we HOLD a placement that settles it — more copies with the
+ *                cap lifted (room exists), or everything placed under the cap
+ *                (nothing bound). A proof, constructive.
+ *   arithmetic   the weight side: a cap and a set of masses, exact either way.
+ *   search       the same search, cap lifted, found no more. Honest evidence
+ *                that the carton stops it too, and NOT a proof — worded as one
+ *                it would be the sentence amendment 2 removed, back again.
+ */
+export type OtherConstraint =
+  | {
+      known: true
+      atLimit: boolean
+      evidence: 'bound' | 'arrangement' | 'arithmetic' | 'search'
+    }
+  | { known: false; reason: string }
+
+export interface BindingReport {
+  constraint: BindingConstraint
+  /** Whether that constraint actually STOPPED anything. False on a fit where
+   *  everything was placed: `constraint` is then the one with the least
+   *  headroom, which is useful, and `note` says so instead of claiming a stop
+   *  that never happened. */
+  bound: boolean
+  otherConstraint: OtherConstraint
+  note: string
+}
+
+/** True when the request carried no weight at all — every part weightless.
+ *  Derived from the request rather than the settings so this module needs no
+ *  settings: a weight of zero on every part IS "no weight was given". */
+function weightless(request: PackRequest): boolean {
+  return request.parts.every((part) => part.weightG === 0)
+}
+
+function otherConstraintOf(
+  result: PackResult,
+  request: PackRequest,
+  capApplies: boolean
+): OtherConstraint {
+  if (result.binding === 'weight') {
+    if (result.mode !== 'max-quantity') {
+      return {
+        known: false,
+        reason:
+          'a fit-check packs a mixed set of parts, and no rigorous bound exists for how ' +
+          'tightly that set could be made to sit — so whether the carton also ran out is open'
+      }
+    }
+    // Proof first: a rigorous bound meeting the count needs no search.
+    if (result.geometryBound !== undefined && result.geometryBound <= result.count) {
+      return { known: true, atLimit: true, evidence: 'bound' }
+    }
+    // Then the arrangement (ADR-0033): the same search with the cap lifted.
+    if (result.spaceOnlyCount !== undefined) {
+      return result.spaceOnlyCount > result.count
+        ? { known: true, atLimit: false, evidence: 'arrangement' }
+        : { known: true, atLimit: true, evidence: 'search' }
+    }
+    if (result.geometryBound === undefined) {
+      return { known: false, reason: 'no finite bound exists on what the carton could hold' }
+    }
+    // A bound is a ceiling, not a possibility — the earlier wording ("might
+    // hold as many as") asserted room from a number that only fails to exclude
+    // it, and two readers disproved it by hand (2026-09-03).
+    return {
+      known: false,
+      reason:
+        `the space-only bound is ${result.geometryBound}, which is a ceiling and not a ` +
+        `placement — nothing has placed ${result.count + 1}`
+    }
+  }
+  if (!capApplies) return { known: false, reason: 'no weight cap was supplied' }
+  if (result.mode === 'max-quantity') {
+    // The engine's own label carries this: it says 'geometry' exactly when the
+    // weight cap allows strictly more copies than the carton does
+    // (quantityGrid.ts — a tie reports 'weight'). So the cap has headroom by
+    // construction, and no second derivation is needed to say so.
+    return { known: true, atLimit: false, evidence: 'arithmetic' }
+  }
+  // Fit-check: every part, placed or not, would have to come in under the cap
+  // for space to be the only thing in the way. Exact, so it is stated either way.
+  const total = request.parts.reduce((sum, part) => sum + part.weightG, 0)
+  return { known: true, atLimit: total > request.maxWeightG, evidence: 'arithmetic' }
+}
+
+/**
+ * Which constraint bound, whether it BOUND AT ALL, what the other one was doing,
+ * and a sentence that claims exactly as much as those fields establish.
+ *
+ * Lives HERE, beside the caption, because it has three consumers — the panel,
+ * both exports and the MCP reply — and it spent its first two days in the MCP
+ * layer alone, while the exports wrote "Limited by: weight" flat beside an
+ * answer the wire refused to make (2026-09-03, both clients). One module, one
+ * wording, is what ADR-0017 built this file for.
+ *
+ * The core's `binding` is deliberate: when everything is placed it names the
+ * constraint with the least headroom (extremePointFit.ts). ADR-0029's phase-2
+ * amendments are the history of every sentence below being wrong in turn —
+ * "stopped" for "closest", "there is room left" for "not checked", "might hold
+ * as many as 5" for "a bound of 5" — and the rule they converged on: no claim
+ * about the constraint not named without a field that establishes it.
+ */
+export function bindingReport(result: PackResult, request: PackRequest): BindingReport {
+  const bound = result.mode === 'max-quantity' || !result.fits
+  const capApplies = Number.isFinite(request.maxWeightG) && request.maxWeightG > 0
+  if (bound) {
+    const other = otherConstraintOf(result, request, capApplies)
+    const count = result.mode === 'max-quantity' ? result.count : null
+    const at = count !== null ? ` at ${count.toLocaleString()}` : ''
+    let note: string
+    if (result.binding === 'weight') {
+      if (other.known && other.atLimit && other.evidence === 'bound') {
+        note =
+          `Both limits land on ${count !== null ? count.toLocaleString() : 'this answer'}: ` +
+          'the weight cap stopped it, and no arrangement fits another one in the carton either.'
+      } else if (other.known && other.atLimit) {
+        // 'search': evidence, labelled as such, never dressed as the proof above.
+        note =
+          `The weight cap stopped this${at}, and lifting the cap does not change the count — ` +
+          `the carton stops it${at} as well, as far as this search can tell.`
+      } else if (other.known && result.mode === 'max-quantity' && result.spaceOnlyCount !== undefined) {
+        note =
+          `The weight cap stopped this${at} — the carton itself would take ` +
+          `${result.spaceOnlyCount.toLocaleString()}: that many were placed with the cap lifted.`
+      } else {
+        note =
+          `The weight cap stopped this${at}. Whether the carton has room for one more is ` +
+          'not established here.'
+      }
+    } else if (other.known && other.atLimit) {
+      note =
+        'The carton stopped this — and the weight cap would have too: the parts together ' +
+        'weigh more than the cap allows.'
+    } else if (other.known) {
+      note = `The carton stopped this${at}, not the weight cap — the cap has room to spare.`
+    } else {
+      note = `The carton stopped this${at}; no weight cap applied.`
+    }
+    return { constraint: result.binding, bound: true, otherConstraint: other, note }
+  }
+  const pct = (fraction: number): string => `${Math.round(fraction * 1000) / 10}%`
+  const placed = result.placements.length
+  const fill = pct(result.utilization)
+  let note: string
+  if (!capApplies) {
+    note = `Nothing bound — all ${placed} parts placed, filling ${fill} of the carton; no weight cap applied.`
+  } else if (weightless(request)) {
+    // Three sessions flagged "Space is the closer limit" here: with no weight
+    // given, the 0% it ranks against is an absent input, not a measurement.
+    note =
+      `Nothing bound — all ${placed} parts placed, filling ${fill} of the carton. ` +
+      'No part weight was given, so only space could have limited this.'
+  } else {
+    note =
+      `Nothing bound — all ${placed} parts placed at ${pct(packedWeightG(result, request) / request.maxWeightG)} ` +
+      `of the weight cap and ${fill} of the carton. ` +
+      `${result.binding === 'weight' ? 'Weight' : 'Space'} is the closer limit.`
+  }
+  // Nothing stopped the pack, so neither limit is at its limit — and that IS
+  // knowable here: we hold an arrangement of everything, under the cap.
+  return {
+    constraint: result.binding,
+    bound: false,
+    otherConstraint: { known: true, atLimit: false, evidence: 'arrangement' },
+    note
+  }
+}
+
 /** Carton fill as a percentage. Bounding-box based: air trapped inside a part's
  *  box is not usable by another part, so the box is what packing consumes. */
 export function utilizationPercent(utilization: number): string {

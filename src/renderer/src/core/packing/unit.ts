@@ -14,6 +14,24 @@ import type { PackPart } from './types'
 // of the per-part AABBs, while the thorough tier gets the true convex hull of the
 // union for free. Weights sum.
 
+/**
+ * The name a fused whole-file unit carries, and the test for it.
+ *
+ * Exported because the packed VIEW has to recognise it (2026-09-03 dogfood):
+ * a placement named "18 parts" matches no real part, and the scene builder's
+ * stale-data guard skipped it — so a max-quantity answer with no unit part
+ * selected rendered an empty carton beside a count of 1, in both AI clients.
+ * A convention two modules share has to be written down once, not matched by
+ * string in the second.
+ */
+export function fusedUnitName(partCount: number): string {
+  return `${partCount} parts`
+}
+
+export function isFusedUnit(name: string, partCount: number): boolean {
+  return partCount > 1 && name === fusedUnitName(partCount)
+}
+
 export function composeUnit(parts: readonly PackPart[]): PackPart {
   if (parts.length === 0) {
     throw new Error('composeUnit: need at least one part to form a unit')
@@ -32,5 +50,5 @@ export function composeUnit(parts: readonly PackPart[]): PackPart {
     positions.set(p.positions, offset)
     offset += p.positions.length
   }
-  return { name: `${parts.length} parts`, positions, weightG }
+  return { name: fusedUnitName(parts.length), positions, weightG }
 }

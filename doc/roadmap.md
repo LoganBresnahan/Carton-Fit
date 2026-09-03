@@ -755,10 +755,31 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       binding" and a "rigorous" bound with the cap hidden inside it; (e)
       `load_model` clearing the unit part, `save_preset` excluding overrides,
       and the append-only lists are now announced where a client meets them.
-      — carry-in **ADR-0033 (Proposed)**: prove the carton has ROOM by packing
-      again with the cap lifted. `geometryBound` can only prove the carton FULL;
-      the positive direction needs an arrangement, not a bound. Needs the
-      double-pack cost measured before it can be accepted.
+      — **ADR-0033, Accepted and shipped the same evening.** Measured first:
+      a whole thorough-tier estimate round-trip is 150–250 ms on the plate
+      case, so the lifted-cap rerun lives in `pack()` for every consumer, not
+      only the wire. What made it urgent was the second two-client run: at
+      35 lb the app said "not established", at 100 lb "the carton stopped this
+      at 3" — declining, one call away, to use an answer it already had.
+      `spaceOnlyCount` on the result and the wire; `otherConstraint.evidence`
+      (bound | arrangement | arithmetic | search) so a search is never promoted
+      to a proof; the loose-bound reason no longer says "might hold as many as".
+      — **second two-client run, 2026-09-03 evening (ADR-0029 amendment 4):**
+      `bindingReport` moved into `packing/verdict.ts` and the EXPORTS now carry
+      it — the summary with "Closest limit" on a comfortable fit (**the carry-in
+      above, closed**) and the sentence; the CSV keeping `Limited by` and adding
+      `Limit bound` / `Limit note` (ADR-0017 addendum 2). "Space is the closer
+      limit" no longer ranks against a weight nobody gave (third sighting).
+      `utilization.basis` names bounding boxes. `set_inputs` says how to run
+      with no weight.
+      — **first wrong PICTURE, not prose (item 4's viewport):** max-quantity
+      with no unit part rendered an empty carton beside count 1, because the
+      fused unit is named "18 parts" and the scene builder's stale-data guard
+      skipped it. One client saw the empty carton at count 1, the other a
+      correct render at count 3 — two readers on one build located it where
+      one could not. `fusedUnitName`/`isFusedUnit` exported from `unit.ts`;
+      the view renders every part at the unit's transform; pinned by
+      `tests/packed-scene.test.ts`.
       — (f) `weightInput.countedWeightFrom` — `source` reported the mode that was
       set, and was being read as a claim about the answer: `density` beside a
       count whose every gram came from a hand override. `source` keeps its

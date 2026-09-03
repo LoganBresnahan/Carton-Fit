@@ -207,6 +207,12 @@ export const estimateOutput = {
         z.object({ known: z.literal(true), count: z.number() }),
         knownFalse
       ]),
+      // ADR-0033: the same search with the weight cap lifted. Above the count
+      // it is an arrangement we hold; equal to it, honest heuristic evidence.
+      spaceOnlyCount: z.union([
+        z.object({ known: z.literal(true), count: z.number() }),
+        knownFalse
+      ]),
       layout: z.union([
         z.object({ complete: z.literal(true) }),
         z.object({
@@ -227,12 +233,27 @@ export const estimateOutput = {
     // `known: false` is the honest common case: a bound is not a placement,
     // so "the carton has room" is usually unprovable (2026-09-03 finding).
     otherConstraint: z.union([
-      z.object({ known: z.literal(true), atLimit: z.boolean() }),
+      z.object({
+        known: z.literal(true),
+        atLimit: z.boolean(),
+        // What KIND of claim this is (ADR-0033): 'bound' and 'arrangement' are
+        // proofs, 'arithmetic' is exact, 'search' is our own heuristic failing
+        // to find more — evidence, never a proof, and the field is what stops a
+        // reader promoting it to one.
+        evidence: z.enum(['bound', 'arrangement', 'arithmetic', 'search'])
+      }),
       knownFalse
     ]),
     note: z.string()
   }),
-  utilization: z.object({ fraction: z.number(), percent: z.string() }),
+  utilization: z.object({
+    fraction: z.number(),
+    percent: z.string(),
+    // Named because a reader could not act on the number without asking
+    // (2026-09-03): it is placed BOUNDING BOXES over the inner carton, not
+    // material volume — air inside a part's box is not usable by another part.
+    basis: z.literal('bounding-boxes')
+  }),
   qualifications: z.object({
     heuristic: heuristicQualification,
     weightInput: z.union([

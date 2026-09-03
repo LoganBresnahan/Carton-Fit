@@ -337,8 +337,32 @@ describe('buildSummary', () => {
     expect(text).toContain('File: bracket.stp')
     expect(text).toContain('Mode: Fit check · Fast quality')
     expect(text).toContain('Result: Fits')
-    expect(text).toContain('Limited by: space')
+    // The item-21 carry-in, closed 2026-09-03: on a comfortable fit nothing
+    // bound, so the summary says what the panel says — "Closest limit" — and
+    // no longer states "Limited by" flat in the document most likely to be
+    // quoted.
+    expect(text).toContain('Closest limit: space')
+    expect(text).not.toContain('Limited by:')
     expect(text).toContain('Fill: 25%')
+  })
+
+  it('carries the binding sentence the panel and the wire carry (ADR-0017 §2)', () => {
+    // Both dogfood clients, same afternoon: the exports wrote "Limited by:
+    // weight" beside an answer the wire itself refused to make. One shared
+    // `bindingReport`, three consumers — the exports now say exactly as much.
+    const result = qtyResult({ count: 3, binding: 'weight', geometryBound: 5, spaceOnlyCount: 3 })
+    const summary = buildSummary(input({ result }))
+    const csv = buildCsv(input({ result }))
+    expect(summary).toContain('Limited by: weight')
+    expect(summary).toContain('as far as this search can tell')
+    // The CSV keeps the field a script already reads, and adds the structure
+    // that stops it overstating.
+    expect(csv).toContain('Limited by,weight')
+    expect(csv).toContain('Limit bound,yes')
+    expect(csv.split('\n').some((line) => line.startsWith('Limit note,'))).toBe(true)
+    expect(csv).toContain('as far as this search can tell')
+    // And a comfortable fit says so in the CSV too.
+    expect(buildCsv(input())).toContain('Limit bound,no')
   })
 
   it('reuses the panel’s own caption rather than inventing a second wording', () => {

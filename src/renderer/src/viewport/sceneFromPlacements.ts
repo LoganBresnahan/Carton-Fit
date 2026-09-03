@@ -13,6 +13,7 @@ import { partToBufferGeometry } from './partGeometry'
 import { defaultPartMaterial } from './sceneFromParts'
 import { viewportPalette } from './palette'
 import type { Placement, Vec3 } from '../core/packing/types'
+import { isFusedUnit } from '../core/packing/unit'
 import type { ImportedPart } from '../workers/import-protocol'
 
 // Pure scene-builder for the packed view (roadmap item 4): a pack result becomes
@@ -87,12 +88,29 @@ export function buildPackedScene(
   // Group placements per part, preserving order, so each part gets one instanced
   // draw. Placements naming a part we no longer hold are skipped rather than
   // throwing — the view must never be the thing that breaks on stale data.
+  //
+  // THE FUSED UNIT IS NOT STALE DATA (2026-09-03 dogfood). Max-quantity with no
+  // unit part selected replicates the whole file as one rigid unit, and that
+  // unit's placement carries the composed name rather than any part's — so the
+  // guard below silently dropped it, and the packed view showed an empty carton
+  // beside a count of 1. Both AI clients reported the picture disagreeing with
+  // the number; one of them was right. composeUnit concatenates the parts in
+  // their baked world coordinates, so the unit's frame IS each part's frame:
+  // every part rendered at the unit's matrix is exactly the arrangement the
+  // engine packed.
   const grouped = new Map<string, Placement[]>()
   for (const placement of placements) {
-    if (!byName.has(placement.partName)) continue
-    const list = grouped.get(placement.partName)
-    if (list) list.push(placement)
-    else grouped.set(placement.partName, [placement])
+    if (byName.has(placement.partName)) {
+      const list = grouped.get(placement.partName)
+      if (list) list.push(placement)
+      else grouped.set(placement.partName, [placement])
+    } else if (isFusedUnit(placement.partName, parts.length)) {
+      for (const part of parts) {
+        const list = grouped.get(part.name)
+        if (list) list.push(placement)
+        else grouped.set(part.name, [placement])
+      }
+    }
   }
 
   if (grouped.size > 0) {

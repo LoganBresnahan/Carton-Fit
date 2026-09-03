@@ -200,6 +200,17 @@ describe('every answer arrives qualified', () => {
     }
   })
 
+  it('does not rank "the closer limit" against a weight nobody supplied', async () => {
+    // Three sessions, three flags: "Space is the closer limit" beside
+    // `weightInput.supplied: false` compares a real percentage to a placeholder.
+    const report = await estimate({ mode: 'fit-check', carton: carton(100) })
+    expect(report.binding.bound).toBe(false)
+    expect(report.binding.note).toMatch(/^Nothing bound/)
+    expect(report.binding.note).toMatch(/No part weight was given/)
+    expect(report.binding.note).not.toMatch(/closer limit/)
+    expect(report.utilization.basis).toBe('bounding-boxes')
+  })
+
   it('says so when no weight was given, instead of letting "space-bound" imply one was', async () => {
     const report = await estimate({ mode: 'max-quantity', carton: carton(100) })
     expect(report.qualifications.weightInput.supplied).toBe(false)
@@ -246,23 +257,66 @@ describe('every answer arrives qualified', () => {
   // these replace — "The weight cap stopped this, not the carton — there is
   // room left" — was false on the run that found it: a plate whose count was
   // capped at 3 by weight AND by a carton with nowhere to put a 4th.
-  it('will not claim the carton has room, because a bound is not an arrangement', async () => {
+  it('claims the carton has room only with an arrangement in hand (ADR-0033)', async () => {
     // 10 g of 1 g cubes in a carton that would hold a thousand: the cap really
-    // did stop it, and the carton really is roomy — but nothing here has tried
-    // to place an 11th, so the report says only what it checked.
+    // did stop it, and the carton really is roomy. Under amendment 2 the reply
+    // stayed silent here — a bound is not an arrangement. ADR-0033 packs again
+    // with the cap lifted, and 1,000 placed IS the arrangement: room, proven
+    // constructively, and said with the number rather than the old template.
     const report = await estimate({
       mode: 'max-quantity',
       carton: carton(100),
       weight: { partWeight: { value: 1, unit: 'g' } },
       maxWeight: { value: 10, unit: 'g' }
     })
-    expect(report.outcome).toMatchObject({ mode: 'max-quantity', count: 10 })
+    if (report.outcome.mode !== 'max-quantity') throw new Error('mode')
+    expect(report.outcome.count).toBe(10)
+    expect(report.outcome.spaceOnlyCount).toEqual({ known: true, count: 1000 })
     expect(report.binding.constraint).toBe('weight')
-    expect(report.binding.otherConstraint).toMatchObject({ known: false })
+    expect(report.binding.otherConstraint).toEqual({
+      known: true,
+      atLimit: false,
+      evidence: 'arrangement'
+    })
     expect(report.binding.note).toMatch(/weight cap stopped this at 10/)
-    // The exact words that shipped the false claim, and the claim itself.
+    expect(report.binding.note).toMatch(/carton itself would take 1,000/)
+    // The exact words that shipped the false claim stay gone: room is now said
+    // with a count that was placed, never as a clause about the carton.
     expect(report.binding.note).not.toMatch(/room left/)
     expect(report.binding.note).not.toMatch(/not the carton/)
+  })
+
+  it('says the carton stops it too when the lifted-cap search finds no more — as evidence', async () => {
+    // THE PLATE CASE, from three dogfood sessions. Geometry admits exactly 3 by
+    // hand; the volumetric bound says 5 (loose); the cap says 3. Amendment 2
+    // could only say "not established" — while the app, asked at 100 lb, said
+    // "the carton stopped this at 3" one call away. Now the same search runs
+    // with the cap lifted, still finds 3, and the reply says so with the
+    // evidence labelled for what it is: a search, not a proof.
+    const report = await estimate({
+      path: AS1,
+      mode: 'max-quantity',
+      tier: 'thorough',
+      carton: {
+        dimensions: { x: 11, y: 6, z: 10, unit: 'in' },
+        measured: 'outer',
+        wallThickness: { value: 1, unit: 'in' }
+      },
+      clearances: { betweenParts: { value: 0.25, unit: 'in' }, wall: { value: 0.25, unit: 'in' } },
+      maxWeight: { value: 35, unit: 'lb' },
+      weight: { densityGPerCm3: 7.85 },
+      unitPart: 'plate'
+    })
+    if (report.outcome.mode !== 'max-quantity') throw new Error('mode')
+    expect(report.outcome.count).toBe(3)
+    expect(report.outcome.geometryBound).toEqual({ known: true, count: 5 })
+    expect(report.outcome.spaceOnlyCount).toEqual({ known: true, count: 3 })
+    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true, evidence: 'search' })
+    expect(report.binding.note).toMatch(/lifting the cap does not change the count/)
+    expect(report.binding.note).toMatch(/as far as this search can tell/)
+    // Never dressed as the rigorous tie.
+    expect(report.binding.note).not.toMatch(/Both limits land/)
+    expect(report.binding.note).not.toMatch(/not established/)
   })
 
   it('says both limits landed when the geometry bound proves it', async () => {
@@ -277,7 +331,7 @@ describe('every answer arrives qualified', () => {
     })
     expect(report.outcome).toMatchObject({ mode: 'max-quantity', count: 8 })
     expect(report.binding.constraint).toBe('weight')
-    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true })
+    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true, evidence: 'bound' })
     expect(report.binding.note).toMatch(/Both limits land on 8/)
     expect(report.binding.note).not.toMatch(/room left/)
   })
@@ -293,8 +347,15 @@ describe('every answer arrives qualified', () => {
       maxWeight: { value: 1000, unit: 'g' }
     })
     expect(report.binding.constraint).toBe('geometry')
-    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: false })
+    expect(report.binding.otherConstraint).toEqual({
+      known: true,
+      atLimit: false,
+      evidence: 'arithmetic'
+    })
     expect(report.binding.note).toMatch(/not the weight cap/)
+    // The question of lifting the cap never arose, and the reply says why.
+    if (report.outcome.mode !== 'max-quantity') throw new Error('mode')
+    expect(report.outcome.spaceOnlyCount).toMatchObject({ known: false })
   })
 
   it('a non-fit that is also over the cap says both, not just the carton', async () => {
@@ -309,7 +370,11 @@ describe('every answer arrives qualified', () => {
     })
     expect(report.outcome).toMatchObject({ mode: 'fit-check', fits: false })
     expect(report.binding.constraint).toBe('geometry')
-    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true })
+    expect(report.binding.otherConstraint).toEqual({
+      known: true,
+      atLimit: true,
+      evidence: 'arithmetic'
+    })
     expect(report.binding.note).toMatch(/weight cap would have too/)
   })
 

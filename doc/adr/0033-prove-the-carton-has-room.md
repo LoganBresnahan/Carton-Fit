@@ -2,7 +2,9 @@
 
 Date: 2026-09-03
 
-Status: **Proposed 2026-09-03**
+Status: **Accepted 2026-09-03** (Proposed the same evening; the measurement in
+the addendum is what moved it, and the second two-client dogfood is what made
+it urgent — see the addendum)
 
 Extends ADR-0029 (phase-2 amendments 2 and 3) and ADR-0022 §7. Supersedes
 nothing: it adds the half of the answer amendment 2 could not reach.
@@ -109,6 +111,57 @@ measurement, not a guess**, and the measurement is the first slice.
 - **Report the space-only count as a plain field with no prose.** Tempting and
   half-adopted: the field ships either way. But a bare number invites exactly
   the guessing amendment 3 was written about, so the note has to interpret it.
+
+## Addendum, 2026-09-03 (acceptance): the measurement, and what the second dogfood added
+
+**The measurement.** A whole `estimate` round-trip on the plate case at the
+thorough tier — STEP already parsed, pack, report assembly, in-memory
+transport — is 150–250 ms on the development machine; the fused whole-file
+unit is the same. The second pack is a fraction of that, and it runs only on a
+weight-bound max-quantity count the geometry bound did not already settle. So
+the split this ADR's revisit trigger reserved for — wire and exports only, the
+panel keeping its silence — is not needed: the rerun lives in `pack()` itself,
+and every consumer gets the answer.
+
+**What the second dogfood added**, and it changes how this ADR should be read.
+Both clients, on the same build, found that at 35 lb the app said *"whether the
+carton has room for one more is not established here"* while at 100 lb — same
+carton, same tier, same everything — it said *"the carton stopped this at 3."*
+The app was not lacking a capability; it was declining to use one it already
+had, one call away. That is an internal inconsistency, not a gap, and it is the
+sentence an engineer would be shown after specifying a lighter alloy to get a
+fourth plate that does not exist.
+
+**Amendments to the Decision, from building it:**
+
+1. **The evidence kind is a field.** `otherConstraint` gains
+   `evidence: 'bound' | 'arrangement' | 'arithmetic' | 'search'`. The
+   Consequences above said the two heuristic claims "have to survive wording";
+   rule 3 of ADR-0029's phase-2 addendum says a qualification is never prose
+   only, and the revisit trigger below already knew what happens when a reader
+   promotes a search to a proof. So the distinction is structural from the
+   first day rather than after the first conflation.
+2. **`spaceOnlyCount` ships on the wire** beside the two bounds, as
+   `Known<{count}>` — absent with its reason when the question did not arise
+   (space bound the count; the geometry bound already settled it; no finite
+   cap to lift).
+3. **The wording moved to the shared module.** `bindingReport` now lives in
+   `packing/verdict.ts` beside the caption, because the exports were writing
+   "Limited by: weight" flat beside an answer the MCP layer refused to make.
+   Three consumers, one sentence — the reason ADR-0017 built that module.
+4. **The `known: false` reason stopped asserting possibility.** "The carton
+   might hold as many as 5" claimed room from a number that only fails to
+   exclude it; both readers disproved 4 by hand. It now says the bound is a
+   ceiling, not a placement.
+
+**On the plate case specifically**, the answer is now: *"The weight cap stopped
+this at 3, and lifting the cap does not change the count — the carton stops it
+at 3 as well, as far as this search can tell."* That is the second row of the
+table above, labelled `search`, and it is deliberately weaker than what both
+readers proved by hand — because what they did was a proof over one
+orientation, and what the engine did was a search. The first row, where the
+rerun places *more*, is the constructive claim this ADR was written for, and
+it is what a roomy carton now gets instead of silence.
 
 ## Revisit triggers
 
