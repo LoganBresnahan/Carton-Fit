@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { CUBE_STL } from '../samples/goldens'
 import type { AppStateReport } from '../src/main/mcp/appState'
 import { MCP_SERVER_KEY } from '../src/shared/connect'
+import { expectCarriesSession } from './sessionEnv'
 import { importSample, launchApp, type AppHandle } from './harness'
 import { appModeEnv, callStructured, connect, stopSpawnedApp } from './mcpClient'
 
@@ -111,7 +112,12 @@ test('the button writes an invocation that actually reaches this window', async 
     // all (ADR-0030 addendum 3). Claude Desktop passes its own environment
     // through, so this client would work without them — which is exactly how
     // the requirement stayed invisible until ChatGPT, which does not.
-    expect(entry.env?.['HOME']).toBe(process.env['HOME'])
+    //
+    // ASKED PER PLATFORM, because the answer is: this spec first pinned `HOME`
+    // and went red on windows-latest, where the runner HAS a `HOME` and the
+    // entry correctly carries `USERPROFILE` and `APPDATA` instead. A test that
+    // names one platform's variables tests the platform, not the rule.
+    expectCarriesSession(entry.env)
 
     // RUN WHAT WAS WRITTEN. The child's environment starts WITHOUT
     // ELECTRON_RUN_AS_NODE (appModeEnv deletes it) and gets only what the

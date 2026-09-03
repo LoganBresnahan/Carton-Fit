@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { CUBE_STL } from '../samples/goldens'
 import type { AppStateReport } from '../src/main/mcp/appState'
 import { MCP_SERVER_KEY } from '../src/shared/connect'
+import { expectCarriesSession } from './sessionEnv'
 import { REPO_ROOT, importSample, launchApp, type AppHandle } from './harness'
 import { appModeEnv, callStructured, connect, stopSpawnedApp } from './mcpClient'
 
@@ -168,8 +169,7 @@ test('the button runs Codex’s own CLI, and what it stored actually reaches thi
     // server ChatGPT listed with no tools. `mcp-shim.spec.ts` proves the
     // declared set is sufficient by launching from it; here we check the write
     // path actually carried it through the CLI to the store.
-    expect(Object.keys(entry.env ?? {}).length).toBeGreaterThan(1)
-    expect(entry.env?.['HOME']).toBe(process.env['HOME'])
+    expectCarriesSession(entry.env)
     expect(entry.args).toContain('--mcp')
     expect(entry.args).toContain(`--user-data-dir=${profile}`)
 
