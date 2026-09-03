@@ -22,6 +22,16 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   the app could not open its window and the tools never arrived.
   ([ADR-0030](doc/adr/0030-client-agnostic-connect-surface.md))
 
+- **An AI assistant is no longer told the carton has room when it doesn't.**
+  When the weight cap limited a count, the answer sent to the assistant added
+  "not the carton — there is room left" — a claim nothing had checked, and
+  wrong whenever the parts filled the box at the same number. The reply now
+  says what actually stopped the pack, says "both limits land here" when the
+  carton is provably full too, and stays quiet about what it cannot show. Your
+  counts, weights and utilization are unchanged — this was only what the app
+  *said* about them.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 ### Added
 
 - **Carton Fit can now answer an AI assistant's questions directly.** The app

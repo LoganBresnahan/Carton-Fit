@@ -101,6 +101,14 @@ export interface EstimateReport {
      *  headroom, which is useful, and `note` says so instead of claiming a
      *  stop that never happened. */
     bound: boolean
+    /** What the OTHER constraint was doing — the field the note is no longer
+     *  allowed to assert without (ADR-0029 phase-2 amendment 2). "The weight
+     *  cap stopped this, not the carton — there is room left" was prose the
+     *  engine had never checked, and on a plate that saturates both limits at
+     *  3 it was simply false. Absence is the common case and says so: proving
+     *  the carton has room would take an arrangement nobody attempted, and a
+     *  loose upper bound is not that arrangement. */
+    otherConstraint: Known<{ atLimit: boolean }>
     note: string
   }
   utilization: { fraction: number; percent: string }
@@ -377,28 +385,103 @@ export interface LiveEstimateContext {
  * only) and the note says what the number means. A max-quantity count is
  * always bound — it is, by definition, where a constraint stopped it.
  */
+/**
+ * What the constraint that did NOT get named was doing — and, far more often,
+ * why that cannot be said (amendment 2, 2026-09-03).
+ *
+ * The asymmetry here is real and worth stating once, because it decides every
+ * sentence below. **Weight is arithmetic**: a cap and a set of masses settle
+ * the question exactly, in both directions. **Space is not**: the engine's
+ * counts are heuristic arrangements and its bounds are allowed to be loose, so
+ * a bound above the count proves nothing — an arrangement that fits one more
+ * may exist or may not, and only trying would tell. Equality is the exception,
+ * and the only one: a rigorous geometry-only bound EQUAL to the count means no
+ * arrangement anywhere fits another copy.
+ *
+ * So "the carton is full too" is provable and gets said; "the carton has room"
+ * is not, and does not — which is precisely the sentence that was wrong.
+ */
+function otherConstraintOf(
+  result: PackResult,
+  request: PackRequest,
+  capApplies: boolean
+): Known<{ atLimit: boolean }> {
+  if (result.binding === 'weight') {
+    if (result.mode !== 'max-quantity') {
+      return {
+        known: false,
+        reason:
+          'a fit-check packs a mixed set of parts, and no rigorous bound exists for how ' +
+          'tightly that set could be made to sit — so whether the carton also ran out is open'
+      }
+    }
+    const geometry = result.geometryBound
+    if (geometry === undefined) {
+      return { known: false, reason: 'no finite bound exists on what the carton could hold' }
+    }
+    if (geometry <= result.count) return { known: true, atLimit: true }
+    return {
+      known: false,
+      reason:
+        `the carton might hold as many as ${geometry}, but that is an upper bound, not an ` +
+        `arrangement — nothing has placed ${result.count + 1}`
+    }
+  }
+  if (!capApplies) return { known: false, reason: 'no weight cap was supplied' }
+  if (result.mode === 'max-quantity') {
+    // The engine's own label carries this: it says 'geometry' exactly when the
+    // weight cap allows strictly more copies than the carton does
+    // (quantityGrid.ts — a tie reports 'weight'). So the cap has headroom by
+    // construction, and no second derivation is needed to say so.
+    return { known: true, atLimit: false }
+  }
+  // Fit-check: every part, placed or not, would have to come in under the cap
+  // for space to be the only thing in the way. Exact, so it is stated either way.
+  const total = request.parts.reduce((sum, part) => sum + part.weightG, 0)
+  return { known: true, atLimit: total > request.maxWeightG }
+}
+
 function bindingOf(result: PackResult, request: PackRequest): EstimateReport['binding'] {
   const bound = result.mode === 'max-quantity' || !result.fits
+  const capApplies = Number.isFinite(request.maxWeightG) && request.maxWeightG > 0
   if (bound) {
-    return {
-      constraint: result.binding,
-      bound: true,
-      note:
-        result.binding === 'weight'
-          ? 'The weight cap stopped this, not the carton — there is room left.'
-          : 'The carton stopped this, not the weight cap.'
+    const other = otherConstraintOf(result, request, capApplies)
+    const at = result.mode === 'max-quantity' ? ` at ${result.count}` : ''
+    let note: string
+    if (result.binding === 'weight') {
+      note =
+        other.known && other.atLimit
+          ? `Both limits land on ${result.mode === 'max-quantity' ? result.count : 'this answer'}: ` +
+            'the weight cap stopped it, and no arrangement fits another one in the carton either.'
+          : `The weight cap stopped this${at}. Whether the carton has room for one more is ` +
+            'not established here.'
+    } else if (other.known && other.atLimit) {
+      note =
+        'The carton stopped this — and the weight cap would have too: the parts together ' +
+        'weigh more than the cap allows.'
+    } else if (other.known) {
+      note = `The carton stopped this${at}, not the weight cap — the cap has room to spare.`
+    } else {
+      note = `The carton stopped this${at}; no weight cap applied.`
     }
+    return { constraint: result.binding, bound: true, otherConstraint: other, note }
   }
   const pct = (fraction: number): string => `${Math.round(fraction * 1000) / 10}%`
   const placed = result.placements.length
   const fill = pct(result.utilization)
-  const capApplies = Number.isFinite(request.maxWeightG) && request.maxWeightG > 0
   const note = capApplies
     ? `Nothing bound — all ${placed} parts placed at ${pct(packedWeightG(result, request) / request.maxWeightG)} ` +
       `of the weight cap and ${fill} of the carton. ` +
       `${result.binding === 'weight' ? 'Weight' : 'Space'} is the closer limit.`
     : `Nothing bound — all ${placed} parts placed, filling ${fill} of the carton; no weight cap applied.`
-  return { constraint: result.binding, bound: false, note }
+  // Nothing stopped the pack, so neither limit is at its limit — and that IS
+  // knowable here: everything asked for was placed, under the cap.
+  return {
+    constraint: result.binding,
+    bound: false,
+    otherConstraint: { known: true, atLimit: false },
+    note
+  }
 }
 
 export function buildEstimateReport(

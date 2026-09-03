@@ -234,6 +234,18 @@ export interface MaxQuantityResult extends PackResultBase {
    *  zero-extent unit) — absence survives the saved-estimate JSON round-trip,
    *  where Infinity would not. */
   upperBound?: number
+  /** The same bound with the WEIGHT component left out — min(volumetric,
+   *  per-axis) alone. It answers the one question `upperBound` cannot: whether
+   *  the carton itself is out of room. On a weight-capped count `upperBound`
+   *  equals `count` no matter how empty the box is (the weight term is the
+   *  minimum), so only this number can tell "the cap stopped a roomy carton"
+   *  from "both limits landed on the same figure" — and reporting the first
+   *  when it is the second is the defect this field was added to close
+   *  (ADR-0029 phase-2 amendment 2). Equality with `count` is a PROOF that no
+   *  arrangement fits another copy; a value above `count` proves nothing in
+   *  the other direction, because a bound is allowed to be loose. Absent
+   *  exactly when a finite one does not exist. */
+  geometryBound?: number
 }
 
 export type PackResult = FitCheckResult | MaxQuantityResult

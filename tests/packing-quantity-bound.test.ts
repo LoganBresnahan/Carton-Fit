@@ -294,4 +294,40 @@ describe('pack — upperBound field', () => {
     expect(r.count).toBe(5)
     expect(r.upperBound).toBe(5)
   })
+
+  // ADR-0029 phase-2 amendment 2: the geometry-only bound exists to be EVIDENCE
+  // about the carton, which the whole bound cannot be — on a weight-capped run
+  // `upperBound === count` always, no matter how empty the box. A dogfooding AI
+  // read that equality as "the carton is full too"; these pin the number that
+  // actually answers it.
+  it('keeps the weight cap out of the geometry-only bound', () => {
+    // Five 1 kg cubes under a 5 kg cap, in a carton with room for a thousand.
+    const r = pack(req([cubePart('u', [10, 10, 10], 1000)], [100, 100, 100], 5000))
+    if (r.mode !== 'max-quantity') throw new Error('mode')
+    expect(r.upperBound).toBe(5)
+    // The whole point: this number did not move when the cap did.
+    expect(r.geometryBound).toBe(1000)
+  })
+
+  it('lands on the count when the carton really is out of room too', () => {
+    // 10-cubes in a 25-cube: 2 per axis = 8 by geometry. A cap of exactly 8 kg
+    // ties the two limits, which the engine labels 'weight' by convention —
+    // and only the geometry bound can show that the carton is finished as well.
+    const r = pack(req([cubePart('u', [10, 10, 10], 1000)], [25, 25, 25], 8000))
+    if (r.mode !== 'max-quantity') throw new Error('mode')
+    expect(r.count).toBe(8)
+    expect(r.binding).toBe('weight')
+    expect(r.geometryBound).toBe(8)
+  })
+
+  it('is absent exactly when no finite geometric bound exists', () => {
+    const flat = pack(req([cubePart('sheet', [10, 10, 0])], [100, 100, 100]))
+    if (flat.mode !== 'max-quantity') throw new Error('mode')
+    expect('geometryBound' in flat).toBe(false)
+    // A weight cap does not conjure one: the carton still bounds nothing.
+    const capped = pack(req([cubePart('sheet', [10, 10, 0], 1000)], [100, 100, 100], 5000))
+    if (capped.mode !== 'max-quantity') throw new Error('mode')
+    expect(capped.upperBound).toBe(5)
+    expect('geometryBound' in capped).toBe(false)
+  })
 })

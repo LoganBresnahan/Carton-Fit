@@ -738,6 +738,62 @@ emits on the wire is a claim, and a claim gets a test that pins the claim,
 not the wording (the same discipline `tests/pack-verdict.test.ts` already
 applies to the panel's verdict captions).
 
+### Phase-2 contract amendment 2 (2026-09-03) — the other constraint needs a witness
+
+**Same reader, same file, one level down.** The amendment above fixed the note
+for a pack where nothing bound. The client came back to the *bound* case — a
+max-quantity run capped at 3 plates — and found the surviving sentence saying:
+
+> `"The weight cap stopped this, not the carton — there is room left."` … Check
+> the geometry: the plate only lies flat, `0.79·4 + 0.25·3 = 3.91 > 3.5`. Both
+> constraints bind at exactly 3, and there is not room for a 4th.
+
+It is right, and its arithmetic checks out. The first clause of that note was
+computed; the second and third never were. `binding` is a **single winner**
+by construction — `quantityGrid.ts` resolves a tie to `'weight'` deliberately,
+as "the user-facing limit" — and this layer had been reading a label that
+means *which limit is nearer* as a statement that the other one was idle.
+
+Its proposed evidence, though, was wrong, and adopting it would have shipped a
+new false claim in place of the old one: `upperBound === count` does not show
+the carton is full, because the rigorous bound is
+`min(volumetric, per-axis, weight)` (ADR-0022 §7) — the cap is *inside* it, so
+that equality holds on every weight-capped run, roomy carton or not. Recording
+this because the near-miss is the lesson: **an adversarial reader can be right
+about the defect and wrong about the fix, and the second half still has to be
+checked.**
+
+**Amendment.** `binding` gains a required `otherConstraint: Known<{atLimit}>`,
+and no note may assert anything about the unnamed constraint without it. The
+engine gains the witness it needs: `MaxQuantityResult.geometryBound`, the same
+bound with the weight component left out, which is the only number that can
+tell "the cap stopped a roomy carton" from "both landed on the same figure".
+
+What can be proven is asymmetric, and the notes now follow that shape exactly:
+
+- **Weight is arithmetic** — a cap and a set of masses settle it in both
+  directions, so "the cap has room to spare" and "the cap would have stopped
+  this too" are both stated outright.
+- **Space is not.** Counts are heuristic arrangements and bounds may be loose,
+  so a geometry bound *above* the count proves nothing: an arrangement holding
+  one more may exist or may not, and only attempting it would tell. Equality
+  is the single exception — a rigorous geometry-only bound equal to the count
+  means no arrangement anywhere fits another copy, which is the plate case.
+- So **"the carton is full too" is provable and gets said; "the carton has
+  room" is not, and is now simply absent.** The note says what stopped the
+  pack and stops there, with `otherConstraint.known: false` carrying the reason.
+
+Rule 3 of the addendum above (structural, never prose-only) is what made this
+an additive field rather than a rewording; ADR-0020 keeps it a minor change.
+The panel and the exports are untouched: "Limited by weight" is incomplete on
+a tie but not false, and it sits beside the numbers a person can read.
+
+**The standing rule this earns.** Three findings from this reader, and all
+three were *sentences*, never numbers — the engine has been right every time.
+So: any wire sentence that asserts what did **not** happen requires a field
+that establishes it, and if no such field can exist, the sentence does not
+either.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

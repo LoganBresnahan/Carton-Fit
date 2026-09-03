@@ -21,7 +21,7 @@ import { greedyShelfFit } from './shelfFit'
 import { extremePointFit } from './extremePointFit'
 import type { EpFitPlacement } from './extremePointFit'
 import { gridFillQuantity } from './quantityGrid'
-import { quantityUpperBound } from './quantityBound'
+import { quantityBounds } from './quantityBound'
 import { refineQuantity } from './quantityRefine'
 import type { QuantityRefinement } from './quantityRefine'
 import { largestFreeSpace } from './ems'
@@ -332,7 +332,7 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
   }
   const unit = boxOf(composeUnit(request.parts), provider)
   const q = gridFillQuantity(unit, request.carton, request.clearances, request.maxWeightG)
-  const bound = quantityUpperBound(unit, request.carton, request.clearances, request.maxWeightG)
+  const bounds = quantityBounds(unit, request.carton, request.clearances, request.maxWeightG)
   // The grid stands as the floor; EP refines with mixed orientations inside the
   // operation backstop (ADR-0022 §4), behind the crash barrier. refineQuantity
   // returns non-null only on a STRICT improvement, so this is max(grid, EP) by
@@ -344,7 +344,7 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
     request.clearances,
     request.maxWeightG,
     q.count,
-    Number.isFinite(bound) ? bound : undefined
+    Number.isFinite(bounds.overall) ? bounds.overall : undefined
   )
   // Grid utilization from count × one-cell volume, NOT placements.length: the
   // grid is uniform, and placements may be truncated at MAX_GRID_PLACEMENTS
@@ -366,12 +366,20 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
     heuristic: true, // grid fill and EP refinement are both lower bounds — see verdictCaption
     utilization: clampUtilization(occupied, boxVolume(request.carton))
   }
-  if (Number.isFinite(bound)) {
+  if (Number.isFinite(bounds.overall)) {
     // The max is float insurance, not arithmetic: both sides use the same
     // tolerant floors, but "47 fit (upper bound 44)" is a visible contradiction
     // and the achieved count is itself a proof of achievability, so the bound
     // may only ever be raised to meet it, never trusted to sit below it.
-    result.upperBound = Math.max(bound, winner.count)
+    result.upperBound = Math.max(bounds.overall, winner.count)
+  }
+  // Same insurance, same reason — and the geometry-only bound needs it more,
+  // because the wording layer reads EQUALITY with the count as proof that the
+  // carton is full (ADR-0029 phase-2 amendment 2). A bound sitting one below
+  // the count is already broken; raising it keeps it a valid bound rather than
+  // letting a float dip masquerade as a tighter proof.
+  if (Number.isFinite(bounds.geometry)) {
+    result.geometryBound = Math.max(bounds.geometry, winner.count)
   }
   return result
 }

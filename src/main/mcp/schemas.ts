@@ -217,6 +217,13 @@ export const estimateOutput = {
     // Required, not optional: "did anything actually stop this" is the
     // qualification the note used to overstate (2026-09-02 dogfood finding).
     bound: z.boolean(),
+    // The evidence behind any claim about the constraint NOT named above.
+    // `known: false` is the honest common case: a bound is not a placement,
+    // so "the carton has room" is usually unprovable (2026-09-03 finding).
+    otherConstraint: z.union([
+      z.object({ known: z.literal(true), atLimit: z.boolean() }),
+      knownFalse
+    ]),
     note: z.string()
   }),
   utilization: z.object({ fraction: z.number(), percent: z.string() }),

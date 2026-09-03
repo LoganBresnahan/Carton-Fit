@@ -213,6 +213,78 @@ describe('every answer arrives qualified', () => {
     expect(report.binding.note).toMatch(/stopped/)
   })
 
+  // ADR-0029 phase-2 amendment 2 (2026-09-03 dogfood): the note may not assert
+  // what the OTHER constraint was doing unless a field proves it. The sentence
+  // these replace — "The weight cap stopped this, not the carton — there is
+  // room left" — was false on the run that found it: a plate whose count was
+  // capped at 3 by weight AND by a carton with nowhere to put a 4th.
+  it('will not claim the carton has room, because a bound is not an arrangement', async () => {
+    // 10 g of 1 g cubes in a carton that would hold a thousand: the cap really
+    // did stop it, and the carton really is roomy — but nothing here has tried
+    // to place an 11th, so the report says only what it checked.
+    const report = await estimate({
+      mode: 'max-quantity',
+      carton: carton(100),
+      weight: { partWeight: { value: 1, unit: 'g' } },
+      maxWeight: { value: 10, unit: 'g' }
+    })
+    expect(report.outcome).toMatchObject({ mode: 'max-quantity', count: 10 })
+    expect(report.binding.constraint).toBe('weight')
+    expect(report.binding.otherConstraint).toMatchObject({ known: false })
+    expect(report.binding.note).toMatch(/weight cap stopped this at 10/)
+    // The exact words that shipped the false claim, and the claim itself.
+    expect(report.binding.note).not.toMatch(/room left/)
+    expect(report.binding.note).not.toMatch(/not the carton/)
+  })
+
+  it('says both limits landed when the geometry bound proves it', async () => {
+    // 10 mm cubes in a 25 mm carton: 2 per axis, so 8 by geometry — and a cap
+    // of exactly 8 g ties it. The engine labels a tie 'weight' by convention;
+    // the note must not turn that convention into "the carton had room".
+    const report = await estimate({
+      mode: 'max-quantity',
+      carton: carton(25),
+      weight: { partWeight: { value: 1, unit: 'g' } },
+      maxWeight: { value: 8, unit: 'g' }
+    })
+    expect(report.outcome).toMatchObject({ mode: 'max-quantity', count: 8 })
+    expect(report.binding.constraint).toBe('weight')
+    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true })
+    expect(report.binding.note).toMatch(/Both limits land on 8/)
+    expect(report.binding.note).not.toMatch(/room left/)
+  })
+
+  it('says the cap has room only where the engine has actually settled it', async () => {
+    // Same carton, a cap nowhere near binding: geometry stops the count at 8,
+    // and 'geometry' means — by the engine's own arithmetic — that the cap
+    // allows strictly more. That one IS provable, so it is said.
+    const report = await estimate({
+      mode: 'max-quantity',
+      carton: carton(25),
+      weight: { partWeight: { value: 1, unit: 'g' } },
+      maxWeight: { value: 1000, unit: 'g' }
+    })
+    expect(report.binding.constraint).toBe('geometry')
+    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: false })
+    expect(report.binding.note).toMatch(/not the weight cap/)
+  })
+
+  it('a non-fit that is also over the cap says both, not just the carton', async () => {
+    // The cube cannot enter a 5 mm carton, and at 100 g against a 1 g cap it
+    // could not have travelled anyway. Exact arithmetic on the weight side, so
+    // the report states it rather than hedging.
+    const report = await estimate({
+      mode: 'fit-check',
+      carton: carton(5),
+      weight: { partWeight: { value: 100, unit: 'g' } },
+      maxWeight: { value: 1, unit: 'g' }
+    })
+    expect(report.outcome).toMatchObject({ mode: 'fit-check', fits: false })
+    expect(report.binding.constraint).toBe('geometry')
+    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true })
+    expect(report.binding.note).toMatch(/weight cap would have too/)
+  })
+
   it('a non-fit is bound, by the carton', async () => {
     // A 10 mm cube cannot enter a 5 mm carton.
     const report = await estimate({ mode: 'fit-check', carton: carton(5) })

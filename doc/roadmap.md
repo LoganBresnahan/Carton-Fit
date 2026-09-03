@@ -728,6 +728,19 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       (`export/summary.ts`, `export/csv.ts`) — the same overstatement, in the
       place it is most likely to be quoted. Deserves its own pass with the
       export spec, not a silent widening of this one.
+      — **fourth finding, same reader, 2026-09-03: the BOUND case had the same
+      flaw one level down.** On a max-quantity count the note still said "the
+      weight cap stopped this, not the carton — there is room left", which was
+      false on the run that found it: the plate saturated the carton at the
+      same 3. `binding.otherConstraint: Known<{atLimit}>` (required, additive)
+      plus a new `MaxQuantityResult.geometryBound` — the rigorous bound with
+      the weight term removed, because the whole bound cannot be evidence about
+      space (the cap is inside it, so `upperBound === count` on EVERY capped
+      run). ADR-0029 phase-2 contract amendment 2, which also records that the
+      reader's proposed fix was the wrong one and had to be checked. Notes now
+      claim only what a field establishes: weight both ways (arithmetic), space
+      only at equality (a loose bound proves nothing). Mutation-tested against
+      both the old sentence and a geometryBound that folds weight back in.
 
 - [ ] 22. A client-agnostic connect surface — **ADR-0030, Accepted 2026-09-02**
       (Proposed the same morning). Sequenced first of the three open items:

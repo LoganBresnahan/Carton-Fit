@@ -95,6 +95,28 @@ function alongAxis(usable: number, minExtent: number, gap: number): number {
 }
 
 /**
+ * The bound, and the bound with the weight cap left out of it.
+ *
+ * WHY THE SECOND NUMBER EXISTS (ADR-0029 phase-2 amendment 2, 2026-09-03).
+ * `overall` folds the weight component in, which is right for the figure the
+ * results line shows — but it makes the bound useless as evidence about SPACE,
+ * because on any weight-capped run the weight term is the minimum and the
+ * bound equals the count for a reason that has nothing to do with the carton.
+ * A dogfooding AI read `upperBound === count` as "the carton is full too",
+ * which is the reasoning this field replaces with an actual measurement:
+ * `geometry` is min(volumetric, per-axis) and knows nothing about weight, so
+ * `geometry === count` DOES prove no arrangement fits another copy.
+ *
+ * Both are rigorous in the same sense, and both may be Infinity.
+ */
+export interface QuantityBounds {
+  /** min(volumetric, per-axis, weight) — the number the UI states flatly. */
+  overall: number
+  /** min(volumetric, per-axis). Never a claim about the weight cap. */
+  geometry: number
+}
+
+/**
  * Rigorous upper bound on the count for a max-quantity request: no arrangement
  * of `unit` (any mix of its orientation options) that the validator accepts —
  * EPS-tolerant containment, EPS-tolerant gaps, weight under the cap — can
@@ -107,12 +129,22 @@ export function quantityUpperBound(
   clearances: Clearances,
   maxWeightG: number
 ): number {
+  return quantityBounds(unit, carton, clearances, maxWeightG).overall
+}
+
+/** The same derivation, reporting the geometry-only half beside the whole. */
+export function quantityBounds(
+  unit: PackBox,
+  carton: Vec3,
+  clearances: Clearances,
+  maxWeightG: number
+): QuantityBounds {
   const wall = Number.isFinite(clearances.wall) ? Math.max(0, clearances.wall) : 0
   const gap = Number.isFinite(clearances.betweenParts) ? Math.max(0, clearances.betweenParts) : 0
   const usable: Vec3 = [carton[0] - 2 * wall, carton[1] - 2 * wall, carton[2] - 2 * wall]
 
   const options = unit.orientations.filter((o) => isPlaceable(o.extent))
-  if (options.length === 0) return 0
+  if (options.length === 0) return { overall: 0, geometry: 0 }
 
   // Volumetric: smallest tolerant volume any option consumes. Per-axis factors
   // clamp at 0 — an axis the pair tolerance fully forgives contributes no
@@ -157,6 +189,12 @@ export function quantityUpperBound(
       ? floorTolerant(maxWeightG / unit.weightG)
       : Infinity
 
-  const bound = Math.min(volumetric, perAxis, weight)
-  return Number.isFinite(bound) ? bound : Infinity
+  // Split deliberately: `geometry` must never see `weight`, or it stops being
+  // evidence about the carton (see QuantityBounds).
+  const geometry = Math.min(volumetric, perAxis)
+  const overall = Math.min(geometry, weight)
+  return {
+    overall: Number.isFinite(overall) ? overall : Infinity,
+    geometry: Number.isFinite(geometry) ? geometry : Infinity
+  }
 }
