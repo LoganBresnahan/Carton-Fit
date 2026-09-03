@@ -201,6 +201,12 @@ export const estimateOutput = {
       mode: z.literal('max-quantity'),
       count: z.number(),
       upperBound: z.union([z.object({ known: z.literal(true), count: z.number() }), knownFalse]),
+      // Space alone, weight term removed — the field that makes reasoning about
+      // the carton possible without inventing a mechanism (2026-09-03 dogfood).
+      geometryBound: z.union([
+        z.object({ known: z.literal(true), count: z.number() }),
+        knownFalse
+      ]),
       layout: z.union([
         z.object({ complete: z.literal(true) }),
         z.object({

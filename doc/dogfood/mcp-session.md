@@ -140,8 +140,15 @@ app.
    report it.**
 3. `set_part_weight` on one kind by hand, and check the estimate that comes back
    used your number rather than the density it had been deriving.
-4. Ask the person at the keyboard to press **Ctrl+Z once** and tell you what
-   changed on screen. Your last edit should be exactly one undo step, no more.
+
+**Do not ask the person to press Ctrl+Z**, or anything else at the keyboard.
+An earlier version of this station did, and both first-run sessions stalled on
+it: one asked, then invalidated its own test by making more edits while waiting;
+the other never got an answer and correctly refused to report a result it had
+not observed. The undo property — one AI edit, one undo step — is pinned by
+machine tests that can press the key themselves (ADR-0016, ADR-0029). Asking a
+human to watch a field and narrate it back is friction that buys nothing, and it
+interrupts the person whose machine you are already borrowing.
 
 ### Station 6 — presets, history, exports
 

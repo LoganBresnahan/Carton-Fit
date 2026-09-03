@@ -741,6 +741,28 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       claim only what a field establishes: weight both ways (arithmetic), space
       only at equality (a loose bound proves nothing). Mutation-tested against
       both the old sentence and a geometryBound that folds weight back in.
+      — **first two-client dogfood, 2026-09-03 (ADR-0032's brief, run in Claude
+      Desktop and ChatGPT/Codex against the same build).** Both sessions
+      independently found two of the same defects, and neither found a wrong
+      number. Fixed in ADR-0029 phase-2 amendment 3 + ADR-0017's addendum:
+      (a) `verdictCaption` appended "a mixed arrangement may fit more" to counts
+      carrying `upperBound === count` — one payload arguing with itself, on the
+      panel, both exports and the wire at once; (b) the CSV never carried the
+      qualification the summary carries, in the artifact most likely to be
+      pasted into a quote; (c) `geometryBound` now ships ON THE WIRE, because
+      two readers guessing at the same field is a missing field, not two
+      mistakes; (d) `estimate`'s description promised "which constraint was
+      binding" and a "rigorous" bound with the cap hidden inside it; (e)
+      `load_model` clearing the unit part, `save_preset` excluding overrides,
+      and the append-only lists are now announced where a client meets them.
+      — carry-in **ADR-0033 (Proposed)**: prove the carton has ROOM by packing
+      again with the cap lifted. `geometryBound` can only prove the carton FULL;
+      the positive direction needs an arrangement, not a bound. Needs the
+      double-pack cost measured before it can be accepted.
+      — still open from this run: `weightInput.source` reports the mode that was
+      set rather than what produced the counted grams — it says `density` when a
+      hand override supplied every gram, while the summary's prose gets it right.
+      Structural fix, not a rewording; unstarted.
 
 - [ ] 22. A client-agnostic connect surface — **ADR-0030, Accepted 2026-09-02**
       (Proposed the same morning). Sequenced first of the three open items:

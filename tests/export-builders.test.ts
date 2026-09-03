@@ -4,6 +4,7 @@ import { buildCsv, csvCell } from '../src/renderer/src/export/csv'
 import { measurementRows, type EstimateExport } from '../src/renderer/src/export/types'
 import { decimal } from '../src/renderer/src/export/format'
 import { suggestedFileName } from '../src/renderer/src/export/collect'
+import { verdictCaption } from '../src/renderer/src/packing/verdict'
 import type {
   FitCheckResult,
   MaxQuantityResult,
@@ -248,7 +249,29 @@ describe('buildCsv', () => {
     // one figure in this file someone computes with.
     const csv = buildCsv(input({ result: qtyResult({ count: 27000 }) }))
     expect(csv).toContain('Result,27000')
-    expect(csv).not.toContain('27,000')
+    // Scoped to the COMPUTED cell rather than the whole file (narrowed
+    // 2026-09-03). The rule was always about the number someone runs Number()
+    // over; the Result note beneath it is prose, carries the grouped digits the
+    // panel shows, and is quoted by `csvCell` like any other sentence. A
+    // file-wide ban would forbid the qualification from travelling at all,
+    // which is the defect the note exists to fix.
+    expect(csv).not.toMatch(/^Result,"?27,000/m)
+  })
+
+  it('carries the qualification the summary carries — ADR-0017 §2', () => {
+    // BOTH 2026-09-03 dogfood clients found this independently: the summary said
+    // "At least 3 fit … Heuristic", the CSV said `3`. A CSV is the artifact most
+    // likely to be pasted into a quote, so it was the flatter of the two exactly
+    // where flatness costs most.
+    const result = qtyResult({ count: 3, binding: 'weight' })
+    const csv = buildCsv(input({ result }))
+    const summary = buildSummary(input({ result }))
+    const caption = verdictCaption(result)
+    expect(csv).toContain(caption)
+    expect(summary).toContain(caption)
+    // Quoted, because the sentence contains a comma-free clause today and may
+    // not tomorrow — the escaping is what makes prose safe here.
+    expect(csv.split('\n').some((line) => line.startsWith('Result note,'))).toBe(true)
   })
 
   it('writes the bound as a plain number too — it sizes the next carton', () => {

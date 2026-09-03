@@ -168,8 +168,28 @@ describe('estimate against GOLDEN_PACKS', () => {
       )
       expect(report.request.tier).toBe(golden.tier)
       // ADR-0003: a heuristic result must never reach a client as a proof.
+      //
+      // The FLAG carries that unconditionally — the placement really was found
+      // heuristically, whatever the bound says. The NOTE hedges only while the
+      // bound leaves room: these goldens are exact-fit grids where the rigorous
+      // bound meets the count, and "a mixed arrangement may fit more" beside
+      // `upperBound === count` is the self-contradiction the 2026-09-03 dogfood
+      // caught. Method and result are different claims, so they are asserted
+      // separately rather than by grepping one string for both.
       if (golden.mode === 'max-quantity' && (golden.count ?? 0) > 0) {
-        expect(report.qualifications.heuristic.note).toMatch(/Heuristic/)
+        expect(report.qualifications.heuristic.heuristic, because).toBe(true)
+        const note = report.qualifications.heuristic.note
+        const outcome = report.outcome
+        const bound =
+          outcome.mode === 'max-quantity' && outcome.upperBound.known
+            ? outcome.upperBound.count
+            : undefined
+        if (outcome.mode === 'max-quantity' && bound === outcome.count) {
+          expect(note, because).toMatch(/no arrangement beats this/)
+          expect(note, because).not.toMatch(/may fit more/)
+        } else {
+          expect(note, because).toMatch(/Heuristic/)
+        }
       }
     })
   }

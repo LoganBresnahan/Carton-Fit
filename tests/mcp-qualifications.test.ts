@@ -162,13 +162,41 @@ describe('the schema rejects a reply with a hedge missing', () => {
 describe('every answer arrives qualified', () => {
   it('labels a count as heuristic and pairs it with a rigorous bound', async () => {
     const report = await estimate({ mode: 'max-quantity', carton: carton(12, 'in') })
+    // The flag is the claim about METHOD and never lapses. The note's hedge is
+    // a claim about the RESULT, and this carton is an exact-fit grid whose
+    // rigorous bound meets its count — so the note states optimality instead of
+    // inviting a search the bound in the same payload forecloses (2026-09-03).
     expect(report.qualifications.heuristic.heuristic).toBe(true)
-    expect(report.qualifications.heuristic.note).toMatch(/Heuristic/)
+    expect(report.qualifications.heuristic.note).toMatch(/no arrangement beats this/)
     expect(report.outcome.mode === 'max-quantity' && report.outcome.upperBound.known).toBe(true)
     if (report.outcome.mode === 'max-quantity' && report.outcome.upperBound.known) {
       // ADR-0022 §7: the bound is a cap no arrangement can beat, so it can never
       // sit below the count that was actually achieved.
       expect(report.outcome.upperBound.count).toBeGreaterThanOrEqual(report.outcome.count)
+    }
+  })
+
+  it('reports the geometry-only bound beside the joint one', async () => {
+    // WHY THIS FIELD IS ON THE WIRE AT ALL (2026-09-03). Two dogfood clients,
+    // in different products, both reached for `upperBound` as evidence about
+    // the carton — one calling it "unstable", the other correctly deducing it
+    // was joint. A number a client cannot compute is a number it will guess at,
+    // so the guess is replaced with the measurement.
+    const report = await estimate({
+      mode: 'max-quantity',
+      carton: carton(100),
+      weight: { partWeight: { value: 1, unit: 'g' } },
+      maxWeight: { value: 10, unit: 'g' }
+    })
+    if (report.outcome.mode !== 'max-quantity') throw new Error('mode')
+    expect(report.outcome.count).toBe(10)
+    // The cap decides the joint bound…
+    expect(report.outcome.upperBound).toEqual({ known: true, count: 10 })
+    // …and the carton, asked on its own, says something else entirely. If these
+    // two were ever equal here the field would be pointless.
+    expect(report.outcome.geometryBound.known).toBe(true)
+    if (report.outcome.geometryBound.known) {
+      expect(report.outcome.geometryBound.count).toBeGreaterThan(report.outcome.count)
     }
   })
 

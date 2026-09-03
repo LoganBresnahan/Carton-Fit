@@ -41,10 +41,29 @@ export function verdictCaption(result: PackResult): string {
   }
   if (result.count === 0) return 'None fit in this carton.'
   const limit = result.binding === 'weight' ? 'weight-limited' : 'space-limited'
-  return (
-    `At least ${result.count.toLocaleString()} fit (${limit}). ` +
-    `Heuristic — a mixed arrangement may fit more.`
-  )
+  const count = result.count.toLocaleString()
+  // THE HEDGE IS DROPPED WHEN THE BOUND SAYS IT IS FALSE (2026-09-03 dogfood).
+  //
+  // "a mixed arrangement may fit more" beside `upperBound: 3` and `count: 3` is
+  // a payload arguing with itself, and the reader that found it was being sent
+  // to look for a fourth unit the same reply had already ruled out. The bound is
+  // rigorous under the limits as given — that is exactly what makes it able to
+  // retire the hedge — so when the count meets it, the answer is optimal and
+  // says so instead. `upperBoundLabel` below has always described this case
+  // ("when they meet, the answer is optimal"); this line is that sentence
+  // finally being true of the caption too.
+  //
+  // NOT `>=` out of caution: `pack()` clamps the bound up to the count, so they
+  // can only ever meet, never cross. Written as a meeting because a bound below
+  // its count would be a bug elsewhere that this must not paper over.
+  const atBound = result.upperBound !== undefined && result.upperBound === result.count
+  if (atBound) {
+    // "At least" would be true and misleading — it invites a search that cannot
+    // succeed. The limits are named because optimality is relative to THEM: a
+    // bigger carton or a higher cap is still a different question.
+    return `${count} fit (${limit}) — no arrangement beats this under these limits.`
+  }
+  return `At least ${count} fit (${limit}). Heuristic — a mixed arrangement may fit more.`
 }
 
 /**

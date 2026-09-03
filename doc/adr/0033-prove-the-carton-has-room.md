@@ -1,0 +1,124 @@
+# ADR-0033: Prove the carton has room by packing without the cap, not by bounding
+
+Date: 2026-09-03
+
+Status: **Proposed 2026-09-03**
+
+Extends ADR-0029 (phase-2 amendments 2 and 3) and ADR-0022 §7. Supersedes
+nothing: it adds the half of the answer amendment 2 could not reach.
+
+## Context
+
+Amendment 2 gave `binding.note` a rule it could keep: never assert anything
+about the constraint it did not name unless a field establishes it. The field it
+got was `geometryBound` — the rigorous bound with the weight term removed. That
+proves one direction and only one:
+
+- `geometryBound === count` → **the carton is full.** No arrangement anywhere
+  fits another copy. Sound, because the bound dominates every arrangement.
+- `geometryBound > count` → **nothing.** A bound is allowed to be loose, so a
+  gap between it and the count could mean room exists, or could mean the bound
+  is slack. It cannot distinguish them.
+
+The second case is the common one, and it is the case the dogfooders cared
+about. On the carton both 2026-09-03 sessions ran — an 11 × 6 × 10 in outer box
+holding 180 × 150 × 20 mm plates — the true maximum is 3, and both readers
+derived it in a paragraph: only one orientation is admissible (150 mm exceeds
+the 88.9 mm usable axis), so the stack is one column, and 4 × 20 + 3 × 6.35 =
+99.05 mm > 88.9. Our volumetric bound says 5. So the app goes silent —
+*"whether the carton has room for one more is not established here"* — about a
+question two independent readers answered from the same numbers, correctly,
+without the engine's help.
+
+Silence is honest and it is not good enough. The reader that found it named the
+cost precisely: an engineer reads the count, is told the box is a third full,
+sources a lighter plate to get more units per carton, and ships 3 forever. The
+number was right and the reason was missing.
+
+The Claude session also proposed the mechanism, and unlike its `upperBound`
+suggestion (which amendment 3 records as refuted), this one is sound: **run the
+same pack with the cap lifted and compare counts.** That is not a bound — it is
+an arrangement, and an arrangement is a constructive proof.
+
+## Decision
+
+**1. On a weight-bound max-quantity answer, pack a second time with
+`maxWeightG = Infinity` and compare.** Three outcomes, each with a different
+epistemic status, and the prose says which:
+
+| Space-only count | Means | What the note may say |
+| --- | --- | --- |
+| `> count` | An arrangement of more copies EXISTS and we hold it | "the carton would take N — the cap is what stops it" |
+| `=== count` | Our search finds no more, without the cap in the way | "raising the cap does not change this count" — heuristic, and labelled |
+| `< count` | Impossible; a bug | assert, do not narrate |
+
+The first row is the new capability: a proof of room, in the direction
+`geometryBound` structurally cannot reach. The second is weaker than the
+rigorous tie and must never be dressed as one — it is our heuristic failing to
+find a fourth, which is evidence, not proof. `geometryBound === count` remains
+the only sentence entitled to say the carton is *full*.
+
+**2. The comparison runs only where the question exists.** Max-quantity, weight
+binding, and only when `geometryBound` has not already settled it. A fit-check
+has no unit to replicate; a geometry-bound answer already knows the cap has
+headroom by the engine's own arithmetic (amendment 2); a rigorous tie needs no
+second opinion.
+
+**3. It rides the same `pack()` the first answer used**, with one field changed.
+No second engine, no cheaper approximation — an approximation would introduce a
+third answer to the same question, and the whole point is that this one is
+comparable to the first.
+
+**4. The cost is stated where it is paid.** A qualifying estimate packs twice.
+The second pack is the same tier as the first, so a thorough-tier max-quantity
+estimate roughly doubles — bounded by the same ADR-0022 §5 operation backstop
+that bounds the first. If that proves too slow in the app's auto-run, the
+fallback is to compute it for the MCP surface and the export only, where a
+caller is asking a question rather than typing. **That decision needs a
+measurement, not a guess**, and the measurement is the first slice.
+
+## Consequences
+
+- **The note gains the sentence it has never been able to say**, and it says it
+  with a placement behind it rather than a bound.
+- **Two heuristic claims now share a payload**, and their difference has to
+  survive wording: "no arrangement beats this" (rigorous, from the bound) and
+  "raising the cap does not change this count" (heuristic, from a search).
+  Collapsing them would undo amendment 2's whole rule.
+- **Auto-run gets slower on exactly one path.** Fit-check is untouched;
+  space-limited counts are untouched; weight-limited counts pay double.
+- **A new way to be wrong appears**: if the two packs ever disagree for a reason
+  other than the cap, the comparison is garbage. The unbounded pack must differ
+  from the first in that one field and nothing else, and a test has to pin that
+  by running both and diffing the requests.
+
+## Alternatives considered
+
+- **Tighten `geometryBound` instead.** The gap here is volumetric slack: 254 in³
+  of window over 46.85 in³ of haloed plate gives 5 where 3 is true. A
+  per-orientation feasibility bound would close this case — but bounds are
+  proofs, and every improvement to one has to be proven against the validator's
+  tolerances. ADR-0022's own history says what that costs: two adversarial
+  refutations, one of them 922 crafted inputs. The rerun gets the same answer
+  from machinery already trusted.
+- **Say nothing, as today.** Rejected by the finding: the silence is where the
+  wrong purchasing decision lives.
+- **Ask the reader to do it.** They already did — twice, correctly. An engine
+  that leaves its most quotable sentence to the reader's arithmetic is an engine
+  that will be quoted wrongly by the reader who does not do it.
+- **Report the space-only count as a plain field with no prose.** Tempting and
+  half-adopted: the field ships either way. But a bare number invites exactly
+  the guessing amendment 3 was written about, so the note has to interpret it.
+
+## Revisit triggers
+
+- **If the measurement says the second pack is not affordable in auto-run**,
+  this ADR splits: the field and the sentence ship on the MCP surface and the
+  exports, and the panel keeps today's silence until the engine is faster.
+- **If `geometryBound` is ever tightened** to the point where it settles the
+  common cases on its own, the rerun becomes redundant for those and should be
+  gated behind the bound rather than run beside it.
+- **If a session reports the two sentences being conflated** — a reader treating
+  "raising the cap does not change this" as a proof — the wording failed and the
+  distinction needs to become structural, the way `bound` and `otherConstraint`
+  did before it.

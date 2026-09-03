@@ -83,6 +83,27 @@ describe('verdictCaption', () => {
     expect(verdictCaption(qty({ count: 27000 }))).toMatch(/At least 27,000 fit/)
   })
 
+  it('drops the hedge when the bound says nothing more can fit', () => {
+    // THE 2026-09-03 DOGFOOD FINDING. A reply carrying `count: 3` and
+    // `upperBound: 3` also carried "a mixed arrangement may fit more" — one
+    // payload arguing with itself, sending the reader after a fourth unit it
+    // had already ruled out. The hedge is a claim like any other, and the bound
+    // is what settles it.
+    const caption = verdictCaption(qty({ count: 3, binding: 'weight', upperBound: 3 }))
+    expect(caption).toMatch(/^3 fit \(weight-limited\)/)
+    expect(caption).toMatch(/no arrangement beats this under these limits/)
+    expect(caption).not.toMatch(/may fit more/)
+    // "At least" invites the same search the bound forecloses.
+    expect(caption).not.toMatch(/At least/)
+  })
+
+  it('keeps the hedge whenever the bound leaves room, or does not exist', () => {
+    // The hedge is the DEFAULT and must survive: a bound above the count is the
+    // ordinary case, and a bound that does not exist establishes nothing.
+    expect(verdictCaption(qty({ count: 3, upperBound: 5 }))).toMatch(/may fit more/)
+    expect(verdictCaption(qty({ count: 3 }))).toMatch(/may fit more/)
+  })
+
   it('handles the empty and none cases', () => {
     expect(verdictCaption(fit({ fits: true }))).toBe('Nothing to pack.')
     expect(verdictCaption(qty({ count: 0 }))).toBe('None fit in this carton.')

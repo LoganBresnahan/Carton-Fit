@@ -156,9 +156,12 @@ export function createCartonFitServer(options: ServerOptions): McpServer {
       title: 'Estimate a packing',
       description:
         'Pack the parts in a STEP file into a carton and report the answer with its ' +
-        'qualifications: the verdict or count, which hard constraint was binding (space or ' +
-        'weight), how full the carton is, and — for a count — a rigorous upper bound beside ' +
-        'it. Placement is heuristic: a positive result is a concrete arrangement that was ' +
+        'qualifications: the verdict or count, which limit is closest (space or weight) AND ' +
+        'whether it actually stopped anything — read binding.bound, never constraint alone; ' +
+        'how full the carton is; and, for a count, two bounds. upperBound folds the weight ' +
+        'cap in, so it moves when the cap moves and is not evidence about the carton; ' +
+        'geometryBound is space alone, and only IT can tell a roomy carton from a full one. ' +
+        'Placement is heuristic: a positive result is a concrete arrangement that was ' +
         'found, a count is a floor, and neither is a proof that nothing better exists. ' +
         BULK_GUIDANCE,
       inputSchema: wire(estimateInput),
@@ -211,6 +214,10 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
       description:
         'Load a CAD file (.step, .stp, .stl) into the running Carton Fit window, exactly as if ' +
         'it were dropped there — the person at the screen sees what you loaded. ' +
+        'CLEARS THE UNIT PART AND ANY PER-KIND WEIGHT OVERRIDES: kind names belong to the ' +
+        'file that was open, so a reload starts from none. In max-quantity that changes the ' +
+        'question from "how many plates" to "how many whole assemblies" — set unitPart again ' +
+        'after loading. ' +
         SETTLED,
       inputSchema: wire(loadModelInput),
       outputSchema: wire(driveOutcomeOutput)
@@ -394,7 +401,8 @@ function registerDataTools(
       title: 'List saved carton presets',
       description:
         'The named input presets saved in this app — the same list its preset picker shows. ' +
-        'Apply one with apply_preset.',
+        'Apply one with apply_preset. The list is append-only through these tools: there is ' +
+        'no delete, and a name can only be reused by saving over it.',
       inputSchema: wire(listPresetsInput),
       outputSchema: wire(presetsOutput)
     },
@@ -414,7 +422,10 @@ function registerDataTools(
       description:
         'Save the app’s CURRENT inputs — carton, clearances, weight cap, mode, tier, units — ' +
         'under a name, so they can be recalled later. Saves what is on screen, so set the ' +
-        'inputs first. An existing preset of the same name is replaced.',
+        'inputs first. An existing preset of the same name is replaced. ' +
+        'NOT saved: per-kind weight overrides and the unit part, which belong to the loaded ' +
+        'file rather than to a carton — applying a preset leaves whatever overrides the ' +
+        'session already carries, so check them before trusting the answer.',
       inputSchema: wire(savePresetInput),
       outputSchema: wire(presetsOutput)
     },
@@ -461,7 +472,9 @@ function registerDataTools(
       description:
         'The estimates someone chose to keep, newest first, each with the one-line receipt the ' +
         'app’s own list shows. These are RECEIPTS, not a cache: restore_estimate re-applies a ' +
-        'row’s inputs and the engine computes the answer again (ADR-0016).',
+        'row’s inputs and the engine computes the answer again (ADR-0016). Kept rows cannot ' +
+        'be deleted or replaced from here — deliberately, since everything else these tools ' +
+        'do is undoable and that would not be.',
       inputSchema: wire(listSavedEstimatesInput),
       outputSchema: wire(savedEstimatesOutput)
     },

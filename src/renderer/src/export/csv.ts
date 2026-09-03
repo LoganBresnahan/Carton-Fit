@@ -4,6 +4,7 @@ import {
   freeSpaceReport,
   packedWeightG,
   utilizationPercent,
+  verdictCaption,
   verdictHeadline
 } from '../packing/verdict'
 import { decimal, dimsText, lengthText, modeLabel, tierLabel, volumeText, weightText } from './format'
@@ -93,6 +94,19 @@ export function buildCsv(input: EstimateExport): string {
   lines.push(row(['Mode', modeLabel(request.mode)]))
   lines.push(row(['Quality', tierLabel(request.tier)]))
   lines.push(row(['Result', resultCell(result)]))
+  // THE QUALIFICATION TRAVELS, AND THIS FILE IS WHERE IT MATTERS MOST.
+  //
+  // ADR-0017 §2: an answer qualified on screen stays qualified once it leaves
+  // the app. The summary has carried this sentence since it was written; the
+  // CSV shipped the bare number beside it, and BOTH 2026-09-03 dogfood clients
+  // found the discrepancy independently — one noting that a CSV is the artifact
+  // most likely to be pasted into a quote, which is exactly the moment the
+  // answer can no longer defend itself.
+  //
+  // A sentence in a cell rather than a field name, unlike the §7 rows below: it
+  // qualifies the Result cell it sits under, and splitting a hedge into columns
+  // is how a hedge becomes ignorable.
+  lines.push(row(['Result note', verdictCaption(result)]))
   lines.push(row(['Limited by', bindingLabel(result.binding)]))
   lines.push(row(['Fill', utilizationPercent(result.utilization)]))
   lines.push(row([`Carton inner (${length})`, dimsText(request.carton, units)]))

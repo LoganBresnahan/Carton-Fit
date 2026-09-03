@@ -22,6 +22,20 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   the app could not open its window and the tools never arrived.
   ([ADR-0030](doc/adr/0030-client-agnostic-connect-surface.md))
 
+- **A count no longer argues with itself.** When the app could prove nothing
+  more fits — the count has reached its upper bound — it still added "a mixed
+  arrangement may fit more", sending you looking for a unit the same answer had
+  ruled out. It now says the arrangement cannot be beaten under those limits,
+  and keeps the hedge only when the bound genuinely leaves room. Same wording on
+  screen, in both exports, and in an assistant's reply.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+- **The measurements CSV carries the qualification the summary always did.**
+  An estimate that reads "At least 3 fit — heuristic" on screen left the app as
+  a bare `3` in the CSV, which is the file most likely to end up pasted into a
+  quote. It now carries a Result note saying exactly what the screen says.
+  ([ADR-0017](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+
 - **An AI assistant is no longer told the carton has room when it doesn't.**
   When the weight cap limited a count, the answer sent to the assistant added
   "not the carton — there is room left" — a claim nothing had checked, and

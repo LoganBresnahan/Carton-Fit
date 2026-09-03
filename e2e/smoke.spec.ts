@@ -99,9 +99,19 @@ for (const golden of GOLDEN_PACKS) {
       expect(estimate.fill, because).toBe(golden.fill)
     }
     expect(estimate.tier).toBe(golden.tier)
-    // ADR-0003: heuristic results must never be sold as proofs.
+    // ADR-0003: heuristic results must never be sold as proofs — and, since
+    // 2026-09-03, must not be hedged past the point the bound forecloses.
+    // These goldens are exact-fit grids, so the rigorous bound MEETS the count
+    // and "a mixed arrangement may fit more" would contradict the bound printed
+    // beside it (ADR-0029 phase-2 amendment 3). Read the panel's own bound
+    // rather than deciding from the fixture: the two must agree on screen, and
+    // that agreement is the property worth pinning here.
     if (golden.mode === 'max-quantity' && (golden.count ?? 0) > 0) {
-      expect(estimate.caption).toMatch(/Heuristic/)
+      const shown = estimate.upperBound?.match(/[\d,]+/)?.[0]
+      const atBound = shown !== undefined && shown === golden.count?.toLocaleString()
+      expect(estimate.caption, because).toMatch(
+        atBound ? /no arrangement beats this/ : /Heuristic/
+      )
     }
   })
 }

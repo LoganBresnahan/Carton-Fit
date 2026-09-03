@@ -98,6 +98,31 @@ storage banner is not reused.
 - The suggested-filename rule puts part and carton in the name, so a folder of
   exports from one dogfooding session stays legible.
 
+## Addendum, 2026-09-03 (first two-client dogfood): §2 held for the summary and not for the CSV
+
+§2 says a warning shown on screen travels with the export. The summary carried
+`verdictCaption` from the day it was written; **the CSV never did** — its Result
+cell was the bare count, and nothing else in the file hedged it. Both dogfood
+clients found it independently, in different products, on the same afternoon.
+
+The reasoning that let it happen is visible in the code and worth naming,
+because it was not carelessness: the CSV deliberately restates things as field
+names rather than sentences ("a CSV's wording is its field names"), and a
+qualification is a sentence. That principle is right for the §7 non-fit rows,
+where the facts decompose into cells. It is wrong for a hedge — a hedge split
+across columns is a hedge a reader can drop one of.
+
+So the CSV now carries `Result note`: the same sentence, in a cell, quoted by
+`csvCell` like any other prose. The file-wide "no grouped digits" assertion that
+had guarded the count was narrowed to the computed cell it was always about — a
+spreadsheet parses a quoted sentence fine, and the broad reading of that rule
+forbade the qualification from travelling at all.
+
+One consequence worth stating plainly: **the CSV was the worst artifact to have
+got this wrong in.** As the client that found it put it, a CSV is the thing most
+likely to be pasted into a quote — the moment the answer can no longer defend
+itself, which is the moment §2 exists for.
+
 ## Alternatives considered
 
 - **Export saved rows directly** — rejected above; it would create a second

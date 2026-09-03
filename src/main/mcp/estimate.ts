@@ -135,8 +135,20 @@ export type EstimateOutcome =
       mode: 'max-quantity'
       count: number
       /** A cap no arrangement can beat (ADR-0022 §7) — not a heuristic, unlike
-       *  the count beside it. */
+       *  the count beside it. **The weight cap is folded into it**, so on a
+       *  weight-limited answer it equals the count for a reason that says
+       *  nothing about the carton. `geometryBound` is the number to reason
+       *  about space with. */
       upperBound: Known<{ count: number }>
+      /** The same cap with the weight term removed — space alone.
+       *
+       *  Exposed because two independent dogfood clients reached for
+       *  `upperBound` as evidence about the carton and drew opposite
+       *  conclusions from it (2026-09-03); a field they cannot compute is a
+       *  field they will guess at. Equality with `count` PROVES no arrangement
+       *  fits another copy; a value above it proves nothing, because a bound is
+       *  allowed to be loose — this one is, routinely, by more than one. */
+      geometryBound: Known<{ count: number }>
       /** Whether the placements behind the count were all materialized. */
       layout: { complete: true } | { complete: false; shown: number; counted: number; note: string }
     }
@@ -286,6 +298,13 @@ function outcomeOf(
               'is limited by nothing'
           }
         : { known: true, count: result.upperBound },
+    geometryBound:
+      result.geometryBound === undefined
+        ? {
+            known: false,
+            reason: 'no finite bound exists on what the carton alone could hold'
+          }
+        : { known: true, count: result.geometryBound },
     layout:
       truncated === null
         ? { complete: true }

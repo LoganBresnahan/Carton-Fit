@@ -794,6 +794,74 @@ So: any wire sentence that asserts what did **not** happen requires a field
 that establishes it, and if no such field can exist, the sentence does not
 either.
 
+### Phase-2 contract amendment 3 (2026-09-03) — the first session run from the brief, in two clients
+
+ADR-0032 turned this reader into a tier with a written itinerary, and the first
+outing ran it in Claude Desktop and in ChatGPT (Codex) against the same build.
+Both reports are in the same afternoon's history; what follows is what survived
+independent verification.
+
+**The convergence is the useful part.** Two clients, two products, two framings
+— and they landed on the same two defects without seeing each other's work: the
+CSV dropping a qualification the summary keeps (ADR-0017's addendum), and
+`upperBound` being read as evidence about the carton. On the second, one called
+it "unstable" (wrong — it is `min(volumetric, per-axis, weight)` exactly as
+ADR-0022 §7 documents) and the other called it "documented as geometric, and
+actually joint" (right). **Two readers guessing at the same field is not two
+mistakes; it is a missing field.**
+
+**Amendments:**
+
+1. **`geometryBound` goes on the wire**, beside `upperBound`, as
+   `Known<{count}>`. It existed internally from amendment 2 and was doing the
+   work behind the prose — but a client asked to reason about space had nothing
+   to reason with, so it invented a mechanism. Additive, so minor under
+   ADR-0020.
+
+2. **The count's caption stops contradicting the bound in its own payload.**
+   `verdictCaption` appended "Heuristic — a mixed arrangement may fit more" to
+   every count, including the ones carrying `upperBound === count`. A reader was
+   being sent after a fourth unit the same reply had ruled out. The hedge is now
+   dropped at the bound, replaced by "no arrangement beats this under these
+   limits". `upperBoundLabel`'s own comment had described this case since it was
+   written ("when they meet, the answer is optimal"); the caption four lines
+   above it did not. This is the shared verdict module, so the fix lands on the
+   panel, both exports and the wire at once — which is exactly why the module
+   exists.
+
+3. **Two tool descriptions stop promising more than their fields deliver.**
+   `estimate` said the reply names "which hard constraint was binding", which is
+   false whenever `bound: false` — the field names the CLOSEST limit, and
+   amendment 1 deliberately kept it that way rather than nulling it (a `none`
+   would be breaking under ADR-0020 and would discard the headroom answer). It
+   also called the bound "rigorous" without saying the weight cap is inside it.
+   Both now say what is true. Note the shape of this one: the defect was in the
+   DESCRIPTION, and the reader's proposed fix — null the field — had already
+   been considered and rejected here for reasons it could not see.
+
+4. **Three silent behaviours are now announced** where the client meets them:
+   `load_model` clears the unit part and the per-kind overrides (both clients
+   tripped on this, and in max-quantity it silently changes the question from
+   "how many plates" to "how many assemblies"); `save_preset` does not store
+   overrides or the unit part; the preset and estimate lists are append-only.
+   None of these is a behaviour change — each is documented in the code and was
+   invisible on the wire, which is the definition of a surface gap.
+
+**Deferred, deliberately: the space-only rerun.** Amendment 2 can prove the
+carton is FULL (a rigorous geometry bound meeting the count) but never that it
+has ROOM, because a bound above the count proves nothing. Both sessions wanted
+the positive claim, and the Claude session proposed the mechanism that would
+earn it: rerun the pack at an unbounded cap and compare counts — a strictly
+higher count is a constructive proof that room exists, which no bound can give.
+It costs a second pack per max-quantity estimate, so it gets its own ADR rather
+than a paragraph here.
+
+**What this run says about the tier.** Every finding was a sentence or a field
+description; not one was a wrong number, and the session that found the most
+said so itself — "the engine is not the problem". Three sessions, three times
+the same result. The suite proves the mechanism and has never once proven the
+prose.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The
