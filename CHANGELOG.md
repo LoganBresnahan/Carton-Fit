@@ -18,6 +18,8 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   named one. It now carries what the app needs to start, so the tools arrive.
   If ChatGPT already lists Carton Fit, the panel will show it as pointing at an
   older setup — press **Reconnect** once and restart ChatGPT.
+  On Linux that now includes the X display's authorisation file, without which
+  the app could not open its window and the tools never arrived.
   ([ADR-0030](doc/adr/0030-client-agnostic-connect-surface.md))
 
 ### Added

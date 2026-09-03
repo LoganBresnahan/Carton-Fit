@@ -72,6 +72,13 @@ describe('shimEntry — the launch line every client will run', () => {
     expect(sessionEnvKeys('win32')).toContain('SystemRoot')
     expect(sessionEnvKeys('win32')).toContain('APPDATA')
     expect(sessionEnvKeys('linux')).toContain('DISPLAY')
+    // …and the cookie that makes that display usable. A cookie-protected X
+    // server (every `xvfb-run`, most session managers) refuses a client that
+    // names no auth file, and the refusal reads exactly like the app being
+    // broken: no window, no pipe, a shim timing out against a socket nobody
+    // opened. Pinned HERE rather than by the e2e, because the machines this
+    // suite usually runs on leave XAUTHORITY unset and cannot notice its loss.
+    expect(sessionEnvKeys('linux')).toContain('XAUTHORITY')
     // Reason 2 in the module: these decide where the pipe lives, so a shim
     // without them looks for a rendezvous the running app never opened.
     expect(sessionEnvKeys('linux')).toContain('XDG_RUNTIME_DIR')

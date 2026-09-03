@@ -92,6 +92,16 @@ export function sessionEnvKeys(platform: NodeJS.Platform): readonly string[] {
     // may have only WAYLAND_DISPLAY, and a GUI app with neither cannot open a
     // window to be hidden.
     'DISPLAY',
+    // And the KEY to that display. An X server that requires MIT-MAGIC-COOKIE
+    // auth — which most session managers set up, and which `xvfb-run` does
+    // unconditionally — refuses a client whose environment names no cookie
+    // file, so DISPLAY without XAUTHORITY is a door without its key: the app
+    // never opens a window, never listens on the pipe, and the shim spends its
+    // whole 20-second deadline on a socket that will never exist. Absent here,
+    // Xlib falls back to `~/.Xauthority`, which is why the gap survives on any
+    // machine whose session leaves XAUTHORITY unset (WSLg, this dev box) and
+    // shows up only where the cookie lives somewhere else (CI under xvfb).
+    'XAUTHORITY',
     'WAYLAND_DISPLAY',
     'XDG_SESSION_TYPE',
     'DBUS_SESSION_BUS_ADDRESS',

@@ -218,6 +218,27 @@ the profile paths and `TEMP` are there on reasoning, not measurement, because
 the only machine that can measure them is a dogfooder's. The shim's new
 message is what makes the next attempt one glance instead of an hour.
 
+**Follow-on the same day, found by CI: `DISPLAY` alone is not the display.**
+The spec above went green on this dev box and on `windows-latest`, and red on
+Linux CI — the app the shim spawned never listened, and the 20-second deadline
+was all the runner could say. The missing variable was `XAUTHORITY`: an X
+server that requires MIT-MAGIC-COOKIE authentication — which most session
+managers set up, and which `xvfb-run` does unconditionally — refuses a client
+whose environment names no cookie file. Reproduced by pointing a declared-env
+launch at an unreachable `DISPLAY` locally: no window, no socket, same silent
+timeout.
+
+Two things this says beyond the one-line fix. First, **the list is a claim
+about a machine, and the machines we develop on are the ones least able to
+check it** — WSLg and this box leave `XAUTHORITY` unset, so Xlib's fallback to
+`~/.Xauthority` hides the gap; only an environment that puts the cookie
+somewhere else can fail. That is the same shape as the Windows caveat in the
+paragraph above, arriving from the other direction, and it is why the key is
+pinned by a unit assertion on the *list* rather than by an e2e that cannot
+notice its absence. Second, **it is not a CI-only fix**: a Linux dogfooder
+whose session sets `XAUTHORITY` — the common case on X11 — would have hit
+exactly this, with a ChatGPT that lists the server and offers no tools.
+
 ## Decision
 
 **1. One surface, many clients, one seam.** The main process owns a registry

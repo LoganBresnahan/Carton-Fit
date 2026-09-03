@@ -107,18 +107,29 @@ product decisions:
   qualified on screen stays qualified in a quote. PDF reports are deliberately
   later; the text summary is their prototype.
 
-## AI client surface (ADR-0029)
+## AI client surface (ADR-0029, ADR-0030)
 
-The app hosts an MCP stdio server so AI clients — Claude Desktop is the confirmed
-one — can inspect and drive it: the AI keeps the judgment layer (materials,
-handling risk, "should I"), Carton Fit supplies every number, qualified the same
-way the screen qualifies it (binding constraint, upper bound, warnings). Three
-tiers: inspect the engine (geometry report + stateless estimate), drive the live
-app (inputs under auto-run, the packed view returned as an image, undo covering
-the AI's edits like anyone's), then presets/history/export. Setup is a button in
-the app that writes Claude Desktop's config — the audience is non-technical.
-There is deliberately **no chat UI inside Carton Fit**: the conversation lives in
-the AI client, next to the user's other context.
+The app hosts an MCP stdio server so AI clients — **Claude Desktop and ChatGPT
+(Codex)** are the confirmed ones — can inspect and drive it: the AI keeps the
+judgment layer (materials, handling risk, "should I"), Carton Fit supplies every
+number, qualified the same way the screen qualifies it (binding constraint,
+upper bound, warnings). Three tiers: inspect the engine (geometry report +
+stateless estimate), drive the live app (inputs under auto-run, the packed view
+returned as an image, undo covering the AI's edits like anyone's), then
+presets/history/export. There is deliberately **no chat UI inside Carton Fit**:
+the conversation lives in the AI client, next to the user's other context.
+
+Setup is a button per client, never an instruction to hand-edit somebody else's
+config — the audience is non-technical (ADR-0030). The connect panel lists every
+client it knows about, says whether each is installed, connected, or pointing at
+an older build, and reaches each one **through the mechanism its own owner
+supports**: the client's CLI where there is one (Codex), its config file where
+there is not (Claude Desktop), and **always** a copyable set of by-hand fields
+beside both, so a client we cannot write to is still a client the user can
+connect. Adding a third client is a new adapter behind that seam, not a new
+surface. Chat clients that accept only remote HTTPS servers — ChatGPT on the
+web among them — are out of scope: Carton Fit serves a local stdio server on
+the machine holding the CAD file, and does not host one on the internet.
 
 ## Skid stage (ADR-0031)
 
