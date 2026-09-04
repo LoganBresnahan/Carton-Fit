@@ -69,6 +69,40 @@ and as the crash barrier (ADR-0022 §2).
 - **Single fixed algorithm, no tiers** — simpler, but contradicts the user's explicit
   product direction.
 
+## Addendum, 2026-09-04 (sixth dogfood): a negative result must name its limit too
+
+The heuristic-labeling rule this ADR mandates has always been about *epistemic
+direction*: a positive result is a constructive proof, a negative one is not.
+`verdictCaption` implements that carefully for every outcome except one. At
+`count === 0` it returned early with **"None fit in this carton."** — before the
+branch that names which limit stopped the count.
+
+So a 35 lb cap against a hand-typed 40 lb part produced a verdict about the
+*carton*, while `geometryBound: 3`, `spaceOnlyCount: 3` and
+`binding.constraint: "weight"` in the same payload all said the carton takes
+three. Because the panel, the MCP note and both exports read the one caption,
+it reached an exported quote block whose next line but one read "the weight cap
+stopped this at 0 — the carton itself would take 3". The artifact refuted
+itself two lines apart.
+
+**The rule this adds: "in this carton" is a claim about SPACE, and a claim
+about space needs the space bound to license it.** The zero branch now consults
+`geometryBound`; when the bound says the carton takes some, the caption names
+the limit the way every non-zero sibling already does (`None fit
+(weight-limited).`). An absent bound keeps the original sentence rather than
+sharpening it — no bound establishes nothing, and asserting "weight-limited"
+without one would be the same unbacked move in the other direction.
+
+This is ADR-0029's phase-2 rule applied to a case that predates it: the fix is
+a field plus a sentence that reads it, never a rewording. Worth recording that
+the defect survived six months and five dogfood sessions because a zero looks
+like a boring case — the reader who found it went looking specifically for
+whether the zero-count wording reached an export, which is what a tier-3 reader
+does that a test author does not.
+
+Pinned by `tests/pack-verdict.test.ts`: both arms, since a fix that only ever
+says "weight-limited" would trade one unbacked claim for another.
+
 ## Revisit triggers
 
 - Users routinely pack concave parts where nesting would change the answer → fund

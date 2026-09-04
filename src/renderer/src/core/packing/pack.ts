@@ -327,7 +327,11 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
       placements: [],
       binding: 'geometry',
       heuristic: true,
-      utilization: 0
+      utilization: 0,
+      // Nothing to place, so the carton alone takes none of it either. Stated
+      // rather than omitted: the field is total (ADR-0033 addendum 3), and a
+      // gap here would be the one shape a reader cannot tell from a bug.
+      spaceOnlyCount: 0
     }
   }
   const unit = boxOf(composeUnit(request.parts), provider)
@@ -364,7 +368,13 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
     placements: winner.placements,
     binding: winner.binding,
     heuristic: true, // grid fill and EP refinement are both lower bounds — see verdictCaption
-    utilization: clampUtilization(occupied, boxVolume(request.carton))
+    utilization: clampUtilization(occupied, boxVolume(request.carton)),
+    // THE COUNT IN HAND IS THE DEFAULT ANSWER, AND USUALLY THE WHOLE ANSWER.
+    // Only a weight-bound count with room left in the geometry bound can
+    // exceed it, and only that case reruns below. Written as a default rather
+    // than as branches so the field cannot go missing again by falling between
+    // two conditions — which is exactly how the 6th dogfood run lost it.
+    spaceOnlyCount: winner.count
   }
   if (Number.isFinite(bounds.overall)) {
     // The max is float insurance, not arithmetic: both sides use the same
@@ -391,6 +401,15 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
   //
   // Recursion terminates by construction: the rerun has no finite cap, so its
   // binding is 'geometry' and this branch is not entered again.
+  //
+  // THIS IS THE ONLY BRANCH, AND IT ONLY EVER RAISES THE DEFAULT (addendum 3).
+  // It used to be an if/else-if whose two conditions did not cover the case
+  // between them — a weight-bound count settled by its own bound fell through
+  // both and left the field undefined. The reply then said the field was "not
+  // needed", which was true of the RERUN and false of the answer: with
+  // `geometryBound === count`, a cap-free repack can place no more (the bound
+  // forbids it) and no fewer (lifting a cap never places fewer), so the value
+  // is the count and was provable without packing anything.
   const settledByBound = result.geometryBound !== undefined && result.geometryBound <= winner.count
   if (winner.binding === 'weight' && Number.isFinite(request.maxWeightG) && !settledByBound) {
     const uncapped = maxQuantity({ ...request, maxWeightG: Infinity }, provider)
@@ -399,19 +418,6 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
     // discipline as the bounds above: the wording layer reads EQUALITY here as
     // "the carton stops it too", and a dip below the count would say so falsely.
     result.spaceOnlyCount = Math.max(uncapped.count, winner.count)
-  } else if (winner.binding !== 'weight') {
-    // THE CAP DID NOT BIND, SO THIS RUN IS ALREADY THE CAP-FREE ONE (ADR-0033
-    // addendum 2, 4th dogfood). A capped count is min(geometry, weight); when
-    // geometry is what stopped it, the cap allowed at least as many, so lifting
-    // it cannot place fewer and cannot place more than the geometry that just
-    // stopped it. The answer is the count in hand — no second pack, and no
-    // question about which of the two searches produced it.
-    //
-    // It reads as a no-op and is not: the field was absent here, so a reader
-    // asking "how many does the carton alone take?" got "not asked" at exactly
-    // the cap where the carton is the only thing that matters. That is this
-    // ADR's own opening sentence pointed the other way.
-    result.spaceOnlyCount = winner.count
   }
   return result
 }

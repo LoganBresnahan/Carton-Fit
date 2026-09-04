@@ -1158,7 +1158,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       on the plate case three earlier readers had derived by hand against a
       bound that disagreed with them. What it found instead is what this
       surface always ships — sentences. The first two are one line each.
-      - [ ] **The zero-count caption blames the carton for a weight zero**
+      - [x] **The zero-count caption blames the carton for a weight zero**
         (worst). `verdictCaption` returns early at `count === 0` with "None fit
         in this carton." — *before* the branch that names the limit — so a cap
         of 35 lb against a hand-set 40 lb plate prints a claim about the CARTON
@@ -1174,7 +1174,12 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         3": the artifact refutes itself two lines apart. Keep the reader's
         judgement of why it matters — a buyer reading it orders a bigger
         carton, and a bigger carton would still hold zero.
-      - [ ] **`spaceOnlyCount` is withheld in the one case where its value is
+        **Shipped 2026-09-04, ADR-0003 addendum.** The carton claim is now
+        licensed by `geometryBound`; an absent bound keeps the old sentence
+        rather than sharpening it, since asserting "weight-limited" without
+        one is the same unbacked move in the other direction. Both arms
+        pinned, and the guard mutation-checked in both directions.
+      - [x] **`spaceOnlyCount` is withheld in the one case where its value is
         provable.** ADR-0033 addendum 2 left exactly one `known: false` branch —
         a weight-bound count whose `geometryBound` meets it — on the sound
         ground that a rerun cannot beat a bound and should be skipped. The
@@ -1188,7 +1193,19 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         (`pack.ts:402`), whose comment — "it reads as a no-op and is not" —
         applies here verbatim. Needs an ADR-0033 amendment, because the ADR
         names this surviving branch by hand.
-      - [ ] **`Fill` is exported as a bare percentage.** The MCP reply carries
+        **Shipped 2026-09-04, ADR-0033 addendum 3.** The field is now
+        REQUIRED on `MaxQuantityResult` — a default on the result literal
+        that only the rerun may raise, rather than a value assigned in one
+        of two branches that left a gap between them. That structure is the
+        real fix: a default cannot go missing. Two `otherConstraint`
+        reasons went with it, both already unreachable — the engine ran the
+        rerun in exactly the case they described, and only a fixture
+        omitting a field the engine always set could reach them. The wire
+        keeps its `Known` wrapper (dropping it is a major, ADR-0020 §3) and
+        simply stops sending the absent arm. Mutation-tested; the
+        rerun-skip itself is provably unobservable and is recorded as a
+        true negative.
+      - [x] **`Fill` is exported as a bare percentage.** The MCP reply carries
         `utilization.basis: "bounding-boxes"`; the summary and the CSV print
         `Fill: 23%` and drop it. Every row beside it names its basis or its unit
         — `Carton inner (in)`, `Packed weight (lb)` — and `Limited by` was given
@@ -1197,6 +1214,14 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         plate (32.95 in³ of box against 32.38 in³ enclosed); the CSV prints both
         part volumes in its own rows while its Fill silently uses one.
         `csv.ts:125`, `summary.ts:126`.
+        **Shipped 2026-09-04, ADR-0017 addendum 4.** One
+        `UTILIZATION_BASIS` in `verdict.ts` now carries the basis in the
+        three spellings its four surfaces need: the CSV gains a `Fill
+        basis` row beside the unrenamed `Fill`, the summary takes a
+        parenthetical, and the panel's tooltip and the wire's enum read the
+        same definition. Pinned including the invariant that the token and
+        the label stay two spellings of one basis — nothing else can catch
+        that drift, since both are string literals.
       - [ ] **No field says whether an input was set this session or
         inherited** — a surface gap, product work rather than a bug fix.
         `get_app_state` returned the entire station-4 specification before this

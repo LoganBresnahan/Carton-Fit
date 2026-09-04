@@ -39,8 +39,26 @@ export function verdictCaption(result: PackResult): string {
       `did not fit. Heuristic placement — not a proof the rest cannot fit.`
     )
   }
-  if (result.count === 0) return 'None fit in this carton.'
   const limit = result.binding === 'weight' ? 'weight-limited' : 'space-limited'
+  // A ZERO NAMES ITS LIMIT LIKE EVERY OTHER COUNT (2026-09-04, 6th dogfood).
+  //
+  // "in this carton" is a claim about SPACE, and this branch used to make it
+  // without consulting the space bound — so a cap of 35 lb against a hand-typed
+  // 40 lb part printed a verdict about the carton while `geometryBound: 3` in
+  // the same payload said the carton takes three. The reader found it in an
+  // EXPORT, two lines above a binding note that contradicted it, and named the
+  // cost exactly: someone reading it buys a bigger carton, and a bigger carton
+  // still holds zero.
+  //
+  // So the carton claim is now licensed by the bound that can back it, and
+  // every other zero borrows the same `limit` word its non-zero siblings use.
+  // Absent bound keeps the old sentence rather than sharpening: no bound
+  // establishes nothing, and "weight-limited" would be the same unbacked move
+  // in the other direction.
+  if (result.count === 0) {
+    const cartonTakesNone = result.geometryBound === undefined || result.geometryBound === 0
+    return cartonTakesNone ? 'None fit in this carton.' : `None fit (${limit}).`
+  }
   const count = result.count.toLocaleString()
   // THE HEDGE IS DROPPED WHEN THE BOUND SAYS IT IS FALSE (2026-09-03 dogfood).
   //
@@ -247,23 +265,19 @@ function otherConstraintOf(
       return { known: true, atLimit: true, evidence: 'bound' }
     }
     // Then the arrangement (ADR-0033): the same search with the cap lifted.
-    if (result.spaceOnlyCount !== undefined) {
-      return result.spaceOnlyCount > result.count
-        ? { known: true, atLimit: false, evidence: 'arrangement' }
-        : { known: true, atLimit: true, evidence: 'search' }
-    }
-    if (result.geometryBound === undefined) {
-      return { known: false, reason: 'no finite bound exists on what the carton could hold' }
-    }
-    // A bound is a ceiling, not a possibility — the earlier wording ("might
-    // hold as many as") asserted room from a number that only fails to exclude
-    // it, and two readers disproved it by hand (2026-09-03).
-    return {
-      known: false,
-      reason:
-        `the space-only bound is ${result.geometryBound}, which is a ceiling and not a ` +
-        `placement — nothing has placed ${result.count + 1}`
-    }
+    //
+    // UNCONDITIONAL SINCE ADR-0033 ADDENDUM 3, and this is where a pair of
+    // `known: false` branches used to sit — "no finite bound exists…" and "the
+    // space-only bound is N, which is a ceiling and not a placement". Both are
+    // gone because both were ALREADY unreachable from the engine: they
+    // described a weight-bound count with no space-only answer, and the rerun
+    // ran in exactly that case. Making the field total only proved it. The
+    // sentence they were fixing is still pinned — as the `arrangement` branch
+    // below, which reports the placement instead of the ceiling, which is what
+    // the two readers who disproved "might hold as many as" by hand were owed.
+    return result.spaceOnlyCount > result.count
+      ? { known: true, atLimit: false, evidence: 'arrangement' }
+      : { known: true, atLimit: true, evidence: 'search' }
   }
   if (!capApplies) return { known: false, reason: 'no weight cap was supplied' }
   if (result.mode === 'max-quantity') {
@@ -314,7 +328,7 @@ export function bindingReport(result: PackResult, request: PackRequest): Binding
         note =
           `The weight cap stopped this${at}, and lifting the cap does not change the count — ` +
           `the carton stops it${at} as well, as far as this search can tell.`
-      } else if (other.known && result.mode === 'max-quantity' && result.spaceOnlyCount !== undefined) {
+      } else if (other.known && result.mode === 'max-quantity') {
         note =
           `The weight cap stopped this${at} — the carton itself would take ` +
           `${result.spaceOnlyCount.toLocaleString()}: that many were placed with the cap lifted.`
@@ -370,8 +384,35 @@ export function bindingReport(result: PackResult, request: PackRequest): Binding
   }
 }
 
-/** Carton fill as a percentage. Bounding-box based: air trapped inside a part's
- *  box is not usable by another part, so the box is what packing consumes. */
+/**
+ * WHAT A FILL PERCENTAGE IS A SHARE OF — in one place, in the three spellings
+ * its four surfaces need (2026-09-04, 6th dogfood).
+ *
+ * The number is bounding-box based: air trapped inside a part's box is not
+ * usable by another part, so the box is what packing consumes. That is a real
+ * qualification — on the reference plate the box is 32.95 in³ against 32.38 in³
+ * of enclosed mesh, and the CSV prints BOTH of those volumes in its own rows
+ * while its Fill silently uses one of them.
+ *
+ * It was disclosed on the wire (`basis`), on the panel (a hover tooltip), and
+ * nowhere at all in the two exports — which are the artifacts that get pasted
+ * into a quote, where nobody can hover and the wire is not present. A reader
+ * called that out as a qualification the screen makes and the quote drops.
+ * Every neighbouring CSV row names its unit; this one named nothing.
+ *
+ * One definition, three renderings: `token` is the wire's enum (kebab, pinned
+ * by a zod literal), `label` is what a person reads, `note` is the sentence
+ * behind the panel's tooltip.
+ */
+export const UTILIZATION_BASIS = {
+  token: 'bounding-boxes',
+  label: 'bounding boxes',
+  note: 'Share of the carton filled by part bounding boxes'
+} as const
+
+/** Carton fill as a percentage. See `UTILIZATION_BASIS` for what it is a share
+ *  of — the number alone does not say, and for two builds nothing else did
+ *  either once it reached an export. */
 export function utilizationPercent(utilization: number): string {
   const pct = utilization * 100
   return pct > 0 && pct < 1 ? '<1%' : `${Math.round(pct)}%`

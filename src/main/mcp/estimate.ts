@@ -17,6 +17,7 @@ import {
   openMeshWarning,
   packedWeightG,
   truncatedLayoutNote,
+  UTILIZATION_BASIS,
   verdictCaption,
   type BindingReport
 } from '../../renderer/src/packing/verdict'
@@ -320,23 +321,14 @@ function outcomeOf(
             reason: 'no finite bound exists on what the carton alone could hold'
           }
         : { known: true, count: result.geometryBound },
-    spaceOnlyCount:
-      result.spaceOnlyCount !== undefined
-        ? { known: true, count: result.spaceOnlyCount }
-        : {
-            known: false,
-            // One case left, and it is the one where a STRONGER field already
-            // answers: a weight-bound count whose geometry bound meets it.
-            // `geometryBound === count` proves the carton full over every
-            // arrangement, which is more than any rerun could return, so the
-            // rerun is skipped and this says which field to read instead. The
-            // old third branch ("not asked — the carton, not the cap, stopped
-            // this count") is gone with the gap it described.
-            reason:
-              result.geometryBound !== undefined && result.geometryBound <= result.count
-                ? 'not needed — the geometry bound already proves the carton is full'
-                : 'no finite cap to lift'
-          },
+    // NO `known: false` ARM LEFT (ADR-0033 addendum 3, 6th dogfood). The engine
+    // now derives this in every case instead of only when a rerun produces it,
+    // so there is no absence to explain — the last reason string described a
+    // rerun that was correctly skipped while withholding an answer that was
+    // provable. The `Known` WRAPPER stays: dropping `known`/`reason` from the
+    // wire would be a major under ADR-0020 §3, clients already branch on it,
+    // and narrowing which arm we send breaks nobody.
+    spaceOnlyCount: { known: true, count: result.spaceOnlyCount },
     layout:
       truncated === null
         ? { complete: true }
@@ -480,7 +472,7 @@ export function buildEstimateReport(
     utilization: {
       fraction: result.utilization,
       percent: `${Math.round(result.utilization * 1000) / 10}%`,
-      basis: 'bounding-boxes'
+      basis: UTILIZATION_BASIS.token
     },
     qualifications: qualificationsOf(context, units),
     units

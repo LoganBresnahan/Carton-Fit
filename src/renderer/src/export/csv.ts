@@ -1,5 +1,6 @@
 import { lengthUnitLabel, volumeUnitLabel } from '../core/units'
 import {
+  UTILIZATION_BASIS,
   bindingLabel,
   bindingReport,
   freeSpaceReport,
@@ -123,6 +124,11 @@ export function buildCsv(input: EstimateExport): string {
   lines.push(row(['Limit bound', binding.bound ? 'yes' : 'no']))
   lines.push(row(['Limit note', binding.note]))
   lines.push(row(['Fill', utilizationPercent(result.utilization)]))
+  // ADDED beside `Fill`, not folded into it: a script already reads that cell,
+  // and every other row here names its unit or its basis in its FIELD name
+  // ("Carton inner (in)", "Packed weight (lb)"). Fill named nothing, in the
+  // one artifact where the qualification cannot be hovered for.
+  lines.push(row(['Fill basis', UTILIZATION_BASIS.label]))
   lines.push(row([`Carton inner (${length})`, dimsText(request.carton, units)]))
   lines.push(
     row([`Clearance between parts (${length})`, lengthText(request.clearances.betweenParts, units)])
@@ -158,9 +164,10 @@ export function buildCsv(input: EstimateExport): string {
     if (result.geometryBound !== undefined) {
       lines.push(row(['Geometry bound', decimal(result.geometryBound, 0)]))
     }
-    if (result.spaceOnlyCount !== undefined) {
-      lines.push(row(['Space-only count', decimal(result.spaceOnlyCount, 0)]))
-    }
+    // No presence check, unlike the bound above it: the engine derives this in
+    // every case now (ADR-0033 addendum 3), so a quote always carries the one
+    // number that separates a roomy carton from a full one.
+    lines.push(row(['Space-only count', decimal(result.spaceOnlyCount, 0)]))
   }
   if (result.mode === 'fit-check' && result.unplaced.length > 0) {
     lines.push(row(['Did not fit', result.unplaced.join('; ')]))

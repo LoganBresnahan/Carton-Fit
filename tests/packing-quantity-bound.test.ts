@@ -330,15 +330,24 @@ describe('pack — upperBound field', () => {
     expect(r.spaceOnlyCount).toBe(1000)
   })
 
-  it('does not rerun when the bound already settled it — the stronger field answers', () => {
+  it('derives the field instead of rerunning when the bound already settled it', () => {
     // Tie: 8 by geometry, 8 by weight — the rigorous bound proves it, no search.
-    // This is the ONE case the field is absent, and it is absent because
-    // `geometryBound === count` is a proof over every arrangement, which is
-    // more than a rerun could ever return.
+    // This was the ONE case the field went ABSENT, until the 6th dogfood run
+    // pointed out that the value is provable exactly here: `geometryBound`
+    // meets the count, so a cap-free repack can place no more (the bound
+    // forbids it) and no fewer (lifting a cap never places fewer).
     const tie = pack(req([cubePart('u', [10, 10, 10], 1000)], [25, 25, 25], 8000))
     if (tie.mode !== 'max-quantity') throw new Error('mode')
+    expect(tie.binding).toBe('weight')
     expect(tie.geometryBound).toBe(8)
-    expect('spaceOnlyCount' in tie).toBe(false)
+    expect(tie.spaceOnlyCount).toBe(8)
+    //
+    // THE SKIPPED RERUN IS NOT OBSERVABLE HERE, AND CANNOT BE. When
+    // `geometryBound === count` the uncapped pack would return the same 8, so
+    // running it anyway changes only the clock — a mutation deleting
+    // `!settledByBound` survives this file by construction, and that is a true
+    // negative rather than a hole. What IS pinned is the value, which is the
+    // part a reader receives.
   })
 
   // ADR-0033 addendum 2 (4th dogfood): the same carton at two caps, side by

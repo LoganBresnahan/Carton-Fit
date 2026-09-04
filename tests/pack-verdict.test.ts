@@ -39,16 +39,20 @@ function fit(patch: Partial<FitCheckResult> = {}): FitCheckResult {
 }
 
 function qty(patch: Partial<MaxQuantityResult> = {}): MaxQuantityResult {
-  return {
-    mode: 'max-quantity',
-    tier: 'fast',
+  const base = {
+    mode: 'max-quantity' as const,
+    tier: 'fast' as const,
     count: 0,
     placements: [],
-    binding: 'geometry',
+    binding: 'geometry' as const,
     heuristic: true,
     utilization: 0,
     ...patch
   }
+  // Defaulted from the patched count, never from the base one: the engine's
+  // invariant is `spaceOnlyCount >= count`, so a fixture defaulting to 0 would
+  // hand the wording layer a state the engine cannot produce.
+  return { ...base, spaceOnlyCount: patch.spaceOnlyCount ?? base.count }
 }
 
 /** A placement stub — only its presence/count matters to the wording. */
@@ -109,6 +113,26 @@ describe('verdictCaption', () => {
     expect(verdictCaption(fit({ fits: true }))).toBe('Nothing to pack.')
     expect(verdictCaption(qty({ count: 0 }))).toBe('None fit in this carton.')
   })
+
+  it('a zero names its limit unless the carton is what stopped it', () => {
+    // 6th dogfood run: cap 35 lb against a hand-typed 40 lb plate counts 0
+    // while `geometryBound: 3` says the carton takes three. "in this carton"
+    // is a claim about SPACE, and the zero branch was making it without ever
+    // consulting the space bound — two lines above a correct binding note in
+    // the same exported quote block.
+    expect(verdictCaption(qty({ count: 0, binding: 'weight', geometryBound: 3 }))).toBe(
+      'None fit (weight-limited).'
+    )
+    // ...and it survives untouched where the bound licenses it: a part the
+    // carton genuinely cannot take, which is the case the sentence was written
+    // for. Both arms matter — a fix that only ever says "weight-limited" would
+    // trade one unbacked claim for another.
+    expect(verdictCaption(qty({ count: 0, binding: 'weight', geometryBound: 0 }))).toBe(
+      'None fit in this carton.'
+    )
+    // No bound at all establishes nothing, so the wording may not get sharper.
+    expect(verdictCaption(qty({ count: 0, binding: 'weight' }))).toBe('None fit in this carton.')
+  })
 })
 
 describe('bindingReport', () => {
@@ -150,14 +174,33 @@ describe('bindingReport', () => {
     expect(r.note).not.toMatch(/Both limits land/)
   })
 
-  it('stays silent when it has only a loose bound, and calls the bound a ceiling', () => {
-    const r = bindingReport(qty({ count: 3, binding: 'weight', geometryBound: 5 }), request(30))
-    expect(r.otherConstraint).toMatchObject({ known: false })
-    if (r.otherConstraint.known) throw new Error('known')
-    // Not "might hold as many as" — a bound only fails to exclude.
-    expect(r.otherConstraint.reason).toMatch(/ceiling and not a placement/)
-    expect(r.otherConstraint.reason).not.toMatch(/might hold/)
-    expect(r.note).toMatch(/not established/)
+  it('answers a loose bound from the arrangement, never from the ceiling', () => {
+    // WAS "stays silent … and calls the bound a ceiling" until 2026-09-04. That
+    // silence described a state the ENGINE COULD NOT PRODUCE: a weight-bound
+    // count with a loose bound is exactly when the cap-lifted rerun runs, so
+    // `spaceOnlyCount` was always there to answer with. The old expectation
+    // held only because the fixture omitted a field the engine always set —
+    // which is why the branch is gone rather than re-pinned.
+    //
+    // The claim it was protecting survives intact and is asserted here: a bound
+    // of 5 above a count of 3 must never be read as room. Room is reported only
+    // when something was PLACED (evidence 'arrangement'), and a rerun that
+    // matched the count reports 'search' — never "might hold as many as 5".
+    const roomy = bindingReport(
+      qty({ count: 3, binding: 'weight', geometryBound: 5, spaceOnlyCount: 4 }),
+      request(30)
+    )
+    expect(roomy.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arrangement' })
+    expect(roomy.note).toMatch(/the carton itself would take 4/)
+    expect(roomy.note).not.toMatch(/5/)
+
+    const full = bindingReport(
+      qty({ count: 3, binding: 'weight', geometryBound: 5, spaceOnlyCount: 3 }),
+      request(30)
+    )
+    expect(full.otherConstraint).toEqual({ known: true, atLimit: true, evidence: 'search' })
+    expect(full.note).toMatch(/as far as this search can tell/)
+    expect(full.note).not.toMatch(/might hold/)
   })
 
   it('names the side its evidence is about on a comfortable fit', () => {

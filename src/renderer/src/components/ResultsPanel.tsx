@@ -8,6 +8,7 @@ import {
   truncatedLayoutNote,
   upperBoundLabel,
   utilizationPercent,
+  UTILIZATION_BASIS,
   verdictCaption,
   verdictHeadline
 } from '../packing/verdict'
@@ -126,7 +127,7 @@ export default function ResultsPanel() {
           <dd data-testid="results-binding">{bindingLabel(result.binding)}</dd>
         </div>
         <div>
-          <dt title="Share of the carton filled by part bounding boxes">Fill</dt>
+          <dt title={UTILIZATION_BASIS.note}>Fill</dt>
           <dd data-testid="results-utilization">{utilizationPercent(result.utilization)}</dd>
         </div>
         <div>

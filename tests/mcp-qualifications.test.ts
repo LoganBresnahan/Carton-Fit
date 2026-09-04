@@ -334,9 +334,12 @@ describe('every answer arrives qualified', () => {
     expect(report.outcome.count).toBe(3)
     // 5 until 2026-09-04, and the number that reached a quote block twice.
     expect(report.outcome.geometryBound).toEqual({ known: true, count: 3 })
-    // No rerun is needed once the bound meets the count, and the reply says
-    // which field settled it rather than describing the rerun that did not run.
-    expect(report.outcome.spaceOnlyCount).toMatchObject({ known: false })
+    // No rerun is needed once the bound meets the count — but the ANSWER is
+    // needed, and it is derivable: the bound forbids more and a lifted cap
+    // never places fewer, so the carton alone takes exactly these 3. Absent
+    // until 2026-09-04, which cost a reader the corroborating field at the one
+    // tie where they went looking for a second opinion.
+    expect(report.outcome.spaceOnlyCount).toEqual({ known: true, count: 3 })
     expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true, evidence: 'bound' })
     expect(report.binding.note).toMatch(/Both limits land on 3/)
     // The hedges that were honest while this was a search must not survive

@@ -213,6 +213,66 @@ a sweep asserting `spaceOnlyCount >= count` at six caps) and
 `tests/mcp-qualifications.test.ts` on the wire. Mutation-tested: disabling the
 new branch fails three specs, two of them at the wire.
 
+## Addendum 3, 2026-09-04 (sixth dogfood): the field is derived, not searched
+
+Addendum 2 left exactly one `known: false` case — a weight-bound count whose
+`geometryBound` meets it — and justified it correctly: a rerun cannot beat a
+rigorous bound, so the rerun is skipped. The sixth dogfood reader accepted the
+reasoning and then asked the question the reasoning does not answer. Skipping
+the *search* is right. Withholding the *answer* is a separate act, and nothing
+justified it.
+
+**The value was provable the whole time.** When `geometryBound === count`, a
+cap-free repack can place no more (the bound forbids it) and no fewer (lifting
+a cap never places fewer), so `spaceOnlyCount === count`, derivable without
+packing anything. The reply instead said "not needed — the geometry bound
+already proves the carton is full", which is true of the rerun and false of the
+answer. The reader's own words for the cost: the field that would corroborate
+`geometryBound` is suppressed *because it agrees*, at the one place — a
+both-limits tie — where a person most wants a second opinion.
+
+**Decision: `spaceOnlyCount` is required on `MaxQuantityResult`.** Not "usually
+present". Three of the four ways to reach an answer know it without a second
+pack — a geometry-bound count is its own cap-free count, a count with no finite
+cap is cap-free by definition, and a bound-settled count is fixed by the bound
+— and the fourth reruns as before. It is now a default on the result literal
+that the rerun may *raise*, rather than a value assigned in one of two branches
+that did not cover the space between them. That structure is the actual fix:
+the field went missing because two conditions left a gap, and a default cannot.
+
+Three consequences worth naming, because two of them delete things:
+
+1. **The wire keeps its `Known` wrapper and stops using half of it.** Dropping
+   `known`/`reason` would be a major under ADR-0020 §3, clients already branch
+   on the union, and narrowing which arm we emit breaks nobody. `known: false`
+   remains reachable elsewhere on the same field's *neighbours*, so the wrapper
+   is not vestigial in general.
+2. **Two `otherConstraint` reasons are deleted, and they were already dead** —
+   "no finite bound exists on what the carton could hold" and "the space-only
+   bound is N, which is a ceiling and not a placement". Both described a
+   weight-bound count with no space-only answer, and the rerun ran in exactly
+   that case, so the engine could not produce either. They survived because a
+   test built the state by hand from a fixture that omitted a field the engine
+   always set. The claim they protected — a bound is a ceiling and never
+   evidence of room — is unharmed and better pinned: room is now reported only
+   from the `arrangement` branch, which has a placement behind it.
+3. **The CSV's `Space-only count` row loses its presence check** and therefore
+   appears on every max-quantity export, which is the point: it is the number
+   that separates a roomy carton from a full one.
+
+**The skipped rerun is now unobservable, and provably so.** With
+`geometryBound === count` the uncapped pack returns the same count, so running
+it anyway changes only the clock. A mutation deleting `!settledByBound`
+survives the suite by construction — recorded here as a true negative rather
+than left for the next reader to mistake for a hole.
+
+Pinned by `tests/packing-quantity-bound.test.ts` (the tie now asserts the
+derived value), `tests/mcp-qualifications.test.ts` (the plate reports
+`{ known: true, count: 3 }`), and `tests/pack-verdict.test.ts`, whose
+"stays silent on a loose bound" case was replaced by the two branches that can
+actually occur. Mutation-tested: defaulting the field to `0` fails six specs,
+deleting the rerun fails five.
+
 ## Revisit triggers
 
 - **If the measurement says the second pack is not affordable in auto-run**,

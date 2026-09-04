@@ -184,6 +184,42 @@ A row is omitted rather than written empty when its field is absent. The wire
 answers absence with a reason; a CSV has no room for one, and an empty cell in
 a quote reads as a measured zero.
 
+## Addendum 4, 2026-09-04 (sixth dogfood): a percentage that does not say what it is a share of
+
+`Fill: 23%`. Of what? The MCP reply answers — `utilization.basis:
+"bounding-boxes"` — and the panel answers on hover. Both exports dropped it.
+
+That is §2 ("warnings travel with the export") failing in the same shape as
+addendum 1, one qualification later: the app disclosed something on the surface
+that can afford a tooltip, and withheld it from the two artifacts that get
+pasted into a quote, where nobody can hover and the wire is not present.
+
+The basis is a real qualification, not pedantry. Bounding-box fill counts the
+air trapped inside a part's box as consumed, because it is — no other part can
+use it — but it is not volumetric fill, and on the reference plate the box is
+32.95 in³ against 32.38 in³ of enclosed mesh. **The CSV prints both of those
+volumes in its own rows** while its `Fill` cell silently uses one of them, which
+is the version of this defect that can actually mislead someone doing arithmetic
+from the file.
+
+**Decision.** One `UTILIZATION_BASIS` in `packing/verdict.ts` carries the basis
+in the three spellings its four surfaces need — a wire token (kebab, pinned by
+the zod literal), a human label, and the sentence behind the panel's tooltip.
+The CSV gains a `Fill basis` row *beside* `Fill`, which keeps its name (renaming
+a cell a script reads is a major under ADR-0020 §3, the same rule addendum 3
+followed for `Upper bound`). The summary, being prose, takes a parenthetical:
+`Fill: 23% (bounding boxes)`.
+
+The panel is unchanged apart from sourcing its tooltip from the shared
+definition. A screen can qualify on hover; a quote cannot, and that asymmetry is
+the reason the two exports say it in text and the panel does not need to.
+
+Nothing but a test can catch this drifting again: both spellings are string
+literals, so a hand-written `'bounding-boxes'` on the wire typechecks perfectly
+while meaning something the exports no longer say. `tests/export-builders.test.ts`
+asserts the row, the parenthetical, and that the token and the label remain two
+spellings of one basis.
+
 ## Revisit triggers
 
 - A real request to hand a formatted document to a customer → PDF, seeded from

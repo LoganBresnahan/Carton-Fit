@@ -1,5 +1,6 @@
 import { lengthUnitLabel } from '../core/units'
 import {
+  UTILIZATION_BASIS,
   bindingHeading,
   bindingLabel,
   bindingReport,
@@ -123,7 +124,10 @@ export function buildSummary(input: EstimateExport): string {
     // would not make.
     `${bindingHeading(result)}: ${bindingLabel(result.binding)}`,
     bindingReport(result, request).note,
-    `Fill: ${utilizationPercent(result.utilization)}`,
+    // Prose, so the basis rides along in words rather than as its own row —
+    // the summary is what gets pasted into an email, and "23%" of what was the
+    // question a reader could not answer from it.
+    `Fill: ${utilizationPercent(result.utilization)} (${UTILIZATION_BASIS.label})`,
     '',
     ...cartonLines(input),
     `Clearances: ${lengthText(request.clearances.betweenParts, units)} ` +

@@ -46,7 +46,8 @@ describe('packing contract', () => {
       binding: 'weight',
       heuristic: false,
       placements: [],
-      utilization: 0.5
+      utilization: 0.5,
+      spaceOnlyCount: 12
     }
     expect(fit.binding).toBe('geometry')
     expect(qty.binding).toBe('weight')

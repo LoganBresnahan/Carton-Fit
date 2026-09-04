@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildSummary } from '../src/renderer/src/export/summary'
+import { UTILIZATION_BASIS } from '../src/renderer/src/packing/verdict'
 import { buildCsv, csvCell } from '../src/renderer/src/export/csv'
 import { measurementRows, type EstimateExport } from '../src/renderer/src/export/types'
 import { decimal } from '../src/renderer/src/export/format'
@@ -88,16 +89,19 @@ function fitResult(patch: Partial<FitCheckResult> = {}): FitCheckResult {
 }
 
 function qtyResult(patch: Partial<MaxQuantityResult> = {}): MaxQuantityResult {
-  return {
-    mode: 'max-quantity',
-    tier: 'fast',
+  const base = {
+    mode: 'max-quantity' as const,
+    tier: 'fast' as const,
     count: 27000,
     placements: [],
-    binding: 'geometry',
+    binding: 'geometry' as const,
     heuristic: true,
     utilization: 0.9,
     ...patch
   }
+  // See pack-verdict's twin: `spaceOnlyCount >= count` is an engine invariant,
+  // so it follows the patched count rather than defaulting below it.
+  return { ...base, spaceOnlyCount: patch.spaceOnlyCount ?? base.count }
 }
 
 function input(patch: Partial<EstimateExport> = {}): EstimateExport {
@@ -319,13 +323,35 @@ describe('buildCsv', () => {
     expect(fields.filter((field) => field === 'Upper bound')).toHaveLength(1)
   })
 
+  it('names what the fill percentage is a share of', () => {
+    // One definition in verdict.ts feeds the wire's `basis`, the panel tooltip
+    // and both exports, so the four surfaces cannot drift into three answers —
+    // which is the state the 6th dogfood run found them in.
+    const csv = buildCsv(input({ result: qtyResult({ count: 4, binding: 'geometry' }) }))
+    expect(csv).toContain(`Fill basis,${UTILIZATION_BASIS.label}`)
+    // Beside `Fill`, never folded into it: a script already reads that cell.
+    expect(csv).toContain('Fill,90%')
+    // The wire's enum and the human label must stay two spellings of ONE
+    // basis. Nothing else can catch a drift here: both are string literals, so
+    // a hand-written 'bounding-boxes' on the wire typechecks perfectly while
+    // meaning something the exports no longer say.
+    expect(UTILIZATION_BASIS.token.replace('-', ' ')).toBe(UTILIZATION_BASIS.label)
+    expect(UTILIZATION_BASIS.note.toLowerCase()).toContain(UTILIZATION_BASIS.label)
+  })
+
   it('omits a bound row rather than writing an empty one', () => {
     // Absence-with-a-reason is the wire's rule; a CSV has no room for reasons,
     // so a field with nothing behind it does not appear at all — an empty cell
-    // in a quote reads as a measured zero.
+    // in a quote reads as a measured zero. Still true of the two BOUNDS, which
+    // a zero-extent unit can leave genuinely infinite.
     const csv = buildCsv(input({ result: qtyResult({ count: 4, binding: 'geometry' }) }))
     expect(csv).not.toContain('Geometry bound')
-    expect(csv).not.toContain('Space-only count')
+    expect(csv).not.toContain('Upper bound')
+    // Not the space-only count, though: the engine derives it in every case
+    // (ADR-0033 addendum 3), so it is never the absent-field problem this test
+    // was written for — and the quote always carries the number that tells a
+    // roomy carton from a full one.
+    expect(csv).toContain('Space-only count,4')
   })
 
   it('restates the §7 explanation in Field,Value shape rather than as a sentence', () => {
@@ -391,7 +417,10 @@ describe('buildSummary', () => {
     // quoted.
     expect(text).toContain('Closest limit: space')
     expect(text).not.toContain('Limited by:')
-    expect(text).toContain('Fill: 25%')
+    // The basis rides with the number (6th dogfood): "25%" of what was a
+    // question the quote could not answer, while the wire and a panel tooltip
+    // both said. A percentage in an email outlives the session that made it.
+    expect(text).toContain('Fill: 25% (bounding boxes)')
   })
 
   it('carries the binding sentence the panel and the wire carry (ADR-0017 §2)', () => {

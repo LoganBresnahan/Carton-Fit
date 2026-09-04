@@ -12,6 +12,29 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **"None fit" no longer blames the carton when the weight cap is what stopped
+  it.** A zero count always read "None fit in this carton." — even when the
+  carton had room for three and a weight limit was the only thing in the way.
+  In an exported quote that sentence sat two lines above a correct one saying
+  the carton would take three. A zero now names its limit the way every other
+  count does, and keeps the carton wording only when the carton really is what
+  stopped it.
+  ([ADR-0003](doc/adr/0003-packing-modes-and-tiers.md))
+
+- **The "space-only count" is always reported now.** The number that separates
+  a roomy carton from a full one went missing in one case — a weight-limited
+  count the app had already proven full — where it was the field a reader
+  reached for to double-check. It was derivable all along, so it is now stated
+  rather than skipped, and it appears on every CSV export.
+  ([ADR-0033](doc/adr/0033-prove-the-carton-has-room.md))
+
+- **Exports now say what "Fill" is a percentage of.** The figure counts the
+  space taken by each part's bounding box, which is not the same as the volume
+  of the part itself — the app said so on screen and on the AI surface, but the
+  summary and the CSV printed a bare percentage. Both now name the basis, in
+  the artifact most likely to end up in a customer's hands.
+  ([ADR-0017](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+
 - **"How many could possibly fit" is a much tighter number now — and on the
   reference plate it is exact.** The ceiling beside a max-quantity count could
   sit well above anything that actually fits, because it considered part

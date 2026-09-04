@@ -253,13 +253,21 @@ export interface MaxQuantityResult extends PackResultBase {
    *  evidence that it does not, which is a weaker claim and must be worded as
    *  one. Always ≥ `count`.
    *
-   *  Present whenever the answer is available, which is not the same as
-   *  "whenever a rerun ran" (addendum 2): a geometry-bound count IS its own
-   *  cap-free count, since the cap that did not bind cannot have hidden a
-   *  placement. Absent in exactly one case — a weight-bound count the geometry
-   *  bound already settled — where `geometryBound === count` is the stronger
-   *  field and says so. */
-  spaceOnlyCount?: number
+   *  ALWAYS PRESENT (addendum 3, 6th dogfood), which is not the same as
+   *  "a rerun always runs" — it almost never does. Three of the four ways to
+   *  reach an answer already know it without packing anything twice: a
+   *  geometry-bound count IS its own cap-free count (the cap that did not bind
+   *  hid nothing); a count with no finite cap is cap-free by definition; and a
+   *  weight-bound count whose `geometryBound` MEETS it cannot grow, because
+   *  the bound forbids more and lifting a cap never places fewer — so the
+   *  value is the count, provable rather than searched. Only the fourth case,
+   *  a weight-bound count with room left in the bound, pays for a second pack.
+   *
+   *  It was optional until the last of those three was reported as absent
+   *  rather than derived, which is how a reader lost the corroborating field
+   *  at exactly the tie where they wanted a second opinion. Skipping the rerun
+   *  was right; withholding the answer was not. */
+  spaceOnlyCount: number
 }
 
 export type PackResult = FitCheckResult | MaxQuantityResult
