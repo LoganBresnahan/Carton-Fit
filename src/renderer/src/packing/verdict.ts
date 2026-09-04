@@ -353,11 +353,19 @@ export function bindingReport(result: PackResult, request: PackRequest): Binding
       `${result.binding === 'weight' ? 'Weight' : 'Space'} is the closer limit.`
   }
   // Nothing stopped the pack, so neither limit is at its limit — and that IS
-  // knowable here: we hold an arrangement of everything, under the cap.
+  // knowable here. The evidence names the side it is about (2026-09-04, a
+  // reader filtering on evidence found a weight fact labelled 'arrangement'):
+  // when the closest limit is weight the OTHER is space, settled by the
+  // arrangement we hold; when it is space the other is weight, settled by
+  // packed weight against the cap — arithmetic.
   return {
     constraint: result.binding,
     bound: false,
-    otherConstraint: { known: true, atLimit: false, evidence: 'arrangement' },
+    otherConstraint: {
+      known: true,
+      atLimit: false,
+      evidence: result.binding === 'weight' ? 'arrangement' : 'arithmetic'
+    },
     note
   }
 }

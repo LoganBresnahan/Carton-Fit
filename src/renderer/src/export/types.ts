@@ -40,6 +40,13 @@ export interface EstimateExport {
    * with it has been misled by an omission.
    */
   overrides: PartWeightOverrides
+  /**
+   * Enclosed (mesh) volume per part name, mm³ — what a density weight was
+   * derived from. Optional because `PackRequest` carries positions without
+   * indices, so the caller that holds the imported parts supplies it; a CSV
+   * built without it leaves the column blank rather than guessing.
+   */
+  enclosedVolumeMm3?: Readonly<Record<string, number>>
 }
 
 /** One part's measurements, in canonical units — formatting happens per format. */
@@ -56,6 +63,12 @@ export interface MeasurementRow {
    *  unreliable on an open mesh (ADR-0015), and a column of numbers cannot
    *  carry a caveat the way a sentence can. */
   boxVolumeMm3: number
+  /** Enclosed mesh volume (mm³), the basis of a density weight — null when
+   *  the caller did not supply one. Beside the box volume on purpose
+   *  (2026-09-04): a reader recomputing a unit weight from "Box volume" got
+   *  9.34 lb against the 9.183 the engine used, and a column label was the
+   *  only thing saying the two volumes are different quantities. */
+  enclosedVolumeMm3: number | null
   unitWeightG: number
   totalWeightG: number
 }
@@ -72,7 +85,11 @@ export interface MeasurementRow {
  * times, and `count` — not the materialized placements, which the engine caps —
  * is the truth.
  */
-export function measurementRows(request: PackRequest, result: PackResult): MeasurementRow[] {
+export function measurementRows(
+  request: PackRequest,
+  result: PackResult,
+  enclosedVolumeMm3: Readonly<Record<string, number>> = {}
+): MeasurementRow[] {
   const placedByName = new Map<string, number>()
   if (result.mode === 'fit-check') {
     for (const placement of result.placements) {
@@ -89,6 +106,7 @@ export function measurementRows(request: PackRequest, result: PackResult): Measu
       quantity,
       extentMm,
       boxVolumeMm3: extentMm[0] * extentMm[1] * extentMm[2],
+      enclosedVolumeMm3: enclosedVolumeMm3[part.name] ?? null,
       unitWeightG: part.weightG,
       totalWeightG: part.weightG * quantity
     }

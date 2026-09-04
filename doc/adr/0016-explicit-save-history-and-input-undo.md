@@ -112,6 +112,37 @@ ADR plus a THIRD-PARTY-NOTICES entry by house rule (ADR-0011).
   settings-restore, undo/redo stack with coalescing. No schema change, no
   migration, no new dependencies.
 
+## Addendum, 2026-09-04 (third two-client dogfood): a receipt that does not say what it counted is not a receipt
+
+§3 says a saved row is a receipt, not a cache — restoring its settings re-runs
+the pack and "reproduces the answer honestly". It did not, and the reason was
+one missing key. `saveEstimate` wrote `settings` and, since ADR-0018 §3, the
+per-kind overrides beside them; it never wrote the **unit part**. So a row saved
+as "3 fit" with the plate selected, restored into a session on the whole file,
+recomputed 1 — and a row saved as "1 fit" on the whole file, restored into a
+plate session, recomputed 3. Nothing in either reply said what had changed. The
+reader that found it isolated the cause cleanly: the overrides restored
+correctly beside the wrong count, so the unit part was the single input the
+receipt had never carried.
+
+The fix is the shape ADR-0018 already chose: `unitPartName` rides in the same
+opaque blob beside `partWeightsG` (no schema change, no migration), and restore
+prunes it the way overrides are pruned — a name the loaded file does not have
+becomes the whole file rather than invisible state. Rows written before this
+date have no key and restore the whole file, which is what they were saved
+against in fact: the picker's choice was never written down, so "3 fit" coming
+back as 1 is such a row telling the truth about what it recorded, for the first
+time. The one-line receipt now names the unit ("3 fit · of plate · …"), because
+three rows that read alike were saved under three different setups and could
+not be picked apart.
+
+Two things this changes about §2's undo rule, stated rather than left to be
+discovered: a restore is still one store write and one undo step, but the unit
+part is not on the undo stack (it never was — it is file-scoped state, not an
+input), so undoing a restore reverts the settings and overrides and leaves the
+unit part where the restore put it. That is a gap, and it is the pre-existing
+one, not a new one; it is worth closing when the picker joins the stack.
+
 ## Alternatives considered
 
 - **Collapse consecutive rows sharing content hash + settings** (the roadmap's

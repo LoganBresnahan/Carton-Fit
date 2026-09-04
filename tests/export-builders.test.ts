@@ -190,14 +190,16 @@ describe('buildCsv', () => {
   it('names the units in every measurement header', () => {
     const header = buildCsv(input()).split('\n')[0]
     expect(header).toBe(
-      'Part,Quantity,Length (in),Width (in),Height (in),Box volume (in³),Unit weight (lb),Total weight (lb)'
+      'Part,Quantity,Length (in),Width (in),Height (in),Box volume (in³),Enclosed volume (in³),Unit weight (lb),Total weight (lb)'
     )
   })
 
   it('writes hand-checkable numbers in the display units', () => {
     const row = buildCsv(input()).split('\n')[1]
     // 1 × 2 × 4 in, 8 in³, 2 lb each, one placed.
-    expect(row).toBe('bracket,1,1,2,4,8,2,2')
+    // Enclosed volume is blank here: the fixture supplies none, and the CSV
+    // must not invent a mesh volume from a bounding box.
+    expect(row).toBe('bracket,1,1,2,4,8,,2,2')
   })
 
   it('lengths follow the unit system; weights follow their own units (ADR-0024)', () => {
@@ -209,9 +211,20 @@ describe('buildCsv', () => {
     expect(lines[0]).toContain('Length (mm)')
     expect(lines[0]).toContain('Unit weight (kg)')
     // 1 in = 25.4 mm; 2 lb = 0.907 kg.
-    expect(lines[1]).toBe('bracket,1,25.4,50.8,101.6,131096.51,0.907,0.907')
+    expect(lines[1]).toBe('bracket,1,25.4,50.8,101.6,131096.51,,0.907,0.907')
     // The estimate-level rows spend against the cap, so they carry ITS unit.
     expect(lines.join('\n')).toContain('Packed weight (g)')
+  })
+
+  it('carries the enclosed volume a density weight came from, beside the box (2026-09-04)', () => {
+    // A reader recomputing a unit weight from "Box volume" got 9.34 lb against
+    // the 9.183 the engine used — 1.7% apart on the plate — with only a column
+    // label saying the two volumes are different quantities.
+    const csv = buildCsv(input({ enclosedVolumeMm3: { bracket: inToMm(1) * inToMm(2) * inToMm(4) * 0.9 } }))
+    expect(csv.split('\n')[1]).toBe('bracket,1,1,2,4,8,7.2,2,2')
+    const [measurement] = measurementRows(request(), fitResult(), { bracket: 42 })
+    expect(measurement.enclosedVolumeMm3).toBe(42)
+    expect(measurementRows(request(), fitResult())[0].enclosedVolumeMm3).toBeNull()
   })
 
   it('keeps every data row the same width as the header', () => {

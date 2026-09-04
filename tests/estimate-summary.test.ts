@@ -22,6 +22,19 @@ describe('estimateSummary', () => {
     expect(estimateSummary(row())).toBe('500 fit · 12×12×12 in · weight-limited')
   })
 
+  it('names the unit a count replicated, when the row recorded one', () => {
+    // Three rows read "3 fit · 11×6×10 in" and were saved under three unit
+    // parts (2026-09-04). A receipt that cannot say what it counted cannot be
+    // picked from a list.
+    expect(
+      estimateSummary(
+        row({ settings: { boxDimsMm: [304.8, 304.8, 304.8], unitSystem: 'imperial', unitPartName: 'plate' } })
+      )
+    ).toBe('500 fit · of plate · 12×12×12 in · weight-limited')
+    // Rows from before the key existed, and whole-file counts, read as before.
+    expect(estimateSummary(row())).toBe('500 fit · 12×12×12 in · weight-limited')
+  })
+
   it('states a fit-check verdict in the panel’s own words', () => {
     expect(estimateSummary(row({ result: { mode: 'fit-check', fits: true } }))).toBe(
       'Fits · 12×12×12 in'

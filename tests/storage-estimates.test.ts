@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { ImportedPart } from '../src/renderer/src/workers/import-protocol'
 import { useAppStore } from '../src/renderer/src/store'
 import {
   refreshSavedEstimates,
@@ -59,6 +60,60 @@ beforeEach(() => {
   useAppStore.setState({ savedEstimates: [], storageError: null })
 })
 
+describe('the unit part travels with the receipt (2026-09-04)', () => {
+  const part = (name: string): ImportedPart => ({
+    name,
+    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+    normals: null,
+    indices: new Uint32Array([0, 1, 2])
+  })
+  const rowWith = (settings: unknown): EstimateRow => ({
+    id: 1,
+    fileName: 'a.stp',
+    contentHash: 'h',
+    settings,
+    result: { mode: 'max-quantity', count: 3 },
+    createdAt: 1
+  })
+  /** An estimate on screen for a file that has a part named `plate`. */
+  const ready = (): void => {
+    useAppStore.getState().beginImport({ name: 'as1.stp', sizeBytes: 1 })
+    useAppStore
+      .getState()
+      .importSucceeded([part('plate'), part('nut')], { elapsedMs: 1, partCount: 2, triangleCount: 2 }, 'h')
+    useAppStore.getState().packSucceeded(RESULT, REQUEST, 12)
+  }
+
+  // A row saved as "3 plates" restored against a session on the whole file
+  // recomputed 1 — and a row saved as "1 assembly" restored against a plate
+  // session recomputed 3 — with nothing in either reply saying what changed.
+  // Overrides restored correctly beside it, which isolated the unit part as the
+  // single input the receipt never carried.
+  it('is written beside the overrides', async () => {
+    const api = fakeApi()
+    ready()
+    useAppStore.getState().setUnitPartName('plate')
+    expect(await saveEstimate(api)).toBe(true)
+    expect((api.recorded[0].settings as { unitPartName: unknown }).unitPartName).toBe('plate')
+  })
+
+  it('is restored when the loaded file has that part, and pruned to the whole file when not', () => {
+    ready()
+    useAppStore.getState().setUnitPartName(null)
+    restoreEstimateSettings(rowWith({ unitPartName: 'plate' }))
+    expect(useAppStore.getState().unitPartName).toBe('plate')
+    restoreEstimateSettings(rowWith({ unitPartName: 'flange' }))
+    expect(useAppStore.getState().unitPartName).toBeNull()
+  })
+
+  it('an older row with no key restores the whole file — which is what it recorded', () => {
+    ready()
+    useAppStore.getState().setUnitPartName('plate')
+    restoreEstimateSettings(rowWith({}))
+    expect(useAppStore.getState().unitPartName).toBeNull()
+  })
+})
+
 describe('saveEstimate', () => {
   it('files the estimate on screen, with the file identity that produced it', async () => {
     const api = fakeApi()
@@ -74,7 +129,9 @@ describe('saveEstimate', () => {
     // folding them in would put them in presets and localStorage.
     expect(api.recorded[0].settings).toEqual({
       ...useAppStore.getState().settings,
-      partWeightsG: useAppStore.getState().partWeightsG
+      partWeightsG: useAppStore.getState().partWeightsG,
+      // The unit part rides in the same blob since 2026-09-04 (ADR-0016 addendum).
+      unitPartName: useAppStore.getState().unitPartName
     })
   })
 

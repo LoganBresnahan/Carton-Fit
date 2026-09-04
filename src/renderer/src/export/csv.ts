@@ -68,12 +68,13 @@ export function buildCsv(input: EstimateExport): string {
       `Width (${length})`,
       `Height (${length})`,
       `Box volume (${volumeUnitLabel(units)})`,
+      `Enclosed volume (${volumeUnitLabel(units)})`,
       `Unit weight (${weight})`,
       `Total weight (${weight})`
     ])
   ]
 
-  for (const measurement of measurementRows(request, result)) {
+  for (const measurement of measurementRows(request, result, input.enclosedVolumeMm3)) {
     lines.push(
       row([
         measurement.name,
@@ -82,6 +83,11 @@ export function buildCsv(input: EstimateExport): string {
         lengthText(measurement.extentMm[1], units),
         lengthText(measurement.extentMm[2], units),
         volumeText(measurement.boxVolumeMm3, units),
+        // Two volumes, side by side, because they answer different questions:
+        // the box is what packing consumes; the enclosed volume is what a
+        // density weight was multiplied from. Blank rather than guessed when
+        // the caller could not supply it (2026-09-04).
+        measurement.enclosedVolumeMm3 === null ? '' : volumeText(measurement.enclosedVolumeMm3, units),
         weightText(measurement.unitWeightG, weight),
         weightText(measurement.totalWeightG, weight)
       ])

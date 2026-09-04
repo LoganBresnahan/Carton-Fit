@@ -780,6 +780,42 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       one could not. `fusedUnitName`/`isFusedUnit` exported from `unit.ts`;
       the view renders every part at the unit's transform; pinned by
       `tests/packed-scene.test.ts`.
+      — **third two-client run, 2026-09-04, on `+f3c3552` — the first session on
+      a current build.** Both readers: station 4 matched their own arithmetic
+      exactly, both paths byte-identical, the tie named with a field behind
+      each half. Stations 2 and 3 fixed. What survived the second-reader pass,
+      worst first — **(a)–(e) fixed the same night (ADR-0029 amendment 5,
+      ADR-0016 addendum); (f) proposed as an ADR-0022 amendment, awaiting its
+      adversarial pass**:
+      (a) **`restore_estimate` does not restore the unit part** — a receipt
+      saved as "3 plates" recomputes against whatever unit is current and
+      reproduces the wrong count silently, in both directions. Confirmed by
+      construction: `saveEstimate` writes `settings` + `partWeightsG` and never
+      `unitPartName`; `restoreEstimateSettings` restores neither. Overrides ride
+      beside settings in the same blob for the same reason (ADR-0018 §3); the
+      unit part should ride the same way, restored pruned to kinds the file has.
+      (b) **the estimate report has no `unitPart`** — `request` echoes every
+      input except the one that decides what is being counted, which is what
+      makes (a) and the `load_model` reset silent instead of loud. (c) the
+      receipt line "3 fit · 11×6×10 in" carries no unit part, cap or weight
+      source — three rows read alike and were produced under three setups.
+      (d) `otherConstraint.evidence` says `arrangement` for a WEIGHT fact on a
+      comfortable fit; the weight side is arithmetic. (e) the CSV part row
+      cannot reproduce its own unit weight: "Box volume" is the bounding box,
+      the weight derives from the enclosed mesh volume, 1.7% apart on the
+      plate. (f) **`geometryBound` 5 against a provable 3 reaches the quote
+      block** as "upper bound 5" at 100 lb. The reader's derivation is a
+      tightening the bound could adopt rigorously: per-axis over FEASIBLE
+      orientations only — an orientation that cannot fit the window at all
+      cannot appear in any arrangement — which on the plate gives exactly 3
+      and would make the tie a `bound` proof rather than a `search`. Needs
+      ADR-0022's adversarial pass before it ships; proposed as an amendment.
+      Refuted: "no arrangement beats this" unbacked (the field is
+      `upperBound: 3` in the same payload — one reader found it, one did not);
+      the append-only lists unannounced (the descriptions say so since
+      `7ae4f50`; the other reader read them); nulling `binding.constraint`
+      (decided, amendment 1). Also noted: `inspect_model` echoes a weight unit
+      it never uses.
       — (f) `weightInput.countedWeightFrom` — `source` reported the mode that was
       set, and was being read as a claim about the answer: `density` beside a
       count whose every gram came from a hand override. `source` keeps its

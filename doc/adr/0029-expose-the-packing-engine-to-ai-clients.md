@@ -914,6 +914,47 @@ the disagreement was the diagnosis. Where they agreed it was the app; where
 they differed it was the input — and that is a property one reader cannot
 have.
 
+### Phase-2 contract amendment 5 (2026-09-04) — the first run on a current build
+
+Third two-client run, and the first against a build that carried everything
+the earlier runs had asked for. Station 4 held for both readers — each derived
+3 by hand, each got 3 with the tie named and a field behind each half, both
+paths byte-identical. What survived the second-reader pass was not about the
+numbers; it was about a count with nothing saying what it counted.
+
+1. **`request.unitPart` is on the wire.** The report echoed every input except
+   the one that decides what a max-quantity count is a count OF. That absence
+   is what made the two silent changes silent: `load_model` clearing the unit
+   part (intended, file-scoped, announced in its description since amendment
+   3) and `restore_estimate` never restoring it (a defect — ADR-0016's
+   addendum). A count of 1 after a reload now says `unitPart: null` beside it.
+2. **`otherConstraint.evidence` names the side it is about.** On a comfortable
+   fit the field said `arrangement` regardless; when the closest limit is
+   space, the other is weight, and packed weight against the cap is arithmetic.
+   A reader filtering on `evidence` had mis-sorted the row.
+3. **The receipt line names the unit** (ADR-0016 addendum), so the rows
+   `list_saved_estimates` returns can be told apart.
+4. **The CSV part row carries the enclosed volume** the weight derives from,
+   beside the bounding-box volume packing consumes (ADR-0017). A reader
+   recomputing a unit weight from "Box volume" got 9.34 lb against 9.183 — the
+   column label was the only thing standing between them, and a label cannot
+   carry a caveat.
+
+**Refuted, and worth recording because each will be proposed again:** "no
+arrangement beats this" is backed by `upperBound === count` in the same
+payload — one reader found the field, the other did not; the append-only
+lists are announced in the descriptions since amendment 3 — one reader read
+them, the other did not; nulling `binding.constraint` was decided in amendment
+1. Two readers on one build disagreeing about what the surface says is itself
+information: it means the surface is saying it in a place one of them did not
+look.
+
+**Proposed, not built — the bound.** `geometryBound: 5` against a provable 3
+reached the quote block as "upper bound 5". The reader's own derivation is a
+rigorous tightening: restrict the per-axis bound to orientations that can fit
+the window at all. Recorded as a proposed amendment to ADR-0022, where the
+proof obligations live.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

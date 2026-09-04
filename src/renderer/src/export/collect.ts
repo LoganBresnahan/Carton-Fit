@@ -1,5 +1,6 @@
 import { lengthUnitLabel, mmToLength } from '../core/units'
 import { openMeshParts } from '../packing/request'
+import { meshVolume } from '../core/geometry'
 import { openMeshWarning, truncatedLayoutNote } from '../packing/verdict'
 import { useAppStore } from '../store'
 import type { EstimateExport } from './types'
@@ -33,13 +34,19 @@ export function collectExport(): EstimateExport | null {
     truncatedLayoutNote(packResult)
   ].filter((warning): warning is string => warning !== null)
 
+  // The enclosed volume rides with the export because only this side holds the
+  // indices to compute it; `PackRequest` carries positions alone.
+  const enclosedVolumeMm3: Record<string, number> = {}
+  for (const part of parts) enclosedVolumeMm3[part.name] = meshVolume(part.positions, part.indices)
+
   return {
     fileName: file?.name ?? null,
     request: packRequest,
     result: packResult,
     settings,
     warnings,
-    overrides: state.partWeightsG
+    overrides: state.partWeightsG,
+    enclosedVolumeMm3
   }
 }
 

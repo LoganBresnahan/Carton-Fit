@@ -36,6 +36,21 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   quote. It now carries a Result note saying exactly what the screen says.
   ([ADR-0017](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
 
+- **A saved estimate now remembers which part it counted.** Saving "3 plates
+  fit" and restoring it later recomputed against whatever part was selected at
+  the time — 3 could come back as 1, or 1 as 3 — with nothing saying why.
+  Receipts now carry the unit part and restore it, and the saved-estimates list
+  names it ("3 fit · of plate · …") so rows that read alike can be told apart.
+  Estimates saved before this update restore as whole-file counts, which is
+  what they were actually saved as.
+  ([ADR-0016](doc/adr/0016-explicit-save-history-and-input-undo.md))
+
+- **The measurements CSV shows the volume a weight was computed from.** The
+  "Box volume" column is the bounding box packing uses; the weight comes from
+  the part's enclosed volume, which can differ by a few percent. The row now
+  carries both, so a unit weight can be checked from the row itself.
+  ([ADR-0017](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+
 - **The packed view no longer shows an empty carton for a whole-assembly count.**
   Ask how many copies of the *entire file* fit — max quantity with no unit
   part chosen — and the count was right while the 3D view drew the carton and

@@ -160,10 +160,20 @@ describe('bindingReport', () => {
     expect(r.note).toMatch(/not established/)
   })
 
+  it('names the side its evidence is about on a comfortable fit', () => {
+    // Weight closest → the OTHER is space, settled by the arrangement we hold.
+    // Space closest → the other is weight, settled by packed weight vs cap.
+    // A reader filtering on evidence found a weight fact labelled 'arrangement'.
+    const weightClosest = bindingReport(fit({ fits: true, binding: 'weight', placements: [placement] }), request(1000, 1))
+    expect(weightClosest.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arrangement' })
+    const spaceClosest = bindingReport(fit({ fits: true, binding: 'geometry', placements: [placement] }), request(1000, 1))
+    expect(spaceClosest.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arithmetic' })
+  })
+
   it('drops the closer-limit ranking when every part is weightless', () => {
     const r = bindingReport(fit({ fits: true, placements: [placement] }), request(1000, 0))
     expect(r.bound).toBe(false)
-    expect(r.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arrangement' })
+    expect(r.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arithmetic' })
     expect(r.note).toMatch(/No part weight was given/)
     expect(r.note).not.toMatch(/closer limit/)
   })

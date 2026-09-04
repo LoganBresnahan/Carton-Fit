@@ -201,6 +201,44 @@ so they re-run rather than rot.
   larger accuracy gain per effort, benefits two shipped tiers, and tier 3 warm-starts
   from tier 2 anyway (ADR-0023), so better placement compounds rather than competes.
 
+## Proposed amendment, 2026-09-04: the per-axis bound over FEASIBLE orientations only
+
+**Status: Proposed.** Not built; needs the adversarial pass this ADR's own
+history says a bound change costs (two refutations, one of 922 crafted inputs).
+
+§7's bound is `min(volumetric, per-axis, weight)`, and the per-axis component
+tiles the window with the smallest extent ANY orientation puts on each axis —
+deliberately, because the single-orientation product is a lower bound in
+disguise (13 dominoes in a 3-cube). On the 2026-09-03 plate case that gives 168
+per axis and the volumetric component gives 5, against a true maximum of 3 —
+and 5 reached the summary export as "upper bound 5" beside a count the same
+engine had just shown, with the cap lifted, could not be raised.
+
+Both dogfood readers derived 3 the same way, and the derivation is the
+amendment: **an orientation whose extents do not fit the usable window at all
+cannot appear in any arrangement, so it cannot contribute to the per-axis
+minimum.** The plate has six axis permutations; only the two that put the
+20 mm thickness on the 88.9 mm axis fit. Over those two, the per-axis minima
+are 150 × 20 × 150 mm, the tiling gives 1 × 3 × 1, and the bound is 3 — tight,
+and the tie becomes a `bound` proof instead of a `search` (ADR-0033).
+
+Why it is sound where the single-orientation product was not: the domino trap
+is mixing orientations that ALL fit, which the per-axis minimum over the
+feasible set still dominates — it is the same argument as §7, over a smaller
+set. What changes is only which orientations are admitted to the minimum, and
+inadmissible ones are exactly those the validator would reject on containment
+alone, EPS-tolerantly. The tolerance is the proof obligation: "fits the window"
+must be judged with the same EPS the validator grants, or a face within EPS of
+an exact fit is excluded from the bound and admitted by the engine — the
+refutation shape §7's build already met once.
+
+If accepted: `quantityBound.ts` filters `options` to those with
+`extent[a] ≤ usable[a] + 2·EPS` on every axis before the per-axis fold (the
+volumetric component is unaffected — its minimum is over volumes, which
+permutation does not change); the differential fuzz gains the plate case and a
+family of "only-one-orientation-fits" cartons; and ADR-0033's `search` row
+should become rarer, which is the point.
+
 ## Revisit triggers
 
 - Accepted 2026-07-26 ahead of ADR-0003's dogfood trigger, as a deliberate call —

@@ -61,6 +61,13 @@ export function estimateSummary(row: EstimateRow): string {
   const parts: string[] = []
   const answer = answerPhrase(result)
   if (answer) parts.push(answer)
+  // What was counted. Three receipts read "3 fit · 11×6×10 in" and were saved
+  // under three different unit parts (2026-09-04) — a row that cannot say what
+  // it counted cannot be picked from a list. Rows from before that date carry
+  // no key and stay as they were.
+  if (result?.mode === 'max-quantity' && typeof settings?.unitPartName === 'string') {
+    parts.push(`of ${settings.unitPartName}`)
+  }
 
   const carton = cartonPhrase(settings)
   if (carton) parts.push(carton)

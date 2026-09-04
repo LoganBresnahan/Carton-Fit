@@ -53,7 +53,16 @@ export async function saveEstimate(injected?: StorageApi): Promise<boolean> {
       // put them in presets and localStorage, which is exactly what that
       // decision forbids. The blob is opaque JSON to storage, so carrying one
       // more key needs no schema change and no migration.
-      settings: { ...state.settings, partWeightsG: state.partWeightsG },
+      // The unit part rides the same way, for the same reason — and because
+      // without it the receipt is not a receipt: "3 fit" restored against
+      // whatever unit is current reproduced 1, or 3 for a saved 1, with
+      // nothing in the reply saying what changed (2026-09-04 dogfood, both
+      // directions, isolated by the overrides restoring correctly beside it).
+      settings: {
+        ...state.settings,
+        partWeightsG: state.partWeightsG,
+        unitPartName: state.unitPartName
+      },
       result: state.packResult
     })
     await refreshSavedEstimates(injected)
@@ -92,6 +101,7 @@ export function restoreEstimateSettings(row: EstimateRow): void {
   const state = useAppStore.getState()
   const saved = (row.settings ?? {}) as Partial<PackingSettings> & {
     partWeightsG?: unknown
+    unitPartName?: unknown
   }
 
   // Per-kind overrides are restored separately from settings, and PRUNED to
@@ -101,11 +111,25 @@ export function restoreEstimateSettings(row: EstimateRow): void {
   // happens to collide.
   // ONE store write, not two: two would be two undo entries, and ADR-0016 §2
   // makes a restore one step.
-  const { partWeightsG, ...settings } = saved
+  const { partWeightsG, unitPartName, ...settings } = saved
   state.restoreInputs(
     settings,
-    isOverrides(partWeightsG) ? pruneOverrides(partWeightsG, state.parts) : {}
+    isOverrides(partWeightsG) ? pruneOverrides(partWeightsG, state.parts) : {},
+    restoredUnitPart(unitPartName, state.parts)
   )
+}
+
+/**
+ * The unit part a row names, pruned the way overrides are: a name the loaded
+ * file does not have becomes the whole file (null) rather than invisible
+ * state. A row from before 2026-09-04 has no key at all and restores the whole
+ * file too — which is what those rows were saved against in fact, since the
+ * picker's choice was never written down; restoring "3 fit" and getting 1 is
+ * the row telling the truth about what it recorded, for the first time.
+ */
+function restoredUnitPart(saved: unknown, parts: readonly { name: string }[]): string | null {
+  if (typeof saved !== 'string') return null
+  return parts.some((part) => part.name === saved) ? saved : null
 }
 
 /** A row's blob is JSON written by whatever build was running at the time, so

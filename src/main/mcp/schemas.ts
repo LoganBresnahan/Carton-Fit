@@ -179,7 +179,11 @@ export const estimateOutput = {
     innerCarton: dimensionsValue,
     clearances: z.object({ betweenParts: lengthValue, wall: lengthValue }),
     maxWeight: weightValue,
-    packedWeight: weightValue
+    packedWeight: weightValue,
+    unitPart: z
+      .string()
+      .nullable()
+      .describe('max-quantity: the part being replicated; null means the whole file as one unit.')
   }),
   outcome: z.union([
     z.object({

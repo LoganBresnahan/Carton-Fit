@@ -94,6 +94,11 @@ export interface EstimateReport {
     clearances: { betweenParts: LengthValue; wall: LengthValue }
     maxWeight: WeightValue
     packedWeight: WeightValue
+    /** Which part a max-quantity count replicates — `null` is the whole file
+     *  fused into one unit. The one input the report used to leave out, which
+     *  is what made a count of 1 after `load_model` a count of nothing in
+     *  particular (2026-09-04). Always present, `null` in fit-check. */
+    unitPart: string | null
   }
   outcome: EstimateOutcome
   /** Which limit is closest, whether it bound, what the other one was doing
@@ -460,7 +465,8 @@ export function buildEstimateReport(
         wall: fromMm(honored.wall, units.length)
       },
       maxWeight: fromG(request.maxWeightG, units.weight),
-      packedWeight: fromG(packedWeightG(result, request), units.weight)
+      packedWeight: fromG(packedWeightG(result, request), units.weight),
+      unitPart: request.mode === 'max-quantity' ? context.unitPart : null
     },
     outcome: outcomeOf(result, units),
     binding: bindingReport(result, request),

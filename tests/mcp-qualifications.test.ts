@@ -200,6 +200,23 @@ describe('every answer arrives qualified', () => {
     }
   })
 
+  it('says what a count is a count OF', async () => {
+    // The one input the report left out (2026-09-04): `request` echoed
+    // everything except the part being replicated, so a count of 1 after a
+    // reload was a count of nothing in particular.
+    const plate = await estimate({
+      path: AS1,
+      mode: 'max-quantity',
+      carton: carton(24, 'in'),
+      unitPart: 'plate'
+    })
+    expect(plate.request.unitPart).toBe('plate')
+    const whole = await estimate({ path: AS1, mode: 'max-quantity', carton: carton(24, 'in') })
+    expect(whole.request.unitPart).toBeNull()
+    const fitCheck = await estimate({ path: AS1, mode: 'fit-check', carton: carton(24, 'in') })
+    expect(fitCheck.request.unitPart).toBeNull()
+  })
+
   it('does not rank "the closer limit" against a weight nobody supplied', async () => {
     // Three sessions, three flags: "Space is the closer limit" beside
     // `weightInput.supplied: false` compares a real percentage to a placeholder.

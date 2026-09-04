@@ -155,7 +155,16 @@ interface AppState {
    *  subscription notifications — which is two entries on the undo stack, so
    *  the restore would cost two Ctrl+Z presses. ADR-0016 §2 says a restore is
    *  one step, and this is what makes that true. */
-  restoreInputs: (settings: Partial<PackingSettings>, overrides: PartWeightOverrides) => void
+  /** One store write for a restore (ADR-0016 §2: one undo step). The unit
+   *  part rides along since 2026-09-04 — a receipt that did not carry it
+   *  recomputed against whatever unit was current and reproduced the wrong
+   *  count silently, in both directions. `undefined` leaves it untouched (a
+   *  preset, which never carries one); `null` is the whole file. */
+  restoreInputs: (
+    settings: Partial<PackingSettings>,
+    overrides: PartWeightOverrides,
+    unitPartName?: string | null
+  ) => void
 
   /** Which 3D view is showing (VISION: "toggle between model view and packed
    *  view"). 'auto' follows the estimate — the packed carton once one exists —
@@ -299,8 +308,12 @@ export const useAppStore = create<AppState>((set) => ({
       return { partWeightsG: next }
     }),
   setPartWeights: (partWeightsG) => set({ partWeightsG }),
-  restoreInputs: (patch, partWeightsG) =>
-    set((s) => ({ settings: { ...s.settings, ...patch }, partWeightsG })),
+  restoreInputs: (patch, partWeightsG, unitPartName) =>
+    set((s) => ({
+      settings: { ...s.settings, ...patch },
+      partWeightsG,
+      unitPartName: unitPartName === undefined ? s.unitPartName : unitPartName
+    })),
 
   viewMode: 'auto',
   setViewMode: (viewMode) => set({ viewMode }),
