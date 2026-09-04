@@ -133,7 +133,13 @@ grep -rn "from 'three'\|from \"three\"\|document\.\|window\.\|electron" src/rend
 
 ```bash
 grep -rn "25\.4\|453\.59\|0\.0393" src --include='*.ts' --include='*.tsx'
-# expect: core/units.ts only
+# expect: core/units.ts (MM_PER_IN, G_PER_LB) — plus ONE allowed escape:
+#   main/mcp/wire.ts — `25.4` inside the doc comment on `tidy`, explaining why a
+#     carton typed as 6 in echoed back as 5.999999999999999 (6 × 25.4 has no
+#     exact binary form). Prose, not a conversion: `tidy` itself rounds at 1e10
+#     and converts nothing. Listed here because it is PERMANENT — that comment
+#     is the reasoning behind the field, so every future run would otherwise
+#     re-adjudicate the same hit and a real one could hide behind the habit.
 ```
 
 **Worker boundary** — heavy work never runs on the UI thread. On the renderer

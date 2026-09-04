@@ -286,6 +286,13 @@ describe('pack — upperBound field', () => {
     const empty = pack(req([], [100, 100, 100]))
     if (empty.mode !== 'max-quantity') throw new Error('mode')
     expect(empty.upperBound).toBeUndefined()
+    // `spaceOnlyCount` is REQUIRED (ADR-0033 addendum 3), so this path states a
+    // value rather than omitting one: the carton alone takes none of nothing.
+    // Unreachable from the app — `buildPackRequest` returns null at zero parts
+    // and the MCP path throws — so this is the only place the guard is exercised
+    // at all, and without the assertion a mutation to 999 passed all 902 specs.
+    expect(empty.count).toBe(0)
+    expect(empty.spaceOnlyCount).toBe(0)
   })
 
   it('reflects the weight cap in both count and bound', () => {
