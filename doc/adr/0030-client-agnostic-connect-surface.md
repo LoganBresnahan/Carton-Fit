@@ -376,12 +376,17 @@ ways, and the split is stated because it is a real limitation:
 - **macOS and Linux Codex are untested.** Discovery via `PATH` is designed,
   not proven; the requesting machine is Windows, and so is every dogfooder so
   far (ADR-0019).
-- **Whether the Store Claude Desktop launches the shim at all** is still
-  unverified — the MSIX fix is staged (`+c7321b2`) and awaiting its dogfood
-  pass. Its `mcp.log` is empty, which is consistent with "no server ever
-  configured" and not proof that a packaged client can spawn one. If it
-  cannot, that is a finding for ADR-0029, and the copyable fallback here is
-  what the user still has.
+- ~~**Whether the Store Claude Desktop launches the shim at all.**~~
+  **Answered 2026-09-02, before this ADR was written down: it does.** The
+  dogfood pass at `c81dd82` got a successful handshake and all fifteen tools
+  listed from the MSIX client — ADR-0029's phase-6 addendum part 3 has the
+  detail, along with the *second* thing that pass found, which was that every
+  call was then rejected over a schema dialect. Recorded here as closed rather
+  than deleted because this entry stayed open in this ADR for two days after
+  the answer existed, purely because the answer arrived in a different ADR's
+  dogfood pass. **When one ADR's open question is answered by another's
+  session, the closing is a two-file edit** — the pass that finds it is not
+  reading this list.
 
 ## Consequences
 

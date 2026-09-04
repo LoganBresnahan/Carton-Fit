@@ -874,14 +874,22 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       one. VISION already named both confirmed clients; CHANGELOG already
       carried the ADR-0030 line from the env fix, and nothing in phase 5 is
       visible to someone using the app, so it adds none.
-      — carry-ins, all of them **verification, not code** — ADR-0030's four
+      — carry-ins, all of them **verification, not code** — ADR-0030's
       remaining open details, which only a dogfooder can close: `codex mcp add`
       side effects in a real `~/.codex` (the throwaway home refused to create
       PATH aliases, a real one presumably does not), which `codex.exe` is the
       desktop app's when the newest-by-mtime heuristic and the app disagree,
-      Codex discovery on macOS and Linux (designed via `PATH`, proven nowhere),
-      and whether the Store (MSIX) Claude Desktop can spawn the shim at all.
-      The next `/dogfood` pass on a current build is where each is answered.
+      and Codex discovery on macOS and Linux (designed via `PATH`, proven
+      nowhere). The next `/dogfood` pass on a current build is where each is
+      answered.
+      Corrected 2026-09-04, hours after being written: this list said four and
+      included "whether the Store (MSIX) Claude Desktop can spawn the shim at
+      all". It does — the `c81dd82` pass on 2026-09-02 got the handshake and
+      all fifteen tools, recorded in ADR-0029's phase-6 addendum part 3 and at
+      item 21 above. The claim was copied out of ADR-0030's open details, which
+      had gone stale because the answer arrived inside ADR-0029's dogfood pass.
+      Cost of not catching it: a handoff that asks a dogfooder to re-verify
+      something the project proved two days earlier.
 
 - [ ] 23. Skid stage — **ADR-0031, Proposed 2026-09-02.** A program manager
       at a die-casting plant, via their quality manager: take a saved carton estimate to a skid
