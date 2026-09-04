@@ -172,13 +172,22 @@ at the end of this phase for the dogfood pass._
 _Pure prose that can only be accurate once everything above exists. `/shipshape`'s
 docs-match-code check is the gate._
 
-- [ ] `third-client-recipe-doc` · low — Decision 2's fixed order (tooling → file
+- [x] `third-client-recipe-doc` · low — Decision 2's fixed order (tooling → file
       merge → always copyable text), the `ConnectClient` contract, and the e2e env
       seam a new client must expose, in the `src/main/connect/` module header.
       VISION (~line 112, "Claude Desktop is the confirmed one"), roadmap item 22
       checked, CHANGELOG `[Unreleased]` line linking ADR-0030, and the ADR's open
       detail 1 closed with the phase-1 cold-boot numbers (or the explicit
       no-TOML-splice decision). Depends on: everything.
+      **Shipped 2026-09-04.** The recipe is five numbered steps in
+      `src/main/connect/index.ts`'s header, including the two things no ADR
+      sentence had made a rule: `shimEntry` is the only composer of the launch
+      (adapters serialise, never build), and a new client owes one
+      outright-winning env seam so CI can drive a stand-in. Open detail 1
+      closed by measurement, not by the splice — `windows-latest` cold connects
+      at 477–636 ms against a 10 s timeout. VISION and CHANGELOG needed nothing
+      (already current); roadmap item 22 checked, with ADR-0030's four
+      dogfood-only open details pinned to it as carry-ins.
 
 ## Critical path
 

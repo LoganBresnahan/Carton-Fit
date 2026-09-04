@@ -346,6 +346,23 @@ ways, and the split is stated because it is a real limitation:
   each Codex update), or a single documented exception to rule 3 for that one
   key, taken with a parser and an ADR-0011 notices row — never a hand-rolled
   splice.
+  **Closed 2026-09-04 by the measurement, with room to spare.** The
+  `shim-cold-boot-timing` stopwatch has printed `[mcp:server] cold connect:
+  N ms` from every packaged e2e run since phase 1, and it times the cold path
+  itself: no app running, so the shim spawns Electron and answers the handshake
+  only once that app's pipe does. On `windows-latest` — the platform that
+  decides this, since every Codex dogfooder is on Windows (ADR-0019) — five
+  release runs measured **477, 498, 555, 573 and 636 ms**. Linux CI measures
+  **737–757 ms**. The worst of those is 6% of Codex's 10-second budget. A
+  user's disk is slower than a hosted runner's, but not sixteen times slower,
+  so the detail closes WITHOUT the documented exception to rule 3: no TOML key
+  is written, no parser arrives, ADR-0011 gains no row.
+  The stopwatch stays, and stays unasserted on purpose — a threshold would fail
+  on a loaded runner and say nothing about a user's machine — so the number
+  that would reopen this is one `grep` away in any CI or release log. Reopen if
+  a dogfooder sees Codex report no tools *slowly* where `codex mcp get` shows
+  the entry present: that is this timeout, and it looks exactly like addendum
+  3's environment bug from the outside.
 - **`codex mcp add` side effects in the real home.** In the throwaway home it
   warned that it *refused* to create "PATH aliases / helper binaries" because
   the home was under `Temp`. In `~/.codex` it presumably creates them. Observe

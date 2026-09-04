@@ -823,7 +823,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       actually counted, scoped by the same `partsForRequest` selection the pack
       used. Fixed in the same round; mutation-tested.
 
-- [ ] 22. A client-agnostic connect surface — **ADR-0030, Accepted 2026-09-02**
+- [x] 22. A client-agnostic connect surface — **ADR-0030, Accepted 2026-09-02**
       (Proposed the same morning). Sequenced first of the three open items:
       smallest, disjoint code, a dogfooder waiting.
       "The same for ChatGPT" turned out to mean OpenAI Codex (the Store
@@ -857,6 +857,31 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       Pinned by `e2e/mcp-shim.spec.ts` launching from the declared env alone.
       **Windows values are reasoned, not measured** — the next dogfood pass
       confirms or corrects them, and the new message makes that one glance.
+      — **phase 5 closed 2026-09-04, and the item with it.** All 11 slices
+      shipped. The last one was documentation, and the only part of it that was
+      a decision rather than a transcription is **ADR-0030 open detail 1, now
+      closed by measurement**: the phase-1 stopwatch has been printing
+      `cold connect: N ms` since it was added, and five `windows-latest` release
+      runs read 477/498/555/573/636 ms against Codex's 10-second startup
+      timeout (Linux CI 737–757 ms). Worst case 6% of the budget, so the
+      exception to rule 3 — writing the one TOML key, with a parser and an
+      ADR-0011 row behind it — is not needed and was not taken. The
+      third-client recipe lives in `src/main/connect/index.ts`'s header: name
+      it once, reach it through its owner's mechanism in Decision 2's fixed
+      order, never compose the launch (`shimEntry` is the one source, and its
+      env is what addendum 3 was), answer in the panel's vocabulary, and expose
+      one env seam so a fake client can be driven on a runner that has no real
+      one. VISION already named both confirmed clients; CHANGELOG already
+      carried the ADR-0030 line from the env fix, and nothing in phase 5 is
+      visible to someone using the app, so it adds none.
+      — carry-ins, all of them **verification, not code** — ADR-0030's four
+      remaining open details, which only a dogfooder can close: `codex mcp add`
+      side effects in a real `~/.codex` (the throwaway home refused to create
+      PATH aliases, a real one presumably does not), which `codex.exe` is the
+      desktop app's when the newest-by-mtime heuristic and the app disagree,
+      Codex discovery on macOS and Linux (designed via `PATH`, proven nowhere),
+      and whether the Store (MSIX) Claude Desktop can spawn the shim at all.
+      The next `/dogfood` pass on a current build is where each is answered.
 
 - [ ] 23. Skid stage — **ADR-0031, Proposed 2026-09-02.** A program manager
       at a die-casting plant, via their quality manager: take a saved carton estimate to a skid
