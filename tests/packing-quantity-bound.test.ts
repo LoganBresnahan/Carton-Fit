@@ -390,3 +390,126 @@ describe('pack — upperBound field', () => {
     expect('geometryBound' in capped).toBe(false)
   })
 })
+
+// ADVERSARIAL PASS for the feasible-orientation amendment (ADR-0022 amendment,
+// 2026-09-04). A bound change is the one edit in this directory that can be
+// wrong without anything looking wrong: a bound that drops below the achieved
+// count contradicts a number on the same line, and every existing test here
+// was written against the LOOSER bound, so they pass a tightening whether or
+// not it is sound.
+//
+// Two obligations, and they are the two ways the amendment could be wrong:
+//
+//   1. SOUNDNESS. Excluding an orientation removes a floor from a minimum, so
+//      the bound can only go down. If the predicate ever excludes something
+//      placeable, the bound goes below the count. Generated, not reasoned.
+//   2. THE PREDICATE ITSELF. Feasibility must be at least as permissive as the
+//      counting engine. This is where the first draft was wrong: it compared
+//      `extent > usable + 2·EPS` and excluded a 10000.000007 box from a 10000
+//      carton, which `floorTolerant`'s RELATIVE nudge rescues and the grid
+//      really does place.
+describe('the feasible-orientation amendment, adversarially', () => {
+  /** Deterministic LCG — a failing case must be reproducible from the seed. */
+  function rng(seed: number): () => number {
+    let state = seed >>> 0
+    return () => {
+      state = (state * 1664525 + 1013904223) >>> 0
+      return state / 0x100000000
+    }
+  }
+
+  interface Case {
+    unit: PackBox
+    carton: Vec3
+    clearances: Clearances
+  }
+
+  /** Shapes chosen to make the amendment matter: flat plates (whose thinnest
+   *  extent used to become the cell size on every axis), near-cubes, and long
+   *  bars, in cartons that admit one orientation, several, or none. */
+  function corpus(count: number): Case[] {
+    const next = rng(20260904)
+    const pick = (lo: number, hi: number): number => lo + next() * (hi - lo)
+    const cases: Case[] = []
+    for (let i = 0; i < count; i++) {
+      const shape = i % 3
+      const dims: Vec3 =
+        shape === 0
+          ? [pick(80, 220), pick(60, 190), pick(2, 30)] // plate
+          : shape === 1
+            ? [pick(20, 90), pick(20, 90), pick(20, 90)] // near-cube
+            : [pick(150, 400), pick(5, 40), pick(5, 40)] // bar
+      const carton: Vec3 = [pick(50, 400), pick(50, 400), pick(30, 250)]
+      const gap = next() < 0.4 ? 0 : pick(0, 12)
+      const wall = next() < 0.5 ? 0 : pick(0, 10)
+      cases.push({
+        unit: unit(perms(dims), next() < 0.5 ? 0 : pick(10, 4000)),
+        carton,
+        clearances: { betweenParts: gap, wall }
+      })
+    }
+    return cases
+  }
+
+  it('never falls below what the counting engine actually places', () => {
+    // THE contradiction this file exists to prevent, now asked of the tightened
+    // bound over a corpus built to exercise it. The cap is lifted so the
+    // geometry half is what is under test; `geometry` must dominate a count
+    // that was really achieved.
+    let onlyOneOrientationFits = 0
+    for (const c of corpus(3000)) {
+      const achieved = gridFillQuantity(c.unit, c.carton, c.clearances, Infinity).count
+      const bound = quantityUpperBound(c.unit, c.carton, c.clearances, Infinity)
+      expect(bound, `bound below count for ${JSON.stringify(c)}`).toBeGreaterThanOrEqual(achieved)
+      const fitting = c.unit.orientations.filter((o) =>
+        o.extent.every((e, a) => e <= c.carton[a] - 2 * Math.max(0, c.clearances.wall) + 1e-6)
+      )
+      if (fitting.length === 1) onlyOneOrientationFits++
+    }
+    // The family the amendment is FOR has to be present, or the loop above
+    // proves nothing about it. The plate case is one of these.
+    expect(onlyOneOrientationFits).toBeGreaterThan(50)
+  })
+
+  it('never excludes an orientation the counting engine can place', () => {
+    // The predicate, isolated: for every generated case and every orientation,
+    // if the grid can place a single copy of THAT orientation alone, then a
+    // bound computed over that orientation alone must be at least 1. A
+    // predicate stricter than the engine's tolerance fails here and nowhere
+    // else — this is the test the first draft of the amendment failed.
+    for (const c of corpus(1200)) {
+      for (const o of c.unit.orientations) {
+        const alone = unit([o], c.unit.weightG)
+        const placed = gridFillQuantity(alone, c.carton, c.clearances, Infinity).count
+        if (placed >= 1) {
+          expect(
+            quantityUpperBound(alone, c.carton, c.clearances, Infinity),
+            `excluded a placeable orientation ${JSON.stringify(o.extent)} in ${JSON.stringify(c.carton)}`
+          ).toBeGreaterThanOrEqual(1)
+        }
+      }
+    }
+  })
+
+  it('holds at the tolerance boundary the first draft got wrong', () => {
+    // Pinned by value, not by generation: an extent a hair OVER the carton that
+    // floorTolerant's relative nudge still admits. The naive predicate excluded
+    // it and returned 0 against an achieved 1.
+    const over = unit([opt(10000.000007, 10000.000007, 10000.000007)])
+    const carton: Vec3 = [10000, 10000, 10000]
+    expect(gridFillQuantity(over, carton, NO_GAPS, Infinity).count).toBe(1)
+    expect(quantityUpperBound(over, carton, NO_GAPS, Infinity)).toBeGreaterThanOrEqual(1)
+  })
+
+  it('tightens the plate case to the hand-derived 3, and proves it', () => {
+    // 180×150×20 plate; inner 9×4×8 in with 0.25 in clearances → usable
+    // 215.9 × 190.5 × 88.9, gap 6.35. Only the 20 mm face fits the 88.9 axis.
+    // Before: per-axis minima (20,20,20) → 8×7×3 = 168, so the volume ratio's
+    // 5 was the answer. After: feasible minima (150,150,20) → 1×1×3 = 3.
+    const plate = unit(perms([180, 150, 20]))
+    const usableCarton: Vec3 = [228.6, 101.6, 203.2]
+    const clearances: Clearances = { betweenParts: 6.35, wall: 6.35 }
+    expect(gridFillQuantity(plate, usableCarton, clearances, Infinity).count).toBe(3)
+    expect(quantityUpperBound(plate, usableCarton, clearances, Infinity)).toBe(3)
+  })
+})

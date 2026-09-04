@@ -303,13 +303,19 @@ describe('every answer arrives qualified', () => {
     expect(report.binding.note).not.toMatch(/not the carton/)
   })
 
-  it('says the carton stops it too when the lifted-cap search finds no more — as evidence', async () => {
-    // THE PLATE CASE, from three dogfood sessions. Geometry admits exactly 3 by
-    // hand; the volumetric bound says 5 (loose); the cap says 3. Amendment 2
-    // could only say "not established" — while the app, asked at 100 lb, said
-    // "the carton stopped this at 3" one call away. Now the same search runs
-    // with the cap lifted, still finds 3, and the reply says so with the
-    // evidence labelled for what it is: a search, not a proof.
+  it('PROVES the plate tie now, where it could once only search for it', async () => {
+    // THE PLATE CASE, from four dogfood sessions, and the record of what each
+    // one bought. Geometry admits exactly 3 by hand. Amendment 2 could only
+    // say "not established". ADR-0033 ran the search with the cap lifted, got
+    // 3, and said so as EVIDENCE — labelled `search`, because a search is not
+    // a proof. And the bound sat at 5 through all of it, loose enough that
+    // three readers derived 3 by hand and disbelieved the payload.
+    //
+    // The ADR-0022 amendment closes it: over FEASIBLE orientations the
+    // per-axis bound is 1×1×3 = 3, the bound meets the count, and the tie is
+    // proved rather than searched for. `evidence` moves from `search` to
+    // `bound` and the note stops hedging — the strongest claim this reply has
+    // ever made about this carton, and the first one that is a proof.
     const report = await estimate({
       path: AS1,
       mode: 'max-quantity',
@@ -326,14 +332,34 @@ describe('every answer arrives qualified', () => {
     })
     if (report.outcome.mode !== 'max-quantity') throw new Error('mode')
     expect(report.outcome.count).toBe(3)
-    expect(report.outcome.geometryBound).toEqual({ known: true, count: 5 })
-    expect(report.outcome.spaceOnlyCount).toEqual({ known: true, count: 3 })
-    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true, evidence: 'search' })
-    expect(report.binding.note).toMatch(/lifting the cap does not change the count/)
-    expect(report.binding.note).toMatch(/as far as this search can tell/)
-    // Never dressed as the rigorous tie.
-    expect(report.binding.note).not.toMatch(/Both limits land/)
+    // 5 until 2026-09-04, and the number that reached a quote block twice.
+    expect(report.outcome.geometryBound).toEqual({ known: true, count: 3 })
+    // No rerun is needed once the bound meets the count, and the reply says
+    // which field settled it rather than describing the rerun that did not run.
+    expect(report.outcome.spaceOnlyCount).toMatchObject({ known: false })
+    expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true, evidence: 'bound' })
+    expect(report.binding.note).toMatch(/Both limits land on 3/)
+    // The hedges that were honest while this was a search must not survive
+    // into a proof — an over-cautious claim is as wrong as an over-strong one.
+    expect(report.binding.note).not.toMatch(/as far as this search can tell/)
     expect(report.binding.note).not.toMatch(/not established/)
+  })
+
+  it('still labels a genuinely loose bound as a search, not a proof', async () => {
+    // The other side of the same amendment: tightening must not turn every
+    // answer into a proof. Five 1 kg cubes under a 5 kg cap in a carton that
+    // holds a thousand — the bound is nowhere near the count, so the lifted-cap
+    // rerun is what establishes anything, and it is labelled as such.
+    const report = await estimate({
+      mode: 'max-quantity',
+      carton: carton(100),
+      weight: { partWeight: { value: 1000, unit: 'g' } },
+      maxWeight: { value: 5000, unit: 'g' }
+    })
+    if (report.outcome.mode !== 'max-quantity') throw new Error('mode')
+    expect(report.outcome.count).toBe(5)
+    expect(report.binding.otherConstraint).toMatchObject({ evidence: 'arrangement' })
+    expect(report.binding.note).toMatch(/the carton itself would take/)
   })
 
   it('says both limits landed when the geometry bound proves it', async () => {

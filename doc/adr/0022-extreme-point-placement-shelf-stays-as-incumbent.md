@@ -201,10 +201,11 @@ so they re-run rather than rot.
   larger accuracy gain per effort, benefits two shipped tiers, and tier 3 warm-starts
   from tier 2 anyway (ADR-0023), so better placement compounds rather than competes.
 
-## Proposed amendment, 2026-09-04: the per-axis bound over FEASIBLE orientations only
+## Amendment, 2026-09-04: the per-axis bound over FEASIBLE orientations only
 
-**Status: Proposed.** Not built; needs the adversarial pass this ADR's own
-history says a bound change costs (two refutations, one of 922 crafted inputs).
+**Status: Accepted and shipped 2026-09-04**, after the adversarial pass this
+ADR's own history says a bound change costs — which refuted the formula written
+below before it reached a commit. See "What the pass found" at the end.
 
 §7's bound is `min(volumetric, per-axis, weight)`, and the per-axis component
 tiles the window with the smallest extent ANY orientation puts on each axis —
@@ -232,12 +233,69 @@ must be judged with the same EPS the validator grants, or a face within EPS of
 an exact fit is excluded from the bound and admitted by the engine — the
 refutation shape §7's build already met once.
 
-If accepted: `quantityBound.ts` filters `options` to those with
-`extent[a] ≤ usable[a] + 2·EPS` on every axis before the per-axis fold (the
-volumetric component is unaffected — its minimum is over volumes, which
-permutation does not change); the differential fuzz gains the plate case and a
-family of "only-one-orientation-fits" cartons; and ADR-0033's `search` row
-should become rarer, which is the point.
+### What shipped
+
+`quantityBound.ts` filters `options` to the feasible ones once, before both
+components, and both minima are taken over that set.
+
+**Applied to the volumetric component too, where this proposal said it was
+unaffected.** The reasoning here was right about permutations and wrong about
+scope: a permutation does not change a volume, so on axis-aligned options the
+volumetric minimum does not move — but thorough-tier options include OBB
+candidates whose volumes genuinely differ from the AABB's, and there the filter
+can lower nothing and tighten something. The argument is about which
+orientations can appear in an arrangement; it says nothing about which term
+reads them, so scoping it to one term would have been an arbitrary line.
+
+### What the pass found: this section's own formula was the refutation
+
+The implementation sketch above says to filter on
+`extent[a] ≤ usable[a] + 2·EPS`. **That is unsound, and the existing per-axis
+test caught it within seconds of being written.**
+
+`floorTolerant`'s nudge is RELATIVE (1e-9), not absolute. At 10 m scale it
+forgives 1e-5 — four orders more than 2·EPS — so a 10000.000007 box in a 10000
+carton is placed by the grid engine and would have been excluded from the
+bound. Bound 0, achieved 1: the exact contradiction §7 exists to prevent, and
+the same shape as the 922-input refutation this ADR already survived once.
+
+The fix is to stop writing a second opinion about the arithmetic. Feasibility
+now asks `alongAxis` — the function that does the counting — whether this
+extent admits at least one copy on each axis. A predicate that cannot be
+stricter than the counting engine, because it *is* the counting engine.
+
+**The obligation this section named ("the tolerance is the proof obligation")
+was exactly right, and naming it is what made the trap findable.** It just
+could not be met by restating the tolerance; only by borrowing it.
+
+### The adversarial pass
+
+- **3000 generated cases** (seeded LCG, so a failure is reproducible) over
+  plates, near-cubes and bars in cartons that admit one orientation, several or
+  none: `geometry` must dominate what `gridFillQuantity` actually places with
+  the cap lifted. The corpus asserts its own relevance — it fails if fewer than
+  50 cases are the only-one-orientation-fits family this amendment is for.
+- **The predicate, isolated**: for every case and every orientation, if the
+  grid can place one copy of that orientation ALONE, a bound computed over that
+  orientation alone must be ≥ 1. This is the test the sketch's formula fails,
+  and it fails nothing else.
+- **The boundary case pinned by value** — 10000.000007 in 10000.
+- **Mutations**, all caught: the naive predicate; the per-axis fold over one
+  orientation (the domino trap, caught by the new corpus independently of the
+  hand-written domino test). One mutation was NOT caught and should not have
+  been — passing `gap: 0` to the feasibility check — because the gap cancels
+  algebraically for a single copy (`usable+g+2ε ≥ ext+g−ε ⟺ usable+3ε ≥ ext`).
+  A true negative, recorded so the next reader does not mistake it for a hole.
+
+### Consequences
+
+The plate case is now `geometryBound: 3` against a count of 3, so
+`otherConstraint` reports `evidence: 'bound'` rather than `'search'` and the
+note says both limits land on 3 instead of hedging with "as far as this search
+can tell". ADR-0033's rerun is skipped there entirely — its `known: false`
+reason names the bound as the stronger answer. That is the amendment's whole
+point: the strongest claim the reply can make about this carton, and the first
+one that is a proof rather than a search.
 
 ## Revisit triggers
 

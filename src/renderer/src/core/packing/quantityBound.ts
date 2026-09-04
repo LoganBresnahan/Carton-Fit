@@ -82,6 +82,37 @@ function isPlaceable(extent: Vec3): boolean {
   return true
 }
 
+/**
+ * Can a box of this extent be contained at ALL?
+ *
+ * The amendment of 2026-09-04 rests entirely on this predicate, so it errs
+ * toward INCLUDING an orientation: excluding one that can in fact be placed
+ * makes the bound UNSOUND, while including one that cannot only leaves it
+ * loose. So it is not written as a comparison of its own — it asks
+ * `alongAxis`, the same function that counts, whether this extent admits at
+ * least one copy on every axis. A predicate written separately would be a
+ * second opinion about the same arithmetic, and the two would eventually
+ * disagree in the last ulp.
+ *
+ * They already did, in the writing of this: a first draft compared
+ * `extent > usable + 2·EPS` and excluded a 10000.000007 box from a 10000
+ * carton — which `floorTolerant`'s RELATIVE nudge (1e-9, so 1e-5 at that
+ * scale) rescues and the grid engine really does place. The bound would have
+ * been 0 against an achieved 1. The existing per-axis test caught it in
+ * seconds, which is the argument for asking the counting function rather than
+ * re-deriving its tolerance.
+ *
+ * Containment is per-axis and absolute: a box whose extent exceeds the window
+ * on one axis cannot be placed anywhere, at any position, in any arrangement.
+ * That is what makes the exclusion sound, and it is the whole argument.
+ */
+function fitsWindow(extent: Vec3, usable: Vec3, gap: number): boolean {
+  for (let a = 0; a < 3; a++) {
+    if (alongAxis(usable[a], extent[a], gap) < 1) return false
+  }
+  return true
+}
+
 /** Copies that fit along one axis of the tolerant window, given the smallest
  *  extent any option needs there. Infinity when nothing constrains the axis
  *  (zero-or-smaller tolerant cell); 0 when even the tolerant window is
@@ -143,7 +174,36 @@ export function quantityBounds(
   const gap = Number.isFinite(clearances.betweenParts) ? Math.max(0, clearances.betweenParts) : 0
   const usable: Vec3 = [carton[0] - 2 * wall, carton[1] - 2 * wall, carton[2] - 2 * wall]
 
-  const options = unit.orientations.filter((o) => isPlaceable(o.extent))
+  const placeable = unit.orientations.filter((o) => isPlaceable(o.extent))
+  if (placeable.length === 0) return { overall: 0, geometry: 0 }
+
+  // FEASIBLE ORIENTATIONS ONLY (ADR-0022 amendment, 2026-09-04) — the whole of
+  // this amendment, in one filter.
+  //
+  // Both components below take a MINIMUM over options: the smallest inflated
+  // volume, and the smallest extent on each axis. An orientation that cannot
+  // be contained at all still lowered those minima, and on a flat part it
+  // lowered them catastrophically: for a 180×150×20 plate in a carton whose
+  // usable depth is 88.9, the three per-axis minima all become 20 — the
+  // thickness — because SOME permutation puts the thin side on each axis.
+  // The per-axis bound came out 8×7×3 = 168 and never bound anything, leaving
+  // the volume ratio (5) to answer a question three readers could settle by
+  // hand (3). Over feasible orientations the minima are (150,150,20) and the
+  // product is 1×1×3 = 3, exactly.
+  //
+  // Sound because containment is per-axis and absolute: an orientation whose
+  // extent exceeds the tolerant window on any axis cannot be placed at any
+  // position, so no accepted arrangement contains a box using it, so it cannot
+  // be the orientation whose extent or volume some placed box realises.
+  // Excluding it removes a lower bound that no box could ever have attained.
+  //
+  // Applied to BOTH components rather than only the per-axis one, since the
+  // argument is about which orientations can appear and says nothing about
+  // which term reads them. On axis-aligned options the volumetric term does not
+  // move (a permutation has the same volume); on thorough-tier options, where
+  // an OBB candidate and an AABB candidate have genuinely different volumes, it
+  // can — and only ever downward.
+  const options = placeable.filter((o) => fitsWindow(o.extent, usable, gap))
   if (options.length === 0) return { overall: 0, geometry: 0 }
 
   // Volumetric: smallest tolerant volume any option consumes. Per-axis factors
@@ -170,7 +230,7 @@ export function quantityBounds(
     volumetric = Math.floor((windowVolume / minInflatedVolume) * (1 + 1e-9) ** 3)
   }
 
-  // Per-axis, over the per-axis minimum extent across options.
+  // Per-axis, over the per-axis minimum extent across FEASIBLE options.
   let perAxis = 1
   for (let a = 0; a < 3; a++) {
     let minExtent = Infinity

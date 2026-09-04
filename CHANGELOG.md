@@ -12,6 +12,15 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **"How many could possibly fit" is a much tighter number now — and on the
+  reference plate it is exact.** The ceiling beside a max-quantity count could
+  sit well above anything that actually fits, because it considered part
+  orientations the carton cannot accept at all: a 7 in plate was measured as
+  though it might stand on edge in a 3.5 in space. Orientations that cannot go
+  in the box no longer count toward the ceiling. Where the ceiling now meets
+  the count, the app says the carton is provably full instead of hedging.
+  ([ADR-0022](doc/adr/0022-extreme-point-placement-shelf-stays-as-incumbent.md))
+
 - **Ctrl+Z now puts back which part you were counting.** Undo walked back the
   carton and the weights but left the part selection where it was — so undoing
   a restored estimate could land you on numbers for a question you had not

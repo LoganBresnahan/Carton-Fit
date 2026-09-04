@@ -1035,13 +1035,19 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       runs, pulled out of item 21's findings prose so they are checkable. Each
       is small on its own; none is product work, which is why they were easy
       to defer and easy to lose.
-      - [ ] **ADR-0022 proposed amendment: the per-axis bound over FEASIBLE
-        orientations only.** Rigorous by the argument in the ADR; needs the
-        adversarial pass a bound change costs — the differential fuzz extended
-        with the plate case and a family of only-one-orientation-fits cartons,
-        and the EPS-tolerant "fits the window" test proven against the
-        validator. Payoff: the plate tie becomes a `bound` proof instead of a
-        `search`, and "upper bound 5" stops reaching the quote block.
+      - [x] **ADR-0022 amendment: the per-axis bound over FEASIBLE
+        orientations only** — **Accepted and shipped 2026-09-04.** The plate
+        case is `geometryBound: 3` against a count of 3, so the tie is a
+        `bound` proof rather than a `search`, and "upper bound 5" no longer
+        reaches the quote block. **The adversarial pass refuted the ADR's own
+        proposed formula before it reached a commit**: the sketch said to filter
+        on `extent ≤ usable + 2·EPS`, but `floorTolerant`'s nudge is RELATIVE
+        (1e-9 — four orders larger at 10 m scale), so that predicate excluded a
+        box the grid engine really places, giving bound 0 against an achieved 1.
+        Feasibility now asks `alongAxis` itself, so it cannot be stricter than
+        the counting engine. Pinned by 3000 seeded cases that assert their own
+        relevance, a predicate-isolation test, the boundary case by value, and
+        mutation checks including the domino trap.
         **Three independent sightings now** (2026-09-03, and twice on
         2026-09-04), each deriving the same 99.05 mm against 88.9 mm usable by
         hand — the readers keep finding it because 5 is the number a person
