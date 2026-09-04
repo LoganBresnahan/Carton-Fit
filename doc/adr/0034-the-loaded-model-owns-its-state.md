@@ -105,11 +105,27 @@ Three rules make the scope honest rather than a filter that loses things:
   decision is untouched. A receipt you cannot find is not one.
 - **Identity is the hash; the name is a label.** A row belongs to the document
   when its `content_hash` matches. The name is shown, and grouped on, but never
-  matched on: two different parts that share a filename must not merge, which
-  they would under name matching. The known cost is the inverse — re-export the
-  same part from CAD with a trivial change and the hash moves, orphaning that
-  part's history into *All*. That is a revisit trigger below, not a reason to
-  match on names now.
+  matched on *automatically*: two different parts that share a filename must
+  not merge, which they would under name matching.
+- **A document is a set of hashes, because parts get revised.** Re-export the
+  same part from CAD with a trivial change and the hash moves. In a shop that
+  is not an edge case — rev B is the normal case — so hash-only identity with
+  no way to say "same part, new geometry" would strand a part's history the
+  first time anyone revised it (raised 2026-09-04, and right). A small alias
+  table, `document_versions (content_hash → document_hash)`, maps a newer hash
+  to the document's first one; the scope query widens from one hash to the
+  set. **The rows never change**: each receipt keeps the hash it was saved
+  against, and the list marks one from an earlier version as such.
+- **The user links versions; the name is only the hint.** On load, when the
+  hash is unknown *and* another document holds receipts under the same
+  filename, the app offers one line — *"3 saved estimates exist for an earlier
+  `as1-oc-214.stp` — treat this as a new version?"* — with **Link** and **Keep
+  separate**. That keeps both rules above: the name proposes, the person
+  decides, and nothing merges by itself. Linking is safe *because* of ADR-0016
+  §3: restoring an earlier version's receipt re-applies its inputs against the
+  geometry now loaded and recomputes, so a stale result can never be shown as
+  current — the worst case is an honest new number beside a label saying which
+  version the old one was for.
 - **An empty hash matches nothing.** `saveEstimate` writes `contentHash: ''`
   when hashing failed, so the row still saves. Such rows are never anyone's
   document; they live in *All* only.
@@ -185,7 +201,9 @@ thing in front of them.
   written. The prepared statement, the IPC channel and the preload binding are
   all already there; the renderer-side storage service gains one function.
 - Deleting an estimate is a new IPC (`storage:estimates:remove`) and a new
-  prepared statement, no schema change, no migration.
+  prepared statement, no schema change. **Versions are the one migration**:
+  `user_version` 2 adds `document_versions`, through `migrations.ts` as ADR-0007
+  requires. `estimates` is untouched.
 - ADR-0018's "consolidate the slices" trigger fires in a different form than it
   expected: the slices do not merge into one object, they gain a name for what
   they have in common. Whether they should physically consolidate is left to
@@ -210,9 +228,16 @@ thing in front of them.
 - **Per-document carton inputs.** Rejected in §2: it breaks "new part, same
   box." Recorded as a revisit trigger in case the workflow turns out to be the
   other way round for real users.
-- **Match estimates on file name.** Rejected in §3: merges different parts that
-  share a name, which is a worse failure than orphaning a re-export. Hash
-  first; name grouping is the revisit.
+- **Match estimates on file name.** Rejected in §3 as an automatic rule:
+  it merges different parts that share a name. Kept as the *hint* behind the
+  link offer, where a person confirms it.
+- **Link versions automatically when the name matches.** Rejected for the same
+  reason in one step: the offer costs one click and the wrong merge costs a
+  history that lies about which part it describes.
+- **Store a `document_id` on `estimates` instead of an alias table.** Rejected
+  because it rewrites existing rows and makes the receipt's own hash secondary;
+  an alias table leaves every receipt exactly as saved and can be dropped
+  without touching them.
 - **A `setThisSession` provenance flag on `get_app_state`** — the fix item 25
   first reached for. Rejected because it answers the symptom: the flag would be
   correct and the app would still be one global workspace. The document model
@@ -227,10 +252,14 @@ thing in front of them.
 
 ## Revisit triggers
 
-- **A re-exported part orphans its history in dogfooding** — someone saves
-  estimates, re-exports the STEP from CAD, and finds them under *All* only.
-  Then §3's identity rule grows a second tier: group by name, match by hash,
-  and show the name-matches as "earlier versions of this file."
+- **Someone needs to link versions after the fact, or unlink a wrong one.**
+  §3 offers the link only at load time, when the name matches; a manual "this
+  is a newer version of…" from the *All* list, and an unlink, are deliberately
+  not built until a dogfood run asks. The alias table supports both without
+  change.
+- **A renamed file with the same hash** already reads as the same document
+  (hash identity); if the list showing the *latest* name confuses anyone, show
+  both.
 - **A user wants the carton to follow the part** — reopens §2. The evidence
   would be someone restoring saved estimates purely to get the carton back.
 - **The collapsed saved-estimates section hides the count people need** — the

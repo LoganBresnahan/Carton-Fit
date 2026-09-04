@@ -63,6 +63,19 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         is a label, an empty hash matches nothing. Never hides a row from
         *All*. e2e: save on part A, load part B, the list is B's; *All* shows
         both.
+      - [ ] **Versions: a document is a set of hashes** (§3, raised
+        2026-09-04 — rev B is the normal case, not the edge case). Migration to
+        `user_version` 2 adding `document_versions (content_hash →
+        document_hash)`; the scope query widens to the set; a receipt saved
+        against an earlier version is labelled so. On load, when the hash is
+        unknown and another document holds receipts under the same filename,
+        offer **Link / Keep separate** — the name is the hint, the person
+        decides, nothing merges by itself. Restore stays ADR-0016 §3
+        (recompute, never replay), which is what makes linking safe. Effort M;
+        the only slice with a schema change. Tests: migration up from v1 on a
+        populated db; scope over a linked pair; the offer appears only on
+        name-match-with-unknown-hash; *Keep separate* leaves both documents
+        distinct.
       - [ ] **Delete a saved estimate from the panel** (§4). New prepared
         statement, `storage:estimates:remove` IPC and preload binding, a
         Delete beside *Restore inputs*. Not undoable and not on the wire —
@@ -95,7 +108,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         land with the slices that change what a person sees — the scoped list,
         the Delete, the three homes.
       **Not in scope, by decision:** per-file presets; a per-document carton;
-      name-matching for estimates; any thinning of receipts. Each is an
+      *automatic* name-matching for estimates (the name is only the hint behind
+      the link offer); manual link/unlink after load; any thinning of
+      receipts. Each is an
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 

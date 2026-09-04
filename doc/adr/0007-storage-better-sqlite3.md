@@ -79,6 +79,10 @@ and its comment — *"have I estimated this part before?" is the other question
 the UI will ask* — were written here in v1 and left unasked for four ADRs:
 `EstimateStore.forContent()` and the `estimatesForContent` IPC exist end to end
 and had no renderer caller. ADR-0034 scopes the saved-estimates list to the
-loaded model through exactly that path. **No migration**: scoping is a query
-the schema already supports, and deleting a row is a new prepared statement
-and a new IPC channel (`storage:estimates:remove`) against the same table.
+loaded model through exactly that path. Scoping is a query the schema already
+supports, and deleting a row is a new prepared statement and a new IPC channel
+(`storage:estimates:remove`) against the same table. **One migration**, the
+first since v1: `user_version` 2 adds `document_versions (content_hash →
+document_hash)` so a revised part keeps its history (ADR-0034 §3). `estimates`
+itself is not altered — the alias table is the whole change, and the trigger
+above ("schema grows via `migrations.ts`") is the rule it follows.
