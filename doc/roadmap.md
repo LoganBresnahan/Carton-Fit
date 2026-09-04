@@ -822,6 +822,57 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       meaning (an input) and the new field names the provenance of the grams
       actually counted, scoped by the same `partsForRequest` selection the pack
       used. Fixed in the same round; mutation-tested.
+      — **fourth run, 2026-09-04, on `+d79dfaa` — one client only** (Claude
+      Desktop; the Codex account ran out of credits before its session). The
+      first run where the reader's own summary was "yes for the counts, with one
+      condition". Every number reconciled against arithmetic it did itself — 3
+      plates at 35 lb and at 100 lb, 2 at a typed 15 lb, 1 whole assembly at a
+      restored 20 lb override, 27.549 lb packed, 9.183 lb per plate — through
+      both call paths, with the picture agreeing with the layout it derived.
+      What survived, all of it prose or plumbing and none of it a wrong number
+      (pinned as item 24 follow-ups, not fixed here):
+      (a) **`spaceOnlyCount` says "not asked" exactly when space is the whole
+      story.** `pack.ts:395` computes the cap-lifted rerun only when weight
+      bound; at a 100 lb cap on the same carton the field comes back
+      `known: false` — "not asked — the carton, not the cap, stopped this
+      count" — while at 35 lb it is a known 3. But when the cap did not bind,
+      the count already IS the space-only count: removing a cap that allowed
+      more cannot place fewer. So the app knows the answer for free and
+      declines to give it, which is the sentence ADR-0033 was written against,
+      now pointing the other way. ADR-0033 addendum 2.
+      (b) **`geometryBound` 5 against a provable 3, sighted a second time** by
+      a second reader in a second session, with the same derivation: four
+      plates need 4×20 + 3×6.35 = 99.05 mm in the only axis that takes the
+      20 mm face, against 88.9 mm usable. That is item 24's ADR-0022
+      amendment, and it now has two independent hand proofs behind it.
+      (c) **the exports carry neither bound.** `Upper bound,3` in the CSV is
+      the cap-folded number and is not labelled as such — the same carton at a
+      100 lb cap writes 5 into that row — and neither `geometryBound` nor
+      `spaceOnlyCount` reaches the summary or the CSV at all. A recipient
+      holding only the CSV cannot tell a full carton from a capped one except
+      by reading the prose.
+      (d) **`apply_preset`'s description does not carry `save_preset`'s
+      warning.** The behaviour is designed and documented — overrides and the
+      unit part are file-scoped, never in a preset (`store.ts:143`) — but the
+      sentence saying so lives on `save_preset` (`server.ts:429`), which a
+      client that only applies presets never reads. ADR-0029's own rule is that
+      a surprise is announced where a client meets it.
+      Refuted, with the reasoning kept because both will be proposed again:
+      **inherited state is not a defect** — the reader arrived at a session
+      whose overrides and unit part it had not set, but nothing persists them
+      (`store.ts:133-147`; only `settings` and the layout reach localStorage),
+      the app was simply still running from the previous night, and the fields
+      `overriddenKinds` and `countedWeightFrom` named the situation, which is
+      how the reader found it. The brief already asks for exactly this reset,
+      and got it. **`binding.constraint` naming the closest limit when nothing
+      bound** is the third sighting of a decision taken twice (ADR-0029
+      amendment 1); it stays.
+      Half-right, and worth the record: the reader proposed that `apply_preset`
+      "report the overrides it is leaving behind in its reply's
+      qualifications". It already does — `overriddenKinds: ["plate"]` and
+      `countedWeightFrom: "mixed"` were in the very reply the finding was
+      derived from. The gap is the description, not the payload, and adopting
+      the proposal as stated would have added a field that exists.
 
 - [x] 22. A client-agnostic connect surface — **ADR-0030, Accepted 2026-09-02**
       (Proposed the same morning). Sequenced first of the three open items:
@@ -855,8 +906,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       reads every older entry as `outdated` so one Reconnect repairs it, and a
       shim timeout message that now names the environment it was handed.
       Pinned by `e2e/mcp-shim.spec.ts` launching from the declared env alone.
-      **Windows values are reasoned, not measured** — the next dogfood pass
-      confirms or corrects them, and the new message makes that one glance.
+      ~~**Windows values are reasoned, not measured**~~ — **confirmed
+      2026-09-04** by the 4th dogfood pass, from the client's own settings
+      screen rather than a session: the entry carries all eleven
+      `sessionEnvKeys('win32')` values — `SystemRoot`, `SystemDrive`, `windir`,
+      `APPDATA`, `LOCALAPPDATA`, `USERPROFILE`, `HOMEDRIVE`, `HOMEPATH`,
+      `TEMP`, `TMP`, `PATH` — plus `ELECTRON_RUN_AS_NODE=1`, with the
+      passthrough box empty and no working directory, which is exactly what
+      `shimEntry` composes. The reasoning held. Note what this does NOT show:
+      no tool call was made from Codex on this build (the account ran out of
+      credits), so the entry is confirmed written correctly while Codex
+      *answering* still rests on the `+f3c3552` run.
       — **phase 5 closed 2026-09-04, and the item with it.** All 11 slices
       shipped. The last one was documentation, and the only part of it that was
       a decision rather than a transcription is **ADR-0030 open detail 1, now
@@ -921,6 +981,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         and the EPS-tolerant "fits the window" test proven against the
         validator. Payoff: the plate tie becomes a `bound` proof instead of a
         `search`, and "upper bound 5" stops reaching the quote block.
+        **Two independent sightings now** (2026-09-03 and 2026-09-04, different
+        sessions, different clients), each deriving the same 99.05 mm against
+        88.9 mm usable by hand — the readers keep finding it because 5 is the
+        number a person shopping for headroom reads first.
       - [ ] **The unit part onto the undo stack** (ADR-0016 addendum gap).
         Restore is one undo step, but undoing it reverts settings and
         overrides and leaves the unit part where the restore put it. Pre-existing
@@ -943,6 +1007,25 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       - [ ] **`inspect_model` accepts and echoes a weight unit it never uses.**
         Drop the parameter or use it — a parameter that appears to do
         something on the one tool you would sanity-check a weight with.
+      - [ ] **`spaceOnlyCount` is withheld when the cap did not bind** (4th
+        run). `pack.ts:395` runs the cap-lifted rerun only when weight bound,
+        so a geometry-bound answer reports `known: false, "not asked"` — at the
+        exact cap where space is the only thing that matters. When the cap did
+        not bind the count already IS the space-only count (removing a cap that
+        allowed more cannot place fewer), so this is free to state and is
+        currently declined. See ADR-0033 addendum 2.
+      - [ ] **The exports carry neither bound** (4th run). `Upper bound` in the
+        CSV is the cap-folded number, unlabelled as such — the same carton at a
+        higher cap writes a different value into that row — and neither
+        `geometryBound` nor `spaceOnlyCount` reaches the summary or the CSV.
+        The CSV is the artifact most likely to be pasted into a quote, which is
+        the argument ADR-0017's addendum already made once.
+      - [ ] **`apply_preset` does not repeat `save_preset`'s warning** (4th
+        run). Overrides and the unit part are file-scoped and never in a preset
+        (`store.ts:143`) — said plainly in `save_preset`'s description
+        (`server.ts:429`), which a client that only applies presets never
+        reads. The payload is already honest (`overriddenKinds`,
+        `countedWeightFrom`); it is the description that is in the wrong place.
       - [ ] **`/dogfood` split** (offered 2026-09-03, undecided): handoff lives
         only in `/deploy`, `/dogfood` processes reports. One less thing to
         remember which direction it is in.

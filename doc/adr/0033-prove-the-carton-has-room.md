@@ -163,6 +163,39 @@ orientation, and what the engine did was a search. The first row, where the
 rerun places *more*, is the constructive claim this ADR was written for, and
 it is what a roomy carton now gets instead of silence.
 
+## Addendum 2, 2026-09-04 (fourth dogfood): the cap that does not bind
+
+The rerun is gated on `winner.binding === 'weight'` (`pack.ts:395`), which was
+the whole point — a rerun with no cap to lift is a wasted pack. The fourth
+dogfood found the cost of that gate, and it is the sentence this ADR was
+written against, aimed the other way.
+
+Same carton, same part, same clearances, same tier. At a 35 lb cap:
+`spaceOnlyCount: {known: true, count: 3}`. At a 100 lb cap on the identical
+geometry: `spaceOnlyCount: {known: false, reason: "not asked — the carton, not
+the cap, stopped this count"}`. The reader's objection is that the second reply
+is *less* informative about the carton than the first, at exactly the cap where
+the carton is the only thing that matters.
+
+And the answer is free. When the cap did not bind, the count already IS the
+space-only count: the capped count is `min(geometry, weight)` and the cap
+allowed at least as many as space did, so removing it cannot place fewer — the
+same argument the clamp on line 401 rests on. No second pack is needed; the
+field is `known: true, count` with the run itself as its evidence, and the
+`reason` string that exists today is answering a question nobody asked.
+
+**Proposed, not shipped** — it is a wire-contract change (a `Known` flipping
+from false to true in a case clients may have learned to read as "geometry
+bound, no rerun"), so it goes through ADR-0029's amendment path with a test
+that pins both caps side by side rather than riding in as a fix. Pinned as an
+item 24 follow-up.
+
+Two notes for whoever takes it. The `evidence` label must not become `search`
+here — nothing was searched a second time; if the taxonomy has no word for
+"the run itself", that gap is part of the work. And the honest reading of the
+gate is that it was never wrong, only incomplete: it asked "is a rerun needed
+to answer this?" when the question was "is the answer available?".
+
 ## Revisit triggers
 
 - **If the measurement says the second pack is not affordable in auto-run**,
