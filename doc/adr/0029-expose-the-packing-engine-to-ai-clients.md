@@ -1003,6 +1003,45 @@ had honest payloads and misplaced prose. Adopting the reader's proposed fix for
 (2) — "report the overrides it leaves behind" — would have added a field that
 already existed.
 
+### Phase-2 contract amendment 7 (2026-09-04) — the sentence that recommended the loose number
+
+The fifth dogfood found no wrong number and one wrong instruction, and the
+instruction explains two earlier findings that had been treated as separate.
+
+`estimate`'s description said: *"geometryBound is space alone, and only IT can
+tell a roomy carton from a full one."* That was true when amendment 2 wrote it
+on 2026-09-03 — `geometryBound` was the only field about space, and the
+sentence existed to stop readers reasoning from `upperBound`, which has the cap
+inside it. **ADR-0033 made it false the same evening** by adding
+`spaceOnlyCount`, the constructive answer, and nobody went back for the
+sentence.
+
+So for a day the tool told every client to judge the carton by the loosest of
+its three numbers. Two previous readers quoted `geometryBound: 5` against a
+provable 3 and were recorded as having found a loose bound; what they had
+actually found was a loose bound *plus* a tool telling them to trust it. The
+bound's looseness is a real defect and is item 24's ADR-0022 amendment. This
+one is the reason it kept reaching a quote block, and it is a paragraph.
+
+Now the description distinguishes all three, and each says what it is FOR:
+`upperBound` moves when the cap moves and is not evidence about the carton;
+`geometryBound` is a ceiling that PROVES the carton full at equality and proves
+nothing above it, so it is not capacity and must not be quoted as capacity;
+`spaceOnlyCount` is what the same search places with the cap lifted, and is the
+field that tells a roomy carton from a full one.
+
+**The guidance also moved onto the fields themselves.** The three had zod
+`.describe()` on none of them — only code comments, which is to say the
+guidance reached whoever edits `schemas.ts` and not the reader choosing between
+three similar numbers on the other side of the wire. Descriptions are metadata
+and additive, so this is a minor under ADR-0020.
+
+The general lesson, which is the third time this ADR has recorded a version of
+it: **a field added to fix a claim leaves the old claim standing.** Amendment 2
+wrote a sentence about the only field that existed; ADR-0033 added a better
+field the same day; nothing linked the two. When a new field takes over another
+field's job, the other field's prose is part of the change, not a follow-up.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

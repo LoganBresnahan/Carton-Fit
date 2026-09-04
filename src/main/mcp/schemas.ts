@@ -217,19 +217,34 @@ export const estimateOutput = {
     z.object({
       mode: z.literal('max-quantity'),
       count: z.number(),
-      upperBound: z.union([z.object({ known: z.literal(true), count: z.number() }), knownFalse]),
-      // Space alone, weight term removed — the field that makes reasoning about
-      // the carton possible without inventing a mechanism (2026-09-03 dogfood).
-      geometryBound: z.union([
-        z.object({ known: z.literal(true), count: z.number() }),
-        knownFalse
-      ]),
-      // ADR-0033: the same search with the weight cap lifted. Above the count
-      // it is an arrangement we hold; equal to it, honest heuristic evidence.
-      spaceOnlyCount: z.union([
-        z.object({ known: z.literal(true), count: z.number() }),
-        knownFalse
-      ]),
+      // THE THREE COUNT-CEILINGS, each with its guidance ON THE FIELD. They
+      // had only code comments until the 5th dogfood, which is to say they had
+      // none: a comment reaches whoever edits this file, and the reader who
+      // has to choose between three similar numbers is on the other side of
+      // the wire (ADR-0029 amendment 7).
+      upperBound: z
+        .union([z.object({ known: z.literal(true), count: z.number() }), knownFalse])
+        .describe(
+          'A ceiling on the count AS ASKED, weight cap included — it moves when the cap ' +
+            'moves, so it says nothing about the carton on its own.'
+        ),
+      geometryBound: z
+        .union([z.object({ known: z.literal(true), count: z.number() }), knownFalse])
+        .describe(
+          'A rigorous ceiling on what space alone allows. Equal to count it PROVES the ' +
+            'carton is full. Above count it proves nothing whatever — a ceiling is allowed ' +
+            'to be loose and this one routinely is, by more than one. Never quote it as ' +
+            'capacity; read spaceOnlyCount for that.'
+        ),
+      spaceOnlyCount: z
+        .union([z.object({ known: z.literal(true), count: z.number() }), knownFalse])
+        .describe(
+          'How many the CARTON ALONE takes: the same search with the weight cap lifted. ' +
+            'Above count, an arrangement we hold — room, proven constructively. Equal to ' +
+            'count on a weight-bound answer, the search found no more: evidence, not proof. ' +
+            'Equal to count on a space-bound answer, it IS that answer. This is the field ' +
+            'that tells a roomy carton from a full one.'
+        ),
       layout: z.union([
         z.object({ complete: z.literal(true) }),
         z.object({

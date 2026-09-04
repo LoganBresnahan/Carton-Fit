@@ -76,6 +76,34 @@ describe('the server publishes v1', () => {
     expect(estimate?.description).toMatch(/ceiling/i)
     expect(estimate?.description).toMatch(/fill trial/i)
   })
+
+  it('sends the reader to spaceOnlyCount for the carton, not to geometryBound', async () => {
+    // The 5th dogfood's finding, and the mechanism behind two earlier ones:
+    // this description used to say geometryBound was the field that "can tell
+    // a roomy carton from a full one". True on 2026-09-03, when it was the
+    // only space field; false the same evening, when ADR-0033 added the
+    // constructive answer. A reader following the old sentence quoted a
+    // ceiling that is routinely loose.
+    const { tools } = await client.listTools()
+    const estimate = tools.find((tool) => tool.name === 'estimate')
+    expect(estimate?.description).toMatch(/spaceOnlyCount/)
+    expect(estimate?.description).toMatch(/above the count it proves nothing/i)
+    expect(estimate?.description).not.toMatch(/only IT can tell/i)
+  })
+
+  it('carries the choice between the three ceilings ON the fields', async () => {
+    // A code comment reaches whoever edits schemas.ts; the reader choosing
+    // between three similar numbers is on the other side of the wire.
+    const { tools } = await client.listTools()
+    const estimate = tools.find((tool) => tool.name === 'estimate')
+    const outcome = estimate?.outputSchema?.properties?.outcome as {
+      anyOf?: { properties?: Record<string, { description?: string }> }[]
+    }
+    const qty = outcome.anyOf?.find((variant) => variant.properties?.spaceOnlyCount)
+    expect(qty?.properties?.geometryBound?.description).toMatch(/never quote it as capacity/i)
+    expect(qty?.properties?.spaceOnlyCount?.description).toMatch(/roomy carton from a full one/i)
+    expect(qty?.properties?.upperBound?.description).toMatch(/moves when the cap moves/i)
+  })
 })
 
 describe('inspect_model against the hand-computed goldens', () => {

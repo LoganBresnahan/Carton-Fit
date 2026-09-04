@@ -1121,19 +1121,23 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the build touched the connect panel*, this build touched it only in
         docs, and ADR-0030's dogfooder-only open details went unasked a fourth
         time. The observations are about the machine, not the build.
-      - [ ] **`estimate`'s description points readers at `geometryBound`**
-        (5th run, and the reason the loose bound reaches a quote). It says
-        "geometryBound is space alone, and only IT can tell a roomy carton from
-        a full one" (`server.ts:169`) — true when written on 2026-09-03, made
-        false the same evening by ADR-0033's `spaceOnlyCount`, never updated.
-        A reader following the instruction quotes the loosest of three space
-        numbers. One paragraph, no engine work, and it stands whether or not
-        the bound is ever tightened.
-      - [ ] **The wire echoes `5.999999999999999` for a carton typed as 6 in**
-        (5th run). mm→in at the reply boundary with no rounding; the panel has
-        `round4` at the same boundary and shows 6. No answer moves, but a
-        reader checking its own input against the echo sees noise where it
-        typed a round number.
+      - [x] **`estimate`'s description points readers at `geometryBound`** —
+        **shipped 2026-09-04, ADR-0029 amendment 7.** All three ceilings are
+        now distinguished by what they are FOR, and the "roomy vs full" role is
+        reassigned to `spaceOnlyCount`, which earns it. The guidance also moved
+        ONTO the fields as zod `.describe()` metadata (additive, a minor):
+        they had code comments only, which reach whoever edits `schemas.ts` and
+        not the reader choosing between three similar numbers. Mutation-tested
+        at both layers.
+      - [x] **The wire echoes `5.999999999999999` for a carton typed as 6 in**
+        — **shipped 2026-09-04.** One `tidy` at the reply's conversion
+        boundary, at 1e-10: float dust here is ~1e-15 relative, and 1e-10 in is
+        2.5 picometres, so the threshold is unambiguous in both directions and
+        nothing real is ever rounded away. Applied at CONVERSION, never at
+        computation, so every arithmetic check a reader does still reconciles.
+        Mutation-tested from both sides — removing it fails the echo specs,
+        and rounding to two decimals fails a real 12.001 in dimension plus
+        three pre-existing conversion specs.
       Closed with ADR-0030 open detail 1 in item 22, not here: the cold-boot
       numbers (555 ms `windows-latest`, 757 ms Linux CI) that decide it.
 

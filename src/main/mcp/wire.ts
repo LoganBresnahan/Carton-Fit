@@ -63,15 +63,39 @@ export interface DimensionsValue {
 /** The wire's length unit as `core/units.ts` spells unit systems. */
 const systemOf = (unit: LengthUnit): UnitSystem => (unit === 'in' ? 'imperial' : 'metric')
 
+/**
+ * Float dust off a converted value, and nothing else.
+ *
+ * A carton typed as 6 in is stored as 6 × 25.4 = 152.39999999999998 mm and
+ * comes back as 5.999999999999999 in — an exact binary round-trip of a value
+ * that has no exact binary form. It changed no answer (3 plates need 2.86 in
+ * of a 3.5 in span), but the 5th dogfood read it in an ECHO of its own input
+ * and had to reason about whether the app had understood the number. A reply
+ * that makes a reader re-derive its own input has cost more than it saved.
+ *
+ * 1e-10 is the threshold because it is unambiguous in both directions: float
+ * dust here is ~1e-15 relative, and 1e-10 in is 2.5 picometres — below any
+ * dimension a carton, a part or a scale will ever carry, so nothing real is
+ * ever rounded away. The panel does the same thing at the same boundary with
+ * `round4` (InputsPanel.tsx); this is the reply's counterpart, and it is
+ * deliberately four orders finer, because a display may round for legibility
+ * and a payload may only round away what is not information.
+ *
+ * Applied at CONVERSION, not at computation: the engine keeps full precision
+ * and every arithmetic check a reader does still reconciles.
+ */
+const tidy = (x: number): number =>
+  Number.isFinite(x) ? Math.round(x * 1e10) / 1e10 : x
+
 export const toMm = (length: LengthValue): number => lengthToMm(length.value, systemOf(length.unit))
 export const fromMm = (mm: number, unit: LengthUnit): LengthValue => ({
-  value: mmToLength(mm, systemOf(unit)),
+  value: tidy(mmToLength(mm, systemOf(unit))),
   unit
 })
 
 export const toG = (weight: WeightValue): number => weightToG(weight.value, weight.unit)
 export const fromG = (g: number, unit: WeightUnit): WeightValue => ({
-  value: gToWeight(g, unit),
+  value: tidy(gToWeight(g, unit)),
   unit
 })
 
@@ -90,9 +114,9 @@ export const dimsFromMm = (
 ): DimensionsValue => {
   const system = systemOf(unit)
   return {
-    x: mmToLength(mm[0], system),
-    y: mmToLength(mm[1], system),
-    z: mmToLength(mm[2], system),
+    x: tidy(mmToLength(mm[0], system)),
+    y: tidy(mmToLength(mm[1], system)),
+    z: tidy(mmToLength(mm[2], system)),
     unit
   }
 }
@@ -102,7 +126,7 @@ export const dimsFromMm = (
  *  and useless. */
 export const volumeUnitFor = (unit: LengthUnit): VolumeUnit => (unit === 'in' ? 'in3' : 'mm3')
 export const volumeFromMm3 = (mm3: number, unit: LengthUnit): VolumeValue => ({
-  value: mm3ToVolume(mm3, systemOf(unit)),
+  value: tidy(mm3ToVolume(mm3, systemOf(unit))),
   unit: volumeUnitFor(unit)
 })
 

@@ -12,6 +12,20 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **An assistant is no longer told to quote the wrong capacity number.** The
+  packing tools report three "how many could fit" numbers, and the guidance
+  pointed at the one that is only a ceiling — routinely higher than anything
+  that actually fits — as the way to judge a carton. It now points at the
+  count the app can actually place, and says plainly that the ceiling proves a
+  full carton only when it equals the count.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+- **A carton typed as 6 in comes back as 6 in.** Dimensions echoed to an
+  assistant could return as 5.999999999999999 — the exact round-trip of a
+  number with no exact binary form. No answer ever moved, but it made a reader
+  stop and check whether the app had understood the number it was given.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 - **The measurements CSV says which limit its upper bound folded in.** The
   bound has the weight cap inside it, so the same carton at a higher cap wrote
   a different number into that row with nothing to say why. The file now

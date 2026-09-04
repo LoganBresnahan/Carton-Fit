@@ -164,9 +164,14 @@ export function createCartonFitServer(options: ServerOptions): McpServer {
         'Pack the parts in a STEP file into a carton and report the answer with its ' +
         'qualifications: the verdict or count, which limit is closest (space or weight) AND ' +
         'whether it actually stopped anything — read binding.bound, never constraint alone; ' +
-        'how full the carton is; and, for a count, two bounds. upperBound folds the weight ' +
-        'cap in, so it moves when the cap moves and is not evidence about the carton; ' +
-        'geometryBound is space alone, and only IT can tell a roomy carton from a full one. ' +
+        'how full the carton is; and, for a count, THREE numbers about how many could fit, ' +
+        'which say different things. upperBound folds the weight cap in, so it moves when ' +
+        'the cap moves and is not evidence about the carton. geometryBound is a rigorous ' +
+        'CEILING on what space allows: equal to the count it proves the carton is full, but ' +
+        'above the count it proves nothing at all — a ceiling is allowed to be loose and ' +
+        'this one routinely is, so do not quote it as capacity. spaceOnlyCount is what the ' +
+        'same search places with the cap LIFTED — the constructive answer, and the one to ' +
+        'read when the question is whether the carton has room. ' +
         'Placement is heuristic: a positive result is a concrete arrangement that was ' +
         'found, a count is a floor, and neither is a proof that nothing better exists. ' +
         BULK_GUIDANCE,

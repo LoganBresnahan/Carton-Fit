@@ -275,6 +275,36 @@ describe('a unit is never inferred', () => {
     expect(result.isError).toBe(true)
   })
 
+  it('echoes a typed dimension back as the number that was typed', async () => {
+    // 6 in has no exact binary form: it is stored as 6 × 25.4 =
+    // 152.39999999999998 mm and converts back to 5.999999999999999 in. The
+    // answer never moved, but the 5th dogfood read this in an echo of its own
+    // input and had to stop and work out whether the app had understood it.
+    const report = await estimate({
+      carton: { dimensions: { x: 11, y: 6, z: 10, unit: 'in' }, measured: 'inner' },
+      outputUnits: { length: 'in' }
+    })
+    expect(report.request.innerCarton).toMatchObject({ x: 11, y: 6, z: 10, unit: 'in' })
+  })
+
+  it('rounds away float dust WITHOUT rounding away a real dimension', async () => {
+    // The threshold has to be unambiguous in both directions. A 0.001 in
+    // difference is a real dimension a caller may have typed on purpose, and
+    // it must survive; anything at 1e-10 is not a dimension any carton has.
+    const a = await estimate({
+      carton: { dimensions: { x: 12, y: 12, z: 12.001, unit: 'in' }, measured: 'inner' },
+      outputUnits: { length: 'in' }
+    })
+    expect(a.request.innerCarton.z).toBe(12.001)
+    // And the metric side of the same round-trip: 152.39999999999998 mm is the
+    // stored value for 6 in, and a caller asking in mm gets the number back.
+    const b = await estimate({
+      carton: { dimensions: { x: 300, y: 152.4, z: 300, unit: 'mm' }, measured: 'inner' },
+      outputUnits: { length: 'mm' }
+    })
+    expect(b.request.innerCarton.y).toBe(152.4)
+  })
+
   it('rejects a unit it does not know, rather than falling back to a default', async () => {
     const result = await client.callTool({
       name: 'estimate',
