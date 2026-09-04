@@ -270,4 +270,6 @@ thing in front of them.
   (ADR-0030's territory).
 - **A fifth kind of thing wants a home in the sidebar** — §5's rule is that it
   goes where its nature says (verb, library, or record), not at the bottom of
-  the column.
+  the column. (Fired the same day, gently: ADR-0035's customer is app-wide and
+  not an input, so it goes to the header, and it filters this ADR's two lists
+  rather than adding a third.)

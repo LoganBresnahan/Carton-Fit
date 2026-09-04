@@ -1075,6 +1075,15 @@ The brief changes with it (ADR-0032: the brief is the artifact): station 0's
 "reset what you did not set" becomes "load the model first — the document starts
 clean," which is the workflow-level fix rather than a caveat about the report.
 
+### Phase-2 contract amendment 9 (2026-09-04, proposed with ADR-0035) — the customer axis, additive
+
+`get_app_state.customer`, `list_customers`, `set_customer` (a drive tool, since
+it changes what the running app shows), and `customer: 'active' | 'all'` on
+`list_presets` and `list_saved_estimates`, composing with amendment 8's
+`scope`. The two save tools report the tag they applied. All optional or new,
+so minor under ADR-0020 §3. Creating a customer is not a tool, for amendment
+8's reason: not undoable, and not something to do on a reader's guess.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

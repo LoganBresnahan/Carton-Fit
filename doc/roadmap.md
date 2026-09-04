@@ -114,6 +114,38 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [ ] 27. Customers — **ADR-0035, Proposed 2026-09-04**, sequenced behind
+      item 26 because it is a filter on the two lists that item builds. The
+      ask: two identical parts ship to two companies with different carton
+      requirements, and the app can already hold both receipts but cannot say
+      why they differ or let someone work inside one. A customer is **a name
+      and an id, a label and never an input** — nothing the engine computes
+      reads it, and every field beyond the name is a CRM request to be refused
+      on its own. UI word is *Customer* (not "entity"); revisit if the first
+      real grouping is a carrier or a plant.
+      - [ ] **Migration v3**: `customers` table; nullable `customer_id` on
+        `configurations` and `estimates`. Null is *house* — the common case,
+        never made to feel missing. Existing rows need no backfill.
+      - [ ] **"Working for" header selector** holding the active customer —
+        app state, persisted in its own `localStorage` key (ADR-0026 §6's
+        rule), survives a load, **not an undo step**. Pin that the pack
+        pipeline never reads it: same request under two customers is
+        byte-identical.
+      - [ ] **Both lists filter on it**: the preset picker shows the active
+        customer's cartons plus house; the saved-estimates section shows the
+        document's receipts for the active customer plus house; *All* widens
+        both. Saves tag with the active customer; a receipt's tag is
+        immutable, a preset's can be changed from the picker.
+      - [ ] **Wire, additive** (ADR-0029 amendment 9): `get_app_state.customer`,
+        `list_customers`, `set_customer`; `customer: 'active' | 'all'` on both
+        list tools; the two save tools report the tag. Creating a customer is
+        the person's act, not a tool.
+      - [ ] **Close the loop**: VISION gains the customer axis beside the
+        document one; ADR-0035 flips to Accepted on feel, like 0034.
+      **Not in scope, by decision:** any field on a customer beyond its name;
+      per-customer clearances or caps (those are that customer's presets);
+      free-form tags; moving a receipt between customers.
+
 - [x] 7. Persistence — better-sqlite3 in the main process behind IPC (ADR-0007):
       `configurations` (named presets) + `estimates` (history); save/load UI;
       migrations via `PRAGMA user_version`; open-with-recovery

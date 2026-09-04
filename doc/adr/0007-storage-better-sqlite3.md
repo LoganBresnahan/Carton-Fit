@@ -85,4 +85,6 @@ supports, and deleting a row is a new prepared statement and a new IPC channel
 first since v1: `user_version` 2 adds `document_versions (content_hash →
 document_hash)` so a revised part keeps its history (ADR-0034 §3). `estimates`
 itself is not altered — the alias table is the whole change, and the trigger
-above ("schema grows via `migrations.ts`") is the rule it follows.
+above ("schema grows via `migrations.ts`") is the rule it follows. ADR-0035
+(Proposed the same day) follows it again at `user_version` 3: a `customers`
+table and a nullable `customer_id` on both existing tables, no backfill.
