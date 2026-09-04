@@ -12,6 +12,14 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **Ctrl+Z now puts back which part you were counting.** Undo walked back the
+  carton and the weights but left the part selection where it was — so undoing
+  a restored estimate could land you on numbers for a question you had not
+  asked. Choosing a part in the picker is now an undo step like any other
+  input, and stepping back past a newly opened file no longer restores a part
+  that file does not contain.
+  ([ADR-0016](doc/adr/0016-explicit-save-history-and-input-undo.md))
+
 - **An assistant is no longer told to quote the wrong capacity number.** The
   packing tools report three "how many could fit" numbers, and the guidance
   pointed at the one that is only a ceiling — routinely higher than anything

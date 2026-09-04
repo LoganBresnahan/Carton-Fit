@@ -84,6 +84,27 @@ export function overrideForPart(
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 }
 
+/**
+ * The unit part a name still refers to, or null for the whole file.
+ *
+ * Pruned exactly the way overrides are, and for the same reason: a name the
+ * loaded file does not have is invisible state, because `partsForRequest`
+ * silently falls back to every part when the filter matches nothing. The store
+ * would say "plate" while the answer counted assemblies.
+ *
+ * Two callers, which is why it lives here beside `pruneOverrides` rather than
+ * in either of them: restoring a saved estimate (ADR-0016 addendum) and
+ * stepping the undo stack across an import (ADR-0016 §2), both of which can
+ * carry a name from a file that is no longer open.
+ */
+export function prunedUnitPart(
+  name: unknown,
+  parts: readonly ImportedPart[]
+): string | null {
+  if (typeof name !== 'string') return null
+  return parts.some((part) => part.name === name) ? name : null
+}
+
 /** Drop overrides naming kinds this file does not have (ADR-0018 §4:
  *  a restored estimate's overrides apply by kind, and unknown ones are
  *  ignored rather than kept as invisible state). */

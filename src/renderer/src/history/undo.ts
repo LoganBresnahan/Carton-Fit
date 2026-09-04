@@ -1,5 +1,5 @@
 import { useAppStore, type PackingSettings } from '../store'
-import type { PartWeightOverrides } from '../packing/kinds'
+import { prunedUnitPart, type PartWeightOverrides } from '../packing/kinds'
 
 // Undo/redo over the packing inputs (ADR-0016 §2).
 //
@@ -35,6 +35,18 @@ const COALESCE_MS = 600
 interface Snapshot {
   settings: PackingSettings
   overrides: PartWeightOverrides
+  /**
+   * Which part max-quantity replicates, or null for the whole file.
+   *
+   * Joined the snapshot on 2026-09-04, and the gap it closes was pre-existing
+   * rather than new: the picker was never on the stack, so an undo walked the
+   * settings and the overrides back and left the unit part where it was. That
+   * cost nothing while a restore did not carry one either — and then the
+   * ADR-0016 addendum made restores carry it, which turned a quiet omission
+   * into one step that half-reverts. Undoing a restore now puts back the
+   * question, not just the inputs to it.
+   */
+  unitPart: string | null
 }
 
 interface Entry {
@@ -86,6 +98,12 @@ export function changeSignature(prev: Snapshot, next: Snapshot): string {
     if (prev.overrides[kind] !== next.overrides[kind]) changed.push(`weight:${kind}`)
   }
 
+  // Its own name, so choosing a unit part and then editing the carton are two
+  // steps — and so that two picks inside the coalescing window collapse the
+  // way two edits to one number field do, which is the behaviour every other
+  // single-valued input here already has.
+  if (prev.unitPart !== next.unitPart) changed.push('unitPart')
+
   return changed.sort().join('|')
 }
 
@@ -123,7 +141,17 @@ function apply(entry: Entry): void {
     // ONE write covering both slices — the same action a restore uses. The
     // `applying` guard would stop a second write being recorded anyway, but a
     // single write also means a single re-pack rather than two.
-    useAppStore.getState().restoreInputs(entry.state.settings, entry.state.overrides)
+    // PRUNED against the parts loaded RIGHT NOW, not against the ones that
+    // were open when the entry was recorded: the stack survives an import, so
+    // stepping back across one can carry a name the current file does not
+    // have, and `partsForRequest` would silently pack everything while the
+    // store claimed a unit part. Same rule the restore path uses.
+    const state = useAppStore.getState()
+    state.restoreInputs(
+      entry.state.settings,
+      entry.state.overrides,
+      prunedUnitPart(entry.state.unitPart, state.parts)
+    )
   } finally {
     // The store notifies subscribers synchronously inside `set`, so by here our
     // own write has already been seen and skipped.
@@ -216,14 +244,21 @@ export function startUndoHistory(now: () => number = Date.now): () => void {
 
   const snapshot = (state: ReturnType<typeof useAppStore.getState>): Snapshot => ({
     settings: state.settings,
-    overrides: state.partWeightsG
+    overrides: state.partWeightsG,
+    unitPart: state.unitPartName
   })
 
   stack = [{ state: snapshot(useAppStore.getState()), signature: '', at: now() }]
   cursor = 0
 
   const unsubscribe = useAppStore.subscribe((state, prev) => {
-    if (state.settings === prev.settings && state.partWeightsG === prev.partWeightsG) return
+    if (
+      state.settings === prev.settings &&
+      state.partWeightsG === prev.partWeightsG &&
+      state.unitPartName === prev.unitPartName
+    ) {
+      return
+    }
     if (applying) return // our own undo/redo write
     const next = snapshot(state)
     record(next, changeSignature(snapshot(prev), next), now())

@@ -161,6 +161,40 @@ one, not a new one; it is worth closing when the picker joins the stack.
 - **Auto-record everything, thin later** (retention windows, compaction).
   Rejected: infrastructure to manage data nobody asked to keep.
 
+## Addendum 2, 2026-09-04: the picker joins the stack
+
+The first addendum made a saved estimate carry its unit part, so restoring "3
+plates fit" stops recomputing against whatever unit happened to be current.
+That fix created a second, quieter asymmetry, and it is the one this addendum
+closes: **the undo stack never carried the unit part either.**
+
+While a restore did not carry one, nothing was visibly wrong — the picker was
+simply outside the history, the way the loaded file is. Once a restore *did*
+carry one, a single Ctrl+Z put the settings and the overrides back and left the
+restored unit part standing. One step, half reverted, and the half it left
+behind is the one that decides what the count is a count OF. A step that
+reverts the inputs to a question while leaving the question is worse than a
+step that reverts neither, because the result it lands on is one nobody asked
+for.
+
+So `Snapshot` gains `unitPart`, `changeSignature` names it (picking a unit part
+is its own step; two picks inside the coalescing window collapse the way two
+edits to one number field do), and the subscription watches that slice.
+
+**Applying prunes against the parts loaded now, not the ones loaded then.** The
+stack outlives an import, so stepping back across one can carry a name the
+current file does not have — and `partsForRequest` falls back to every part
+when its filter matches nothing, so the store would claim a unit part the
+answer was not counting. That is the same invisible-state rule the restore path
+follows, and the two now share one function (`prunedUnitPart` in
+`packing/kinds.ts`, beside `pruneOverrides`) rather than two copies that agree
+today.
+
+The general shape, for the next time a slice joins the inputs: **anything a
+restore can set, undo must be able to unset.** The two features are one
+timeline seen from opposite ends, and a field added to one is a bug in the
+other until it is added there too.
+
 ## Revisit triggers
 
 - Dogfooding produces a real "I wish it had recorded that" — reopen the

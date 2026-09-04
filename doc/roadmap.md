@@ -1056,11 +1056,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         of the binding term; it is making an inert term do the work and beat
         the volumetric one. The adversarial pass should target exactly that:
         inputs where the two terms trade places.
-      - [ ] **The unit part onto the undo stack** (ADR-0016 addendum gap).
-        Restore is one undo step, but undoing it reverts settings and
-        overrides and leaves the unit part where the restore put it. Pre-existing
-        — the picker was never on the stack — and the right time is when the
-        picker joins it.
+      - [x] **The unit part onto the undo stack** — **shipped 2026-09-04,
+        ADR-0016 addendum 2.** The picker is on the stack, so a restore's undo
+        reverts the question as well as the inputs to it. Applying prunes
+        against the parts loaded NOW, since the stack outlives an import and
+        `partsForRequest` silently falls back to every part when its filter
+        matches nothing — the same invisible-state rule the restore path
+        follows, and the two now share `prunedUnitPart` rather than two copies
+        that agree today. Rule for the next slice that joins the inputs:
+        anything a restore can set, undo must be able to unset.
       - [x] **`load_model`'s reply announces what it cleared** — **shipped
         2026-09-04, ADR-0029 amendment 6.** `DriveOutcome.cleared` names the
         unit part and the overridden kinds, read from the store before the

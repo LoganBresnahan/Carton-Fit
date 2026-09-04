@@ -215,12 +215,88 @@ describe('bulk restores are one step', () => {
   })
 })
 
+// ADR-0016 §2 + the addendum: the picker was never on the stack, which cost
+// nothing while a restore did not carry a unit part either. The addendum made
+// restores carry it, and a step that reverts the inputs to a question while
+// leaving the question itself is worse than one that reverts neither.
+describe('undo over the unit part', () => {
+  const unitPart = () => useAppStore.getState().unitPartName
+  const parts = [
+    { name: 'plate', positions: new Float32Array(), indices: new Uint32Array() },
+    { name: 'bracket', positions: new Float32Array(), indices: new Uint32Array() }
+  ]
+  const stats = { elapsedMs: 1, partCount: 2, triangleCount: 0 }
+  const loadParts = (named: { name: string }[] = parts): void =>
+    useAppStore
+      .getState()
+      .importSucceeded(named as never, { ...stats, partCount: named.length }, 'hash')
+
+  beforeEach(() => {
+    loadParts()
+    useAppStore.getState().setUnitPartName(null)
+  })
+
+  it('walks a picked unit part back and forward', () => {
+    useAppStore.getState().setUnitPartName('plate')
+    advance(700)
+    useAppStore.getState().setUnitPartName('bracket')
+    expect(unitPart()).toBe('bracket')
+
+    expect(undo()).toBe(true)
+    expect(unitPart()).toBe('plate')
+    expect(undo()).toBe(true)
+    expect(unitPart()).toBeNull()
+    expect(redo()).toBe(true)
+    expect(unitPart()).toBe('plate')
+  })
+
+  it('reverts the unit part a restore brought with it, in the same one press', () => {
+    // The gap, stated as a test: before this, the press below put the settings
+    // and the overrides back and left the restored unit part standing — so the
+    // count after an undo answered a question nobody had asked for.
+    useAppStore.getState().setUnitPartName('plate')
+    advance(700)
+    const row: EstimateRow = {
+      id: 2,
+      fileName: 'a.stp',
+      contentHash: 'h',
+      settings: { boxDimsMm: [500, 400, 300], maxWeightG: 9999, unitPartName: 'bracket' },
+      result: {},
+      createdAt: 1
+    }
+    restoreEstimateSettings(row)
+    expect(unitPart()).toBe('bracket')
+    expect(settings().maxWeightG).toBe(9999)
+
+    expect(undo()).toBe(true)
+    expect(settings().maxWeightG).toBe(1000)
+    expect(unitPart()).toBe('plate')
+  })
+
+  it('does not restore a unit part the file no longer has', () => {
+    // The stack outlives an import. Stepping back across one must not put back
+    // a name from the old file: partsForRequest falls back to every part when
+    // the filter matches nothing, so the store would claim a unit the answer
+    // was not counting.
+    useAppStore.getState().setUnitPartName('plate')
+    advance(700)
+    loadParts([{ name: 'flange', positions: new Float32Array(), indices: new Uint32Array() } as never])
+    advance(700)
+    useAppStore.getState().updateSettings({ maxWeightG: 7 })
+
+    expect(undo()).toBe(true) // back over the settings edit
+    expect(undo()).toBe(true) // back across the import
+    expect(unitPart()).toBeNull()
+  })
+})
+
 describe('changeSignature', () => {
   /** A snapshot: settings plus the per-kind overrides (ADR-0018). */
   const snap = (
     patch: Partial<ReturnType<typeof settings>> = {},
-    overrides: Record<string, number> = {}
-  ) => ({ settings: { ...settings(), ...patch }, overrides })
+    overrides: Record<string, number> = {},
+    unitPart: string | null = null
+  ) => ({ settings: { ...settings(), ...patch }, overrides, unitPart })
 
   it('names the array INDEX that changed, not just the field', () => {
     const a = snap({ boxDimsMm: [1, 2, 3] as [number, number, number] })
@@ -257,6 +333,14 @@ describe('changeSignature', () => {
   it('reports a settings edit and a weight edit together', () => {
     expect(changeSignature(snap({}, {}), snap({ maxWeightG: 5 }, { bolt: 7 }))).toBe(
       'maxWeightG|weight:bolt'
+    )
+  })
+
+  it('names the unit part, so picking one is not the same step as the edit beside it', () => {
+    expect(changeSignature(snap({}, {}, null), snap({}, {}, 'plate'))).toBe('unitPart')
+    expect(changeSignature(snap({}, {}, 'plate'), snap({}, {}, null))).toBe('unitPart')
+    expect(changeSignature(snap({}, {}, null), snap({ maxWeightG: 5 }, {}, 'plate'))).toBe(
+      'maxWeightG|unitPart'
     )
   })
 })

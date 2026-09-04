@@ -1,5 +1,5 @@
 import { useAppStore, type PackingSettings } from '../store'
-import { pruneOverrides, type PartWeightOverrides } from '../packing/kinds'
+import { pruneOverrides, prunedUnitPart, type PartWeightOverrides } from '../packing/kinds'
 import { storageMessage } from './message'
 import type { EstimateRow, StorageApi } from '../../../shared/storage'
 
@@ -115,21 +115,8 @@ export function restoreEstimateSettings(row: EstimateRow): void {
   state.restoreInputs(
     settings,
     isOverrides(partWeightsG) ? pruneOverrides(partWeightsG, state.parts) : {},
-    restoredUnitPart(unitPartName, state.parts)
+    prunedUnitPart(unitPartName, state.parts)
   )
-}
-
-/**
- * The unit part a row names, pruned the way overrides are: a name the loaded
- * file does not have becomes the whole file (null) rather than invisible
- * state. A row from before 2026-09-04 has no key at all and restores the whole
- * file too — which is what those rows were saved against in fact, since the
- * picker's choice was never written down; restoring "3 fit" and getting 1 is
- * the row telling the truth about what it recorded, for the first time.
- */
-function restoredUnitPart(saved: unknown, parts: readonly { name: string }[]): string | null {
-  if (typeof saved !== 'string') return null
-  return parts.some((part) => part.name === saved) ? saved : null
 }
 
 /** A row's blob is JSON written by whatever build was running at the time, so
