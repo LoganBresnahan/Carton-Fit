@@ -997,16 +997,14 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         elsewhere, and present even when nothing was in force. Additive, so a
         minor. Pinned by `e2e/mcp-drive.spec.ts` — the only layer that has a
         store and a window — and mutation-tested there.
-      - [ ] **Two `otherConstraint` branches have no test** (from the
-        2026-09-03 `/shipshape`; three when it was written): fit-check
-        weight-bound, the mixed-set `known: false` at `verdict.ts:242`, and no
-        cap supplied at `verdict.ts:268`. `bindingReport` moved since; these two
-        did not. The third — fit-check geometry-bound with every part under the
-        cap (`atLimit: false`) — was covered the same night by
-        `tests/pack-verdict.test.ts:170`, which pins the evidence label on a
-        comfortable fit and exercises that branch to do it. Counted again
-        2026-09-04, because a follow-up list that overstates what is missing is
-        the same defect as one that understates it.
+      - [x] **Two `otherConstraint` branches have no test** — **covered
+        2026-09-04.** The mixed-set `known: false` (a weight-stopped fit-check
+        cannot say whether the carton also ran out, because no rigorous bound
+        exists for how tightly *that* set could sit) and the no-cap branch,
+        which now also pins that an infinite cap reads the same as a zero one —
+        the engine's own spelling of "lifted". Both mutation-tested. The third
+        branch the 2026-09-03 count listed had been covered the same night by
+        the evidence-label test.
       - [x] **`inspect_model` accepts and echoes a weight unit it never uses**
         — **half shipped 2026-09-04, and the half is the decision.** The INPUT
         is length-only now: narrowing an optional input is not a break (an
@@ -1026,12 +1024,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         it. The `evidence` taxonomy is untouched on purpose — no sentence reads
         the new value, so nothing had to invent a word for "the run itself".
         Mutation-tested; both caps pinned side by side at the core and the wire.
-      - [ ] **The exports carry neither bound** (4th run). `Upper bound` in the
-        CSV is the cap-folded number, unlabelled as such — the same carton at a
-        higher cap writes a different value into that row — and neither
-        `geometryBound` nor `spaceOnlyCount` reaches the summary or the CSV.
-        The CSV is the artifact most likely to be pasted into a quote, which is
-        the argument ADR-0017's addendum already made once.
+      - [x] **The exports carry neither bound** (4th run) — **shipped
+        2026-09-04, ADR-0017 addendum 3.** The CSV gains `Geometry bound` and
+        `Space-only count` beside the cap-folded `Upper bound`, which keeps its
+        name (renaming a field is a major under ADR-0020 §3) and is made legible
+        by the two rows rather than by a rename. The summary is unchanged on
+        purpose: it is prose, and its binding note already says this in words —
+        the defect was a fields artifact missing fields. An absent bound omits
+        its row rather than writing an empty cell, which in a quote reads as a
+        measured zero.
       - [x] **`apply_preset` does not repeat `save_preset`'s warning** (4th
         run) — **shipped 2026-09-04, ADR-0029 amendment 6.** The payload was
         always honest; the sentence explaining it lived on the tool the reader

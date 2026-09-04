@@ -12,6 +12,13 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **The measurements CSV says which limit its upper bound folded in.** The
+  bound has the weight cap inside it, so the same carton at a higher cap wrote
+  a different number into that row with nothing to say why. The file now
+  carries the carton's own bound and the count that fits on space alone beside
+  it, so a quote built from the CSV can tell a full carton from a capped one.
+  ([ADR-0017](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+
 - **Loading a model now tells an assistant what it threw away.** Opening a new
   file clears the unit part and any per-kind weights you typed — kind names
   belong to the file that was open — and the app said so only in passing. The

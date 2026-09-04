@@ -170,6 +170,42 @@ describe('bindingReport', () => {
     expect(spaceClosest.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arithmetic' })
   })
 
+  it('refuses to guess about space on a weight-bound MIXED SET', () => {
+    // A fit-check packs whatever parts the file has, and no rigorous bound
+    // exists for how tightly THAT set could be made to sit — so a
+    // weight-stopped fit-check cannot say whether the carton also ran out.
+    // The branch is the one place `known: false` is the right answer rather
+    // than a gap, which is exactly why it went untested until the 2026-09-03
+    // /shipshape counted the branches.
+    const r = bindingReport(
+      fit({ fits: false, binding: 'weight', placements: [placement], unplaced: ['b'] }),
+      request(10, 100)
+    )
+    expect(r.bound).toBe(true)
+    expect(r.otherConstraint.known).toBe(false)
+    if (r.otherConstraint.known) throw new Error('unreachable')
+    expect(r.otherConstraint.reason).toMatch(/mixed set/)
+    expect(r.otherConstraint.reason).toMatch(/no rigorous bound/)
+    // And the note claims exactly that much — no more.
+    expect(r.note).toMatch(/not established/)
+  })
+
+  it('says a cap that was never supplied cannot be reasoned about', () => {
+    // maxWeightG 0 is "no cap", not "a cap of nothing" — the second reading
+    // would make every answer weight-bound at zero. With no cap there is no
+    // arithmetic to do, so the field says so instead of inventing headroom.
+    const r = bindingReport(qty({ count: 4, binding: 'geometry' }), request(0, 5))
+    expect(r.otherConstraint.known).toBe(false)
+    if (r.otherConstraint.known) throw new Error('unreachable')
+    expect(r.otherConstraint.reason).toBe('no weight cap was supplied')
+    expect(r.note).toMatch(/no weight cap applied/)
+    // The same holds for an infinite cap, which is how the engine spells
+    // "lifted" internally (ADR-0033's rerun) and what a caller omitting the
+    // field gets.
+    const lifted = bindingReport(qty({ count: 4, binding: 'geometry' }), request(Infinity, 5))
+    expect(lifted.otherConstraint).toEqual(r.otherConstraint)
+  })
+
   it('drops the closer-limit ranking when every part is weightless', () => {
     const r = bindingReport(fit({ fits: true, placements: [placement] }), request(1000, 0))
     expect(r.bound).toBe(false)

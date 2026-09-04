@@ -155,6 +155,35 @@ two.
 - **Clipboard for the image too** — considered as a fourth affordance;
   deferred until someone misses it. The file is the durable artifact.
 
+## Addendum 3, 2026-09-04 (fourth dogfood): the CSV says which limit its bound folded in
+
+`Upper bound` has the weight cap inside it. That is correct — it is the bound
+on the answer as asked — but it means the same carton at a higher cap writes a
+different number into that row, and the row's name says none of that. A reader
+holding only the CSV could tell a full carton from a capped one *only* by
+reading the prose sentence beside it, in the artifact this ADR exists because
+people paste into quotes.
+
+So the CSV now carries `Geometry bound` and `Space-only count` beside it, both
+already on the wire since ADR-0033 and its addendum 2. Space-only equal to the
+count means the carton is finished; below the geometry bound means that bound
+is loose. Three numbers that disagree usefully, rather than one that cannot
+say why it moved.
+
+**Added, not renamed.** `Upper bound` keeps its name: renaming a field is a
+major under ADR-0020 §3, the rows beside it make it legible, and a consumer
+keying on that name keeps working. A test pins that exactly one row bears it.
+
+**The summary is unchanged, deliberately.** It is prose, and its binding note
+already says the same thing in words — "the carton itself would take 5", or
+"lifting the cap does not change the count". The defect was a fields artifact
+missing fields, not a document missing a sentence, and adding a line that
+restates the note would make the summary longer without making it truer.
+
+A row is omitted rather than written empty when its field is absent. The wire
+answers absence with a reason; a CSV has no room for one, and an empty cell in
+a quote reads as a measured zero.
+
 ## Revisit triggers
 
 - A real request to hand a formatted document to a customer → PDF, seeded from

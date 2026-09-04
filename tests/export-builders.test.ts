@@ -293,6 +293,41 @@ describe('buildCsv', () => {
     expect(csv).not.toContain('31,500')
   })
 
+  it('carries the two bounds that say what "Upper bound" folded in', () => {
+    // The 4th dogfood: "Upper bound,3" has the weight cap inside it, so the
+    // SAME carton at a higher cap writes a different number into that row —
+    // and the CSV is the artifact most likely to reach a quote without the
+    // prose beside it. The geometry bound and the space-only count are what
+    // let a recipient tell a full carton from a capped one.
+    const csv = buildCsv(
+      input({
+        result: qtyResult({
+          count: 3,
+          upperBound: 3,
+          geometryBound: 5,
+          spaceOnlyCount: 3,
+          binding: 'weight'
+        })
+      })
+    )
+    expect(csv).toContain('Upper bound,3')
+    expect(csv).toContain('Geometry bound,5')
+    expect(csv).toContain('Space-only count,3')
+    // The row that was already there keeps its name: renaming a field is a
+    // major under ADR-0020 §3, and these two beside it are what make it read.
+    const fields = csv.split('\n').map((line) => line.split(',')[0])
+    expect(fields.filter((field) => field === 'Upper bound')).toHaveLength(1)
+  })
+
+  it('omits a bound row rather than writing an empty one', () => {
+    // Absence-with-a-reason is the wire's rule; a CSV has no room for reasons,
+    // so a field with nothing behind it does not appear at all — an empty cell
+    // in a quote reads as a measured zero.
+    const csv = buildCsv(input({ result: qtyResult({ count: 4, binding: 'geometry' }) }))
+    expect(csv).not.toContain('Geometry bound')
+    expect(csv).not.toContain('Space-only count')
+  })
+
   it('restates the §7 explanation in Field,Value shape rather than as a sentence', () => {
     // The facts are the panel's — same gate, same descending triples, via
     // freeSpaceReport — but a CSV's wording is its field names, and a dimension

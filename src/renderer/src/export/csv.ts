@@ -143,6 +143,25 @@ export function buildCsv(input: EstimateExport): string {
     // grouped `27,000` that comes back NaN.
     lines.push(row(['Upper bound', decimal(result.upperBound, 0)]))
   }
+  if (result.mode === 'max-quantity') {
+    // The two numbers that say WHICH limit the bound above folds in (4th
+    // dogfood, ADR-0017 addendum 3). "Upper bound" has the weight cap inside
+    // it, so the same carton at a higher cap writes a different value into
+    // that row — and a recipient holding only this file could tell a full
+    // carton from a capped one solely by reading the prose sentence, in the
+    // artifact most likely to be pasted into a quote.
+    //
+    // ADDED, never renamed: "Upper bound" keeps its name because renaming a
+    // field here is a major under ADR-0020 §3, and these two rows beside it
+    // are what make it legible. Space-only equal to the count means the
+    // carton is done; below the geometry bound means that bound is loose.
+    if (result.geometryBound !== undefined) {
+      lines.push(row(['Geometry bound', decimal(result.geometryBound, 0)]))
+    }
+    if (result.spaceOnlyCount !== undefined) {
+      lines.push(row(['Space-only count', decimal(result.spaceOnlyCount, 0)]))
+    }
+  }
   if (result.mode === 'fit-check' && result.unplaced.length > 0) {
     lines.push(row(['Did not fit', result.unplaced.join('; ')]))
     // The §7 explanation, restated in this file's Field,Value shape rather than
