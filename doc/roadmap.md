@@ -816,6 +816,57 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       `7ae4f50`; the other reader read them); nulling `binding.constraint`
       (decided, amendment 1). Also noted: `inspect_model` echoes a weight unit
       it never uses.
+      — **fifth run, 2026-09-04 evening, on `+2b1f856`, one client** (Claude
+      Desktop; the Codex account is still out of credits). Every count and
+      weight matched the reader's own arithmetic across SIX input
+      configurations, both call paths byte-identical, `get_estimate` agreeing
+      with the estimate inlined in `set_inputs`, and the captured image showing
+      the arrangement it had derived. Today's four changes all held: `cleared`
+      reported `unitPart: "plate"` on reload, the cap-only `set_inputs` left
+      every other field verbatim, the CSV carried both new bound rows, and the
+      override was honoured to the gram. What it found instead is the sharpest
+      thing any pass has produced about `geometryBound`:
+      (a) **The description tells the reader to quote the loose number.**
+      `estimate`'s own text says *"geometryBound is space alone, and only IT
+      can tell a roomy carton from a full one"* (`server.ts:169`). That was
+      true when written on 2026-09-03 — amendment 2, when `geometryBound` WAS
+      the only space field — and ADR-0033 made it false the same evening by
+      adding `spaceOnlyCount`, which answers that question constructively. The
+      sentence was never updated. So the tool instructs a reader to judge the
+      carton by the loosest of its three space numbers, which is exactly how
+      "the box holds five plates" reaches a quote. Stale prose, one paragraph,
+      and independent of any bound work.
+      (b) **The reader reverse-engineered which component is inflated, and was
+      right.** From three clearance configurations (0/0 → 8, 0.25/0 → 6,
+      0.25/0.25 → 5, counts 5/4/3) they derived that `geometryBound` is
+      tracking a volume ratio, not a packing. Confirmed against
+      `quantityBound.ts`: the bound is `min(volumetric, per-axis, weight)`, and
+      on the plate the volumetric term is 5.43 → **5** while the per-axis term
+      is **168** — useless, because `minExt` is taken over ALL orientations, so
+      the plate's 20 mm thickness becomes the cell size on every axis. Item
+      24's proposed amendment computes to exactly **3** on this input: the only
+      feasible orientations are (180,150,20) and (150,180,20), so the per-axis
+      minima become (150,150,20) and the product is 1×1×3. **That reframes the
+      amendment** — it is not a small tightening of the binding component, it
+      is making a currently-inert component do the work and beat the volumetric
+      one.
+      (c) `set_inputs` echoes `5.999999999999999` for a carton typed as 6 in.
+      The window is fine — `InputsPanel` renders through `round4` — so this is
+      a wire-only artifact of mm→in at the reply boundary, where the panel's
+      rounding has no counterpart.
+      Refuted, and worth keeping because each has now been proposed more than
+      once: **inherited settings are not a defect** (nothing persists overrides
+      or the unit part; the numeric inputs persist by design, `get_app_state`
+      reports every one, and the reader read them) — though this is the second
+      run to raise it, and what both readers actually want is a way to tell
+      "I set this" from "someone set this at 15:13". **`weight.source` reading
+      `density` under an override** is amendment 5's recorded decision: `source`
+      is the input, `countedWeightFrom` is the provenance, and the reader found
+      the right field in the same reply. **The summary export dropping both
+      bounds** is ADR-0017 addendum 3's recorded decision, and its remaining
+      sting is (a)'s: the Result line's "(upper bound 5)" at a slack cap is the
+      loose number, so tightening the bound removes it without touching the
+      summary.
       — (f) `weightInput.countedWeightFrom` — `source` reported the mode that was
       set, and was being read as a claim about the answer: `density` beside a
       count whose every gram came from a hand override. `source` keeps its
@@ -991,10 +1042,20 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         and the EPS-tolerant "fits the window" test proven against the
         validator. Payoff: the plate tie becomes a `bound` proof instead of a
         `search`, and "upper bound 5" stops reaching the quote block.
-        **Two independent sightings now** (2026-09-03 and 2026-09-04, different
-        sessions, different clients), each deriving the same 99.05 mm against
-        88.9 mm usable by hand — the readers keep finding it because 5 is the
-        number a person shopping for headroom reads first.
+        **Three independent sightings now** (2026-09-03, and twice on
+        2026-09-04), each deriving the same 99.05 mm against 88.9 mm usable by
+        hand — the readers keep finding it because 5 is the number a person
+        shopping for headroom reads first.
+        **The third sighting diagnosed the mechanism, which changes the shape
+        of the work.** On the plate the bound's components are: volumetric
+        **5** (ratio 5.428), per-axis **168**, weight — so `min` takes the
+        volumetric one, and the per-axis component contributes NOTHING, because
+        `minExt` over all orientations is the plate's 20 mm thickness on every
+        axis. Restricting to feasible orientations gives minima (150,150,20)
+        and a product of 1×1×3 = **3**. So this amendment is not a tightening
+        of the binding term; it is making an inert term do the work and beat
+        the volumetric one. The adversarial pass should target exactly that:
+        inputs where the two terms trade places.
       - [ ] **The unit part onto the undo stack** (ADR-0016 addendum gap).
         Restore is one undo step, but undoing it reverts settings and
         overrides and leaves the unit part where the restore put it. Pre-existing
@@ -1060,6 +1121,19 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the build touched the connect panel*, this build touched it only in
         docs, and ADR-0030's dogfooder-only open details went unasked a fourth
         time. The observations are about the machine, not the build.
+      - [ ] **`estimate`'s description points readers at `geometryBound`**
+        (5th run, and the reason the loose bound reaches a quote). It says
+        "geometryBound is space alone, and only IT can tell a roomy carton from
+        a full one" (`server.ts:169`) — true when written on 2026-09-03, made
+        false the same evening by ADR-0033's `spaceOnlyCount`, never updated.
+        A reader following the instruction quotes the loosest of three space
+        numbers. One paragraph, no engine work, and it stands whether or not
+        the bound is ever tightened.
+      - [ ] **The wire echoes `5.999999999999999` for a carton typed as 6 in**
+        (5th run). mm→in at the reply boundary with no rounding; the panel has
+        `round4` at the same boundary and shows 6. No answer moves, but a
+        reader checking its own input against the echo sees noise where it
+        typed a round number.
       Closed with ADR-0030 open detail 1 in item 22, not here: the cold-boot
       numbers (555 ms `windows-latest`, 757 ms Linux CI) that decide it.
 
