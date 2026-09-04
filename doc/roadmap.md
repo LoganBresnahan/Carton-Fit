@@ -1031,7 +1031,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 
 ## Later
 
-- [ ] 24. Dogfood follow-ups — the open pieces from the 2026-09-03/04 ADR-0032
+- [x] 24. Dogfood follow-ups — the open pieces from the 2026-09-03/04 ADR-0032
       runs, pulled out of item 21's findings prose so they are checkable. Each
       is small on its own; none is product work, which is why they were easy
       to defer and easy to lose.
@@ -1150,6 +1150,78 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         three pre-existing conversion specs.
       Closed with ADR-0030 open detail 1 in item 22, not here: the cold-boot
       numbers (555 ms `windows-latest`, 757 ms Linux CI) that decide it.
+
+- [ ] 25. Dogfood follow-ups, 6th run — the 2026-09-04 Claude (Cowork) pass
+      against `1.2.0+384deb5`, and **the first run whose every NUMBER
+      reconciled**: the reader derived the counts, both weights and both fill
+      fractions independently and the engine did not disagree once, including
+      on the plate case three earlier readers had derived by hand against a
+      bound that disagreed with them. What it found instead is what this
+      surface always ships — sentences. The first two are one line each.
+      - [ ] **The zero-count caption blames the carton for a weight zero**
+        (worst). `verdictCaption` returns early at `count === 0` with "None fit
+        in this carton." — *before* the branch that names the limit — so a cap
+        of 35 lb against a hand-set 40 lb plate prints a claim about the CARTON
+        while `geometryBound: 3`, `spaceOnlyCount: 3` and
+        `binding.constraint: "weight"` in the same payload all say the carton
+        takes three. Every non-zero sibling names its limit ("3 fit
+        (weight-limited)"); only the zero branch substitutes a space claim for
+        one. `src/renderer/src/packing/verdict.ts:42` — and because the panel,
+        the MCP `qualifications.heuristic.note`, the summary and the CSV all
+        read the one `verdictCaption`, one line reaches four surfaces. That
+        sharing is also how it reached a quote block whose next line but one
+        reads "the weight cap stopped this at 0 — the carton itself would take
+        3": the artifact refutes itself two lines apart. Keep the reader's
+        judgement of why it matters — a buyer reading it orders a bigger
+        carton, and a bigger carton would still hold zero.
+      - [ ] **`spaceOnlyCount` is withheld in the one case where its value is
+        provable.** ADR-0033 addendum 2 left exactly one `known: false` branch —
+        a weight-bound count whose `geometryBound` meets it — on the sound
+        ground that a rerun cannot beat a bound and should be skipped. The
+        rerun should indeed be skipped; the FIELD should not be. If
+        `geometryBound === count` then a cap-free repack can place no more (the
+        bound forbids it) and no fewer (lifting a cap never places fewer), so
+        the value is `count` — provable without packing anything. As shipped,
+        the corroborating field goes absent exactly when a reader most wants a
+        second opinion on a both-limits tie, which is how the reader put it.
+        Same one-line shape as the `binding !== 'weight'` branch beside it
+        (`pack.ts:402`), whose comment — "it reads as a no-op and is not" —
+        applies here verbatim. Needs an ADR-0033 amendment, because the ADR
+        names this surviving branch by hand.
+      - [ ] **`Fill` is exported as a bare percentage.** The MCP reply carries
+        `utilization.basis: "bounding-boxes"`; the summary and the CSV print
+        `Fill: 23%` and drop it. Every row beside it names its basis or its unit
+        — `Carton inner (in)`, `Packed weight (lb)` — and `Limited by` was given
+        two extra rows in ADR-0017 addendum 3 for exactly this reason.
+        Bounding-box fill is not volumetric fill, and the gap is material on the
+        plate (32.95 in³ of box against 32.38 in³ enclosed); the CSV prints both
+        part volumes in its own rows while its Fill silently uses one.
+        `csv.ts:125`, `summary.ts:126`.
+      - [ ] **No field says whether an input was set this session or
+        inherited** — a surface gap, product work rather than a bug fix.
+        `get_app_state` returned the entire station-4 specification before this
+        reader set anything, so a `set_inputs` "verification" would have
+        compared values that never had to change. This reader noticed and re-set
+        the spec explicitly; the 4th run did not, and reported inherited
+        overrides as a finding against the build. Two runs tripped by the same
+        thing means the pattern wants a field, not the report a caveat.
+      Refuted, and kept because both will be proposed again. (a) "no arrangement
+      beats this under these limits" is **not** on every count reply — it is
+      gated on `upperBound === count` (`verdict.ts:59`), the case where the
+      bound proves it, and every max-quantity reply in this session happened to
+      sit at its bound (3 against 3, then 2 against 2), which is what made it
+      look unconditional. The `heuristic: true` beside it describes the
+      placement SEARCH; the sentence is licensed by the bound, which is not a
+      heuristic — that distinction is ADR-0022 §7's whole point, and the caption
+      drops its hedge only where §7 lets it. (b) `inputs.weight.source:
+      "density"` beside an overridden count is not a missing qualification:
+      `countedWeightFrom` sits in the same reply, exists because an earlier run
+      found this exact confusion, and the reader marked the pair backed after
+      finding it.
+      Recorded, not a defect: presets and saved estimates are append-only and
+      say so at the point of use, which the reader called a good absence. The
+      cost it names is real though — 11 presets and 13 saved estimates of
+      dogfood residue with no way to tidy up.
 
 - [x] 14. Slim the packaged app, second pass — **shipped 2026-07-26: Windows
       `resources/` 59 MB → 13 MB, a 46 MB (78%) cut**, confirmed by unpacking
