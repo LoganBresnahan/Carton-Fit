@@ -1262,7 +1262,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       the app matched to four decimals on both paths, character for character;
       the exports carried their qualifications; the co-binding tie reported as
       a tie. What the reader found is the same defect class *one surface over*.
-      - [ ] **The saved-estimate receipt flattens its binding — and drops it
+      - [x] **The saved-estimate receipt flattens its binding — and drops it
         entirely on a geometry-bound row** (worst). `summary.ts:76` reads
         `if (binding === 'weight' || binding === 'space')`, and
         `BindingConstraint` is `'geometry' | 'weight'` — **`'space'` is the
@@ -1283,7 +1283,18 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         alloy buys more per carton", which buys nothing: a 4th plate needs
         3.90 in on an axis with 3.5 in usable, and the field proving it
         (`geometryBound === count`) was thrown away one layer earlier.
-      - [ ] **`estimate` never repeats `inspect_model`'s mixed-instance
+        **Shipped 2026-09-04, ADR-0016 addendum 4.** `bindingPhrase`,
+        three-way and defensive: nothing on a fit-check that fit,
+        `both limits` where the row's own `geometryBound` proves the tie,
+        otherwise the correct display word. A row saved before
+        `geometryBound` existed keeps the single word rather than gaining a
+        claim its JSON cannot carry. **A THIRD defect surfaced in the same
+        line**: a successful fit-check was being labelled with its CLOSEST
+        limit, so "everything fit" read as "weight-limited". And the
+        `mcp-data-tools` fixture asserting `space-limited` did so from
+        `binding: 'space'` — a value no engine writes — so a dead branch
+        had a passing test aimed at it. Four mutations, four caught.
+      - [x] **`estimate` never repeats `inspect_model`'s mixed-instance
         qualification.** `EstimateQualifications` has exactly four keys —
         heuristic, weightInput, clearances, openMesh — and `instancesAlike`
         lives only in `inspect.ts`. But the pack uses each instance's OWN
@@ -1298,6 +1309,20 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         surprise is announced where a client MEETS it, not only where it is
         created. The stateless `estimate` takes a path, not an inspect result,
         so for many callers it is the only tool they run.
+        **Shipped 2026-09-04, ADR-0029 amendment 10.** A fifth
+        qualification key in `inspect_model`'s own `{ affected }` shape,
+        additive. `mixedInstanceKinds` is exported from `inspect.ts` and
+        called by both tools — one computation, with a test asserting the
+        two agree rather than trusting the shared call. Scoped to the parts
+        the pack USED, which needed its own case: a mutation widening it to
+        the whole file passed everything else.
+        The helper's HOME was decided by a build failure: written beside
+        `inspect_model` and imported from there, it dragged `node:path` into
+        the renderer bundle, because the drive host imports
+        `buildEstimateReport` from `main/mcp/estimate` by value. Typecheck and
+        907 specs were green; only rollup saw it. It lives in
+        `packing/kinds.ts` now, and `inspect_model` derives `instancesAlike`
+        from it rather than recomputing.
       - [ ] **`list_presets` gives no hint at the point of choice.**
         `presetsOutput` is `{ name, savedAt }`. Applying a preset saved beside
         an answer of 3 returned 0, because a 40 lb/plate override from a
@@ -1309,7 +1334,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         its live overrides, so the list can say "3 kinds currently overridden;
         applying a preset will not clear them" — cheap, and it puts the
         sentence at the moment of the choice.
-      - [ ] **`inputs.weight.source` deserves a `.describe()`, on the third
+      - [x] **`inputs.weight.source` deserves a `.describe()`, on the third
         sighting.** Reports 5, 6 and 7 have each read `source: "density"`
         beside an active override as a claim about provenance. It is not — it
         is the MODE, and `countedWeightFrom` carries provenance in the same
@@ -1319,6 +1344,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         about the name, not about the readers.** Renaming is a major under
         ADR-0020 §3; a `.describe()` saying "the mode, not the provenance —
         see countedWeightFrom" is additive and free.
+        **Shipped 2026-09-04.** The field keeps its name (renaming is a
+        major, ADR-0020 §3) and gains a sentence saying it is the mode, not
+        the provenance, and where the answer actually lives.
       Not a defect, recorded: `packedWeight: 0` with no weight supplied is a
       value rather than a null, and `weightInput` says "every part weighs
       nothing" in as many words — disclosed, not hidden.

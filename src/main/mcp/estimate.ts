@@ -8,6 +8,7 @@ import {
   type QualityTier
 } from '../../renderer/src/core/packing/types'
 import { buildPackRequest, openMeshParts, partsForRequest } from '../../renderer/src/packing/request'
+import { mixedInstanceKinds } from '../../renderer/src/packing/kinds'
 import { overrideForPart, type PartWeightOverrides } from '../../renderer/src/packing/kinds'
 import type { PackingSettings } from '../../renderer/src/packing/settings'
 import { DEFAULT_MAX_WEIGHT_G } from '../../renderer/src/core/units'
@@ -198,6 +199,14 @@ export interface EstimateQualifications {
   /** Density weight over a mesh that is not watertight: a wrong weight against
    *  a hard constraint, so a wrong count stated with full confidence (ADR-0015). */
   openMesh: { affected: false } | { affected: true; parts: string[]; note: string }
+  /** Whether any kind's instances arrive at DIFFERENT orientations, so their
+   *  bounding boxes differ (ADR-0002 addendum). The pack uses each instance's
+   *  own box, so this changes what the answer is made of — and it lived only on
+   *  `inspect_model` until the 7th dogfood pointed out that the stateless
+   *  `estimate` takes a PATH, not an inspect result, and is the only tool many
+   *  callers run. ADR-0029 amendment 6's rule, at a new pair of tools: a
+   *  surprise is announced where a client MEETS it. */
+  mixedInstances: { affected: false } | { affected: true; kinds: string[]; note: string }
 }
 
 /** Thrown for a call the engine should never see — a disabled tier, a
@@ -386,6 +395,7 @@ function qualificationsOf(
 
   const open = openMeshParts(parts, settings, context.unitPart, overrides)
   const openNote = openMeshWarning(open)
+  const mixed = mixedInstanceKinds(partsForRequest(parts, settings, context.unitPart))
   // Overrides count as a supplied weight on their own: an ADR-0018 override
   // reaches the engine whatever the weight mode says, so a call carrying only
   // overrides can be weight-BOUND — and a "no weight was given, the cap could
@@ -419,7 +429,22 @@ function qualificationsOf(
         }
       : { asRequested: true },
     openMesh:
-      openNote === null ? { affected: false } : { affected: true, parts: open, note: openNote }
+      openNote === null ? { affected: false } : { affected: true, parts: open, note: openNote },
+    // Scoped to the parts the PACK actually used, like every other
+    // qualification here: a max-quantity run replicates one unit, and mixed
+    // instances of four kinds it never counted say nothing about the answer.
+    mixedInstances:
+      mixed.length === 0
+        ? { affected: false }
+        : {
+            affected: true,
+            kinds: mixed,
+            note:
+              `Instances of ${mixed.join(', ')} do not share one bounding box — the assembly ` +
+              'places them at different orientations, and STEP geometry arrives with that ' +
+              'placement baked in. Each instance was packed with its OWN box, so a count or a ' +
+              'fit here depends on how the file happened to orient them.'
+          }
   }
 }
 

@@ -12,6 +12,21 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **A saved estimate's one-line summary now says what actually limited it.**
+  Rows limited by the carton showed no limit at all, and rows where the carton
+  and the weight cap landed on the same number said only "weight-limited" —
+  which invites the wrong conclusion, that a lighter part would fit more. Those
+  now read "space-limited" and "both limits". A saved estimate that fit
+  everything no longer claims a limit stopped it.
+  ([ADR-0016](doc/adr/0016-explicit-save-history-and-input-undo.md))
+
+- **An assistant is now told when a file's parts sit at different angles.** The
+  app already reported that some parts arrive rotated differently — so their
+  measured boxes differ — when asked to inspect a model, but not when asked for
+  an estimate, which is the only question many assistants ask. The estimate now
+  carries the same qualification, for the parts it actually counted.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 - **"None fit" no longer blames the carton when the weight cap is what stopped
   it.** A zero count always read "None fit in this carton." — even when the
   carton had room for three and a weight limit was the only thing in the way.

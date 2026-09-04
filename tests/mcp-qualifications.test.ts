@@ -89,7 +89,7 @@ describe('the published schema forbids an unqualified answer', () => {
     const qualifications = schema.properties?.qualifications
     // Named individually rather than as a count: a future qualification added
     // to the object is welcome, one of these quietly going optional is not.
-    for (const key of ['heuristic', 'weightInput', 'clearances', 'openMesh']) {
+    for (const key of ['heuristic', 'weightInput', 'clearances', 'openMesh', 'mixedInstances']) {
       expect(qualifications?.required, `qualifications.${key} is optional`).toContain(key)
     }
   })
@@ -114,7 +114,7 @@ describe('the schema rejects a reply with a hedge missing', () => {
     expect(estimateSchema.safeParse(report).success).toBe(true)
   })
 
-  for (const key of ['heuristic', 'weightInput', 'clearances', 'openMesh'] as const) {
+  for (const key of ['heuristic', 'weightInput', 'clearances', 'openMesh', 'mixedInstances'] as const) {
     it(`rejects a reply with qualifications.${key} deleted`, async () => {
       const report = await estimate({ mode: 'max-quantity', carton: carton(100) })
       const mutated = structuredClone(report) as EstimateReport
@@ -526,6 +526,48 @@ describe('every answer arrives qualified', () => {
       weight: { densityGPerCm3: 7.85 }
     })
     expect(report.qualifications.openMesh.affected).toBe(true)
+  })
+
+  it('repeats inspect_model’s mixed-instance qualification on the estimate itself', async () => {
+    // 7th dogfood: `inspect_model` says nut and bolt instances do not share one
+    // bounding box, and the estimate — which takes a PATH, not an inspect
+    // result, and is the only tool many callers run — said nothing. The pack
+    // uses each instance's OWN box, so this changes what the answer is made of.
+    const report = await estimate({ mode: 'fit-check', path: AS1, carton: carton(1000) })
+    const mixed = report.qualifications.mixedInstances
+    expect(mixed.affected).toBe(true)
+    if (!mixed.affected) throw new Error('affected')
+    expect(mixed.kinds).toContain('nut')
+    expect(mixed.kinds).toContain('bolt')
+    expect(mixed.note).toMatch(/own box/i)
+
+    // One computation, two tools: whatever `inspect_model` reports as NOT alike
+    // is exactly what the estimate qualifies. A second implementation of the
+    // agreement test would drift, and the drift would read as one tool
+    // qualifying an answer the other does not.
+    const inspected = await call<{ kinds: { kind: string; instancesAlike: boolean }[] }>(
+      'inspect_model',
+      { path: AS1 }
+    )
+    const notAlike = inspected.kinds.filter((k) => !k.instancesAlike).map((k) => k.kind)
+    expect([...mixed.kinds].sort()).toEqual([...notAlike].sort())
+
+    // A file whose one kind has a single instance has nothing to qualify.
+    const cube = await estimate({ mode: 'fit-check', path: CUBE, carton: carton(1000) })
+    expect(cube.qualifications.mixedInstances.affected).toBe(false)
+
+    // SCOPED TO THE PARTS THE PACK USED, like every other qualification here.
+    // A max-quantity run over `plate` replicates ONE kind whose instances DO
+    // agree, so the mixed nuts and bolts it never counted must not qualify its
+    // answer. Without this case a mutation widening the scope to the whole file
+    // passes — the same file qualifies either way on the fit-check above.
+    const perPlate = await estimate({
+      mode: 'max-quantity',
+      path: AS1,
+      carton: carton(1000),
+      unitPart: 'plate'
+    })
+    expect(perPlate.qualifications.mixedInstances.affected).toBe(false)
     if (report.qualifications.openMesh.affected) {
       expect(report.qualifications.openMesh.parts).toContain('cube-10x10-open')
       expect(report.qualifications.openMesh.note).toMatch(/not a closed mesh/)

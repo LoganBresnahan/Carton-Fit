@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
-import { aabbSize, computeAabb, EPS, isClosedMesh, meshVolume } from '../../renderer/src/core/geometry'
-import { kindOf } from '../../renderer/src/packing/kinds'
+import { aabbSize, computeAabb, isClosedMesh, meshVolume } from '../../renderer/src/core/geometry'
+import { groupByKind, mixedInstanceKinds } from '../../renderer/src/packing/kinds'
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
 import {
   dimsFromMm,
@@ -72,23 +72,6 @@ export interface InspectQualifications {
   mixedInstances: { affected: false } | { affected: true; kinds: string[]; note: string }
 }
 
-function extentsMatch(a: readonly number[], b: readonly number[]): boolean {
-  return a.every((value, i) => Math.abs(value - b[i]) <= EPS)
-}
-
-/** Group parts into kinds in first-appearance order, carrying every instance
- *  (not just a sample) — the instance-agreement check needs them all. */
-function groupByKind(parts: readonly ImportedPart[]): Map<string, ImportedPart[]> {
-  const names = new Set(parts.map((part) => part.name))
-  const groups = new Map<string, ImportedPart[]>()
-  for (const part of parts) {
-    const kind = kindOf(part.name, names)
-    const existing = groups.get(kind)
-    if (existing) existing.push(part)
-    else groups.set(kind, [part])
-  }
-  return groups
-}
 
 export function inspectParts(
   filePath: string,
@@ -100,17 +83,21 @@ export function inspectParts(
 
   const kinds: KindReport[] = []
   const openMeshKinds: string[] = []
-  const mixedKinds: string[] = []
+  // The agreement test itself lives in `packing/kinds`, and BOTH tools call it
+  // (ADR-0029 amendment 10): `estimate` repeats this qualification, and two
+  // implementations of "do these instances match?" would eventually disagree —
+  // which would read as one tool qualifying an answer the other does not.
+  // Structural rather than tested: there is one function, so agreement is not
+  // something the suite has to keep checking.
+  const mixedKinds = mixedInstanceKinds(parts)
+  const mixed = new Set(mixedKinds)
 
   for (const [kind, instances] of groups) {
     const [sample] = instances
     const sampleSize = aabbSize(computeAabb(sample.positions))
-    const alike = instances.every((part) =>
-      extentsMatch(sampleSize, aabbSize(computeAabb(part.positions)))
-    )
+    const alike = !mixed.has(kind)
     const closed = isClosedMesh(sample.positions, sample.indices)
     if (!closed) openMeshKinds.push(kind)
-    if (!alike) mixedKinds.push(kind)
 
     kinds.push({
       kind,

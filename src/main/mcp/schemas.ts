@@ -314,7 +314,19 @@ export const estimateOutput = {
     openMesh: z.union([
       z.object({ affected: z.literal(false) }),
       z.object({ affected: z.literal(true), parts: z.array(z.string()), note: z.string() })
-    ])
+    ]),
+    // Additive, so a minor under ADR-0020 §3 — no existing field changes shape.
+    mixedInstances: z
+      .union([
+        z.object({ affected: z.literal(false) }),
+        z.object({ affected: z.literal(true), kinds: z.array(z.string()), note: z.string() })
+      ])
+      .describe(
+        'Whether any kind counted here has instances at different orientations, so their ' +
+          'bounding boxes differ and each was packed with its own. The same test behind ' +
+          'inspect_model’s instancesAlike, repeated here because this tool takes a file path ' +
+          'and is often the only one a caller runs.'
+      )
   }),
   units: outputUnits
 }
@@ -351,10 +363,18 @@ export const appStateObject = z.object({
     }),
     clearances: z.object({ betweenParts: lengthValue, wall: lengthValue }),
     maxWeight: weightValue,
-    weight: z.union([
-      z.object({ source: z.literal('direct'), partWeight: weightValue }),
-      z.object({ source: z.literal('density'), densityGPerCm3: z.number() })
-    ]),
+    weight: z
+      .union([
+        z.object({ source: z.literal('direct'), partWeight: weightValue }),
+        z.object({ source: z.literal('density'), densityGPerCm3: z.number() })
+      ])
+      .describe(
+        'The weight MODE the panel is set to — not where the counted weight came from. A ' +
+          'per-kind override in `overrides` beats it for that kind, so this can read ' +
+          '"density" while every gram in the answer was typed by hand; the estimate’s ' +
+          '`countedWeightFrom` is the provenance field. Three dogfood readers took this for ' +
+          'provenance (5th, 6th and 7th runs), which is a fact about the name.'
+      ),
     overrides: z.array(z.object({ kind: z.string(), weight: weightValue })),
     unitPart: z.union([z.string(), z.null()]),
     displayUnits: z.object({ length: lengthUnit, maxWeight: weightUnit, partWeight: weightUnit })

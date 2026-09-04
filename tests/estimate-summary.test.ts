@@ -35,6 +35,57 @@ describe('estimateSummary', () => {
     expect(estimateSummary(row())).toBe('500 fit · 12×12×12 in · weight-limited')
   })
 
+  it('names a geometry-bound row, which read as nothing at all', () => {
+    // 7th dogfood, and the half no reader could see. The line compared
+    // `binding === 'space'` while `BindingConstraint` is 'geometry' | 'weight'
+    // — 'space' is the DISPLAY word (verdict.ts) and never a stored value, so
+    // every geometry-bound receipt fell through unlabelled. Visible in the
+    // app's own sidebar the same day: bare "3 fit · 11×6×10 in" rows sitting
+    // beside "weight-limited" ones, and nothing saying the bare ones were the
+    // rows the CARTON stopped.
+    expect(
+      estimateSummary(row({ result: { mode: 'max-quantity', count: 3, binding: 'geometry' } }))
+    ).toBe('3 fit · 12×12×12 in · space-limited')
+  })
+
+  it('says both limits when the carton and the cap land on the same count', () => {
+    // The reader's finding: "3 fit · weight-limited" invites "so a lighter
+    // alloy buys more per carton", and it buys nothing — `geometryBound` meets
+    // the count, which proves the carton full over every arrangement. The
+    // receipt is what gets skimmed, so it is where the tie has to survive.
+    expect(
+      estimateSummary(
+        row({ result: { mode: 'max-quantity', count: 3, binding: 'weight', geometryBound: 3 } })
+      )
+    ).toBe('3 fit · 12×12×12 in · both limits')
+    // A LOOSE bound is not a tie and must still name the cap alone.
+    expect(
+      estimateSummary(
+        row({ result: { mode: 'max-quantity', count: 3, binding: 'weight', geometryBound: 5 } })
+      )
+    ).toBe('3 fit · 12×12×12 in · weight-limited')
+    // Rows saved before `geometryBound` existed cannot prove a tie, so they
+    // keep the single word rather than gaining a claim their JSON cannot back.
+    expect(
+      estimateSummary(row({ result: { mode: 'max-quantity', count: 3, binding: 'weight' } }))
+    ).toBe('3 fit · 12×12×12 in · weight-limited')
+  })
+
+  it('claims no limit on a fit-check that fits', () => {
+    // `binding` names the CLOSEST limit even when nothing bound (ADR-0029
+    // amendment 1), so a successful fit-check carries one — and the receipt
+    // was appending it, turning "everything fit" into "weight-limited". The
+    // fixtures below hid it by omitting a field the engine always sets, which
+    // is the second defect this file's fixtures have concealed that way.
+    expect(
+      estimateSummary(row({ result: { mode: 'fit-check', fits: true, binding: 'weight' } }))
+    ).toBe('Fits · 12×12×12 in')
+    // A fit-check that does NOT fit was bound by something, and says so.
+    expect(
+      estimateSummary(row({ result: { mode: 'fit-check', fits: false, binding: 'weight' } }))
+    ).toBe("Doesn't fit · 12×12×12 in · weight-limited")
+  })
+
   it('states a fit-check verdict in the panel’s own words', () => {
     expect(estimateSummary(row({ result: { mode: 'fit-check', fits: true } }))).toBe(
       'Fits · 12×12×12 in'

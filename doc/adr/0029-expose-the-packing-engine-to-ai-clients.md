@@ -1084,6 +1084,62 @@ it changes what the running app shows), and `customer: 'active' | 'all'` on
 so minor under ADR-0020 §3. Creating a customer is not a tool, for amendment
 8's reason: not undoable, and not something to do on a reader's guess.
 
+### Phase-2 contract amendment 10 (2026-09-04, seventh dogfood) — the qualification that stayed on the tool that found it
+
+`inspect_model` says plainly that a kind's instances do not share one bounding
+box: STEP geometry arrives with its assembly placement baked in (ADR-0002
+addendum), so instances at different orientations have different boxes. The pack
+uses **each instance's own box**, so this changes what an answer is made of.
+
+`estimate` never repeated it. Its `qualifications` block had exactly four keys,
+and the reader's point is the one that decides this: the stateless `estimate`
+takes a **path**, not an inspect result, so for many callers it is the only tool
+they run. On the reference file the nut's reported box is 0.118 × 0.591 × 0.787
+in — a hex nut is not 6.7× longer on one axis than another, so that is one
+arbitrarily-rotated instance and the other seven differ. At 1.4% fill it costs
+nothing; where the nuts bind it moves the answer in either direction with
+nothing in the reply to say so.
+
+This is **amendment 6's rule at a new pair of tools**: a surprise is announced
+where a client MEETS it, not only where it is created. Amendment 6 said it about
+`apply_preset` and `save_preset`; nothing generalised it, so the same shape sat
+one tool-pair over for two months.
+
+- `qualifications.mixedInstances`, the same `{ affected }` union
+  `inspect_model` already uses, additive and therefore minor under ADR-0020 §3.
+- **One computation, two tools.** `mixedInstanceKinds` lives in
+  `renderer/src/packing/kinds.ts` and both tools call it — `inspect_model`
+  derives `instancesAlike` from its result rather than recomputing, so agreement
+  is structural and not something the suite has to keep checking. A test still
+  asserts the two match on the reference file, because the *scoping* differs
+  even though the test does not.
+
+  **Where it lives was decided by a build failure, and the rule is worth
+  keeping.** Written beside `inspect_model` and imported from there, it broke
+  the RENDERER bundle: the drive host imports `buildEstimateReport` from
+  `main/mcp/estimate` by value (this ADR's own design — the drive host runs in
+  the renderer and reuses main's report builders rather than growing a second
+  one), so everything `estimate.ts` imports enters the browser graph, and
+  `inspect.ts` imports `node:path` for one `basename`. Rollup said "basename is
+  not exported by __vite-browser-external"; **typecheck and the 907 vitest specs
+  were all green.** The lesson: a helper two tools share belongs in the pure
+  module they both already depend on, not in whichever tool wrote it first —
+  and `npm run build` is the only gate that can see this class of mistake,
+  which is why it is in CI and in `/deploy` rather than optional.
+- **Scoped to the parts the pack used**, like every other qualification here: a
+  max-quantity run over `plate` must not be qualified by nuts it never counted.
+  That claim is pinned by its own case, because a mutation widening the scope
+  passes every other test in the file.
+
+**`inputs.weight.source` gains a `.describe()`, on its third sighting.** Reports
+5, 6 and 7 each read `source: "density"` beside an active override as a claim
+about provenance. It is not — it is the MODE, and `countedWeightFrom` carries
+provenance in the same reply. That refutation was correct twice and is the wrong
+response a third time: **three independent readers misreading one field is
+evidence about the name, not about the readers.** Renaming is a major under
+ADR-0020 §3, so the field keeps its name and gains a sentence saying what it is
+not, and where the answer actually lives.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

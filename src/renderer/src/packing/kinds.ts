@@ -1,3 +1,4 @@
+import { aabbSize, computeAabb, EPS } from '../core/geometry'
 import type { ImportedPart } from '../workers/import-protocol'
 
 // Part KINDS (ADR-0018): the grouping weight overrides bind to.
@@ -60,6 +61,59 @@ export function partKinds(parts: readonly ImportedPart[]): PartKind[] {
     else byKind.set(kind, { kind, count: 1, sample: part })
   }
   return [...byKind.values()]
+}
+
+/**
+ * Group parts into kinds in first-appearance order, carrying EVERY instance —
+ * unlike `partKinds`, which keeps one sample because the panel only needs a
+ * representative. The instance-agreement check below needs them all.
+ */
+export function groupByKind(parts: readonly ImportedPart[]): Map<string, ImportedPart[]> {
+  const names = new Set(parts.map((part) => part.name))
+  const groups = new Map<string, ImportedPart[]>()
+  for (const part of parts) {
+    const kind = kindOf(part.name, names)
+    const existing = groups.get(kind)
+    if (existing) existing.push(part)
+    else groups.set(kind, [part])
+  }
+  return groups
+}
+
+function extentsMatch(a: readonly number[], b: readonly number[]): boolean {
+  return a.every((value, i) => Math.abs(value - b[i]) <= EPS)
+}
+
+/**
+ * The kinds whose instances do NOT share one bounding box.
+ *
+ * STEP geometry arrives with its assembly placement baked in (ADR-0002
+ * addendum), so instances of one product sitting at different orientations
+ * measure differently — and the pack uses each instance's OWN box, which is why
+ * this qualifies an answer rather than merely describing a file.
+ *
+ * LIVES HERE, not beside `inspect_model` where it was written, and the reason is
+ * a build failure worth recording: the renderer's drive host imports
+ * `buildEstimateReport` from `main/mcp/estimate` by VALUE (ADR-0029 — the drive
+ * host runs in the renderer and reuses main's report builders rather than
+ * growing a second one). So anything `estimate.ts` imports enters the RENDERER
+ * bundle, and `inspect.ts` imports `node:path` for one `basename`. Sharing this
+ * from there turned a browser build into "basename is not exported by
+ * __vite-browser-external" — caught by rollup, invisible to both typecheck and
+ * vitest. The rule it teaches: a helper two tools share belongs in the pure
+ * module they both already depend on, not in whichever tool wrote it first.
+ */
+export function mixedInstanceKinds(parts: readonly ImportedPart[]): string[] {
+  const mixed: string[] = []
+  for (const [kind, instances] of groupByKind(parts)) {
+    const [sample] = instances
+    const sampleSize = aabbSize(computeAabb(sample.positions))
+    const alike = instances.every((part) =>
+      extentsMatch(sampleSize, aabbSize(computeAabb(part.positions)))
+    )
+    if (!alike) mixed.push(kind)
+  }
+  return mixed
 }
 
 /** Weight overrides in grams, keyed by kind. Absent key = no override. */

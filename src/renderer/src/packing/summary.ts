@@ -51,6 +51,44 @@ function answerPhrase(result: Record<string, unknown> | null): string | null {
 }
 
 /**
+ * What bound the answer — or nothing, when nothing did.
+ *
+ * THREE DEFECTS LIVED IN THE ONE LINE THIS REPLACES (7th dogfood, 2026-09-04),
+ * and they are worth naming separately because only one was reported:
+ *
+ *  1. It compared `binding === 'space'`. `BindingConstraint` is
+ *     `'geometry' | 'weight'` — 'space' is the DISPLAY word `bindingLabel`
+ *     produces, never a stored value — so the comparison was dead on one side
+ *     and every geometry-bound receipt went out unlabelled.
+ *  2. On the weight side it named the winner and dropped the tie. A count whose
+ *     `geometryBound` MEETS it is full over every arrangement, so "3 fit ·
+ *     weight-limited" invites "a lighter alloy buys more per carton" — which
+ *     buys nothing, and the field disproving it was thrown away one layer up.
+ *  3. It appended a limit to a fit-check that FIT. `binding` names the closest
+ *     limit even when nothing bound (ADR-0029 amendment 1), so "everything fit"
+ *     was being written down as "weight-limited".
+ *
+ * Defensive like everything else here: a receipt is JSON from whatever build
+ * saved it. A row with no `geometryBound` cannot prove a tie, so it keeps the
+ * single word rather than gaining a claim its own data does not carry.
+ */
+function bindingPhrase(result: Record<string, unknown> | null): string | null {
+  if (!result) return null
+  const binding = result.binding
+  if (binding !== 'weight' && binding !== 'geometry') return null
+  // Nothing STOPPED a fit-check that fits, whatever the closest limit was.
+  if (result.mode === 'fit-check' && result.fits === true) return null
+  const count = num(result.count)
+  const geometryBound = num(result.geometryBound)
+  const tie =
+    binding === 'weight' && count !== null && geometryBound !== null && geometryBound <= count
+  // "both limits" and not a fuller sentence: the row is scanned, and the note
+  // it opens onto already says "Both limits land on 3" in the same words.
+  if (tie) return 'both limits'
+  return binding === 'weight' ? 'weight-limited' : 'space-limited'
+}
+
+/**
  * A saved estimate in one line: what the answer was, in what carton, and what
  * bound it — the three things that make a receipt worth keeping.
  */
@@ -72,8 +110,8 @@ export function estimateSummary(row: EstimateRow): string {
   const carton = cartonPhrase(settings)
   if (carton) parts.push(carton)
 
-  const binding = result?.binding
-  if (binding === 'weight' || binding === 'space') parts.push(`${binding}-limited`)
+  const limit = bindingPhrase(result)
+  if (limit) parts.push(limit)
 
   // A row we cannot read at all still deserves a row in the list — it is the
   // user's data, and silently hiding it would be worse than saying so.

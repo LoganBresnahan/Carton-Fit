@@ -217,6 +217,48 @@ Two things around them change under ADR-0034:
 The "I wish it had recorded that" trigger below has not fired in six dogfood
 runs. The opposite did — "I wish I could remove that" — thirteen times over.
 
+## Addendum 4, 2026-09-04 (seventh dogfood): the receipt named the wrong limit, or none
+
+A receipt is one line, and decision 1 made it a receipt *for a decision* — so
+the line has to be true on its own, because it is the part that gets skimmed and
+pasted. It was not, in three different ways, all in one comparison:
+
+```ts
+if (binding === 'weight' || binding === 'space') parts.push(`${binding}-limited`)
+```
+
+1. **`'space'` is not a value.** `BindingConstraint` is `'geometry' | 'weight'`;
+   `'space'` is the display word `bindingLabel` produces. The comparison was
+   dead on one side, so **every geometry-bound receipt went out unlabelled** —
+   visible in the app's own sidebar as bare `3 fit · 11×6×10 in` rows sitting
+   beside `weight-limited` ones, with nothing saying the bare ones were the rows
+   the carton stopped.
+2. **The weight side named the winner and dropped the tie.** Where
+   `geometryBound` meets the count, the carton is full over every arrangement,
+   and `3 fit · weight-limited` invites "a lighter alloy buys more per carton" —
+   which buys nothing. The reader who found this did the arithmetic: a fourth
+   plate needs 3.90 in on an axis with 3.5 in usable.
+3. **It appended a limit to a fit-check that FIT.** `binding` names the closest
+   limit even when nothing bound (ADR-0029 amendment 1), so "everything fit" was
+   written down as "weight-limited".
+
+**Decision: `bindingPhrase`, three-way and defensive.** Nothing on a successful
+fit-check; `both limits` where the row's own `geometryBound` proves the tie;
+otherwise the correct display word for the constraint that bound. A row with no
+`geometryBound` — saved before the field existed — keeps the single word rather
+than gaining a claim its JSON cannot carry, which is this module's standing rule
+about reading other builds' data.
+
+**Why it survived a file that has tests**, which is the part worth keeping:
+every fixture in `tests/estimate-summary.test.ts` used a weight-bound row, and
+`tests/mcp-data-tools.test.ts` asserted `space-limited` from a fixture whose
+`binding` was the literal string `'space'` — **a value no engine has ever
+written**. So a dead branch had a passing test pointed straight at it. That is
+the second time in one day that a fixture omitting or inventing an engine-set
+field hid a defect here (the first was the loose-bound branch in
+`otherConstraintOf`), and it is now the thing to check first when a branch looks
+covered: *does the fixture describe a state the engine can produce?*
+
 ## Revisit triggers
 
 - Dogfooding produces a real "I wish it had recorded that" — reopen the

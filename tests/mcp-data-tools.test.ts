@@ -36,7 +36,12 @@ const ROWS: EstimateRow[] = [
     contentHash: 'abc',
     createdAt: Date.UTC(2026, 7, 4, 9, 0),
     settings: { ...DEFAULT_SETTINGS },
-    result: { mode: 'max-quantity', count: 343, binding: 'space' }
+    // `binding` is 'geometry' | 'weight'; 'space' is the DISPLAY word and no
+    // engine ever wrote it into a row. This fixture said 'space' and so kept a
+    // dead comparison in `estimateSummary` looking alive for two months
+    // (7th dogfood, 2026-09-04) — the assertion below is unchanged, because
+    // what a reader SEES was always meant to be "space-limited".
+    result: { mode: 'max-quantity', count: 343, binding: 'geometry' }
   },
   {
     id: 4,
