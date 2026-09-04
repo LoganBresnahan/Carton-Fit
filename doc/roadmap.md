@@ -43,6 +43,62 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 
 ## Next
 
+- [ ] 26. The loaded model owns its state — **ADR-0034, Proposed 2026-09-04;
+      accepted on feel once built and dogfooded.** Placed at the head of Next
+      by decision on 2026-09-04, ahead of 19 and 23, because it is what the
+      sixth dogfood pass's two screenshots demand: twelve `dogfood-*` presets,
+      thirteen `as1-oc-214.stp` receipts, and the AI-connect panel — the one
+      surface no runner verifies — pushed off-screen beneath them. The ADR
+      names the boundary the store already draws (`unitPartName` and the
+      overrides are cleared on import; estimates are keyed by `content_hash`,
+      and `estimatesForContent` has run end to end since ADR-0007 with no
+      caller) and gives the sidebar's three different natures three homes.
+      Presets stay global — a carton library, not a part property. Slices,
+      dependency-ordered and small enough to scope inline rather than through
+      `adr-plan`:
+      - [ ] **Scope the saved-estimates list to the loaded model** (ADR-0034
+        §3). `refreshSavedEstimates` learns a scope; the panel lists
+        `estimatesForContent(contentHash)` when a file is loaded and the full
+        list otherwise, with an *All* control. Identity is the hash, the name
+        is a label, an empty hash matches nothing. Never hides a row from
+        *All*. e2e: save on part A, load part B, the list is B's; *All* shows
+        both.
+      - [ ] **Delete a saved estimate from the panel** (§4). New prepared
+        statement, `storage:estimates:remove` IPC and preload binding, a
+        Delete beside *Restore inputs*. Not undoable and not on the wire —
+        `list_saved_estimates`'s description already promises that. Tested at
+        the store and the panel; the wire's append-only claim gets its
+        negative test (no such tool).
+      - [ ] **Saved estimates collapse into a `<details>` section** (§5) with
+        the document's count in the summary line — the `ConnectClientRow`
+        disclosure pattern. Feel is the acceptance test here, and the revisit
+        trigger is the count going unread.
+      - [ ] **AI assistants move to the header** (§5). A control beside
+        `ThemeSelect` opens the connect UI (popover or dialog — decide in the
+        build). `e2e/connect*.spec.ts` reach the panel through the header from
+        then on; nothing about ADR-0030's contracts changes, only where the
+        trigger sits.
+      - [ ] **Presets become a picker beside the carton inputs** (§5). Select +
+        save + delete next to the fields a preset fills; the standalone list
+        goes. The "no part attached" hint stays, in whatever words fit a
+        picker.
+      - [ ] **The wire follows** (§6, ADR-0029 amendment 8): optional `scope`
+        on `list_saved_estimates` with the panel's default rule;
+        `get_app_state.model.savedEstimates`. Additive, minor. Goldens and
+        `tests/mcp-data-tools.test.ts` pin both; the schema-dialect test keeps
+        the new input optional.
+      - [ ] **Close the loop.** Rewrite the brief's station 0 ("load the model
+        first — the document starts clean") and station 6 (scoped list);
+        VISION's "Presets & saved estimates" paragraph gains the document
+        boundary; ADR-0034 flips to Accepted with the feel verdict recorded;
+        item 25's fourth follow-up closes with a pointer here. CHANGELOG entries
+        land with the slices that change what a person sees — the scoped list,
+        the Delete, the three homes.
+      **Not in scope, by decision:** per-file presets; a per-document carton;
+      name-matching for estimates; any thinning of receipts. Each is an
+      alternative ADR-0034 records with its reason, and each has a revisit
+      trigger rather than a checkbox.
+
 - [x] 7. Persistence — better-sqlite3 in the main process behind IPC (ADR-0007):
       `configurations` (named presets) + `estimates` (history); save/load UI;
       migrations via `PRAGMA user_version`; open-with-recovery
@@ -1230,6 +1286,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the spec explicitly; the 4th run did not, and reported inherited
         overrides as a finding against the build. Two runs tripped by the same
         thing means the pattern wants a field, not the report a caveat.
+        **Answered structurally by item 26 (ADR-0034), not by a field:**
+        file-scoped state belongs to the loaded document and a load starts it
+        clean, so the only inherited state left is the global carton, which the
+        brief tells the reader to set. Closes when item 26's last slice ships.
       Refuted, and kept because both will be proposed again. (a) "no arrangement
       beats this under these limits" is **not** on every count reply — it is
       gated on `upperBound === count` (`verdict.ts:59`), the case where the
@@ -1246,7 +1306,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       Recorded, not a defect: presets and saved estimates are append-only and
       say so at the point of use, which the reader called a good absence. The
       cost it names is real though — 11 presets and 13 saved estimates of
-      dogfood residue with no way to tidy up.
+      dogfood residue with no way to tidy up. Half of that is wrong on
+      inspection — presets have had a Delete button all along — and the other
+      half is item 26's second slice.
 
 - [x] 14. Slim the packaged app, second pass — **shipped 2026-07-26: Windows
       `resources/` 59 MB → 13 MB, a 46 MB (78%) cut**, confirmed by unpacking

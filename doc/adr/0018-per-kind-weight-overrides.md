@@ -112,5 +112,10 @@ it.
 - A material density library arrives (roadmap Later) → it becomes a richer
   default generator under the same override layer; this ADR's shape holds.
 - A fifth piece of file-scoped state → consolidate the slices.
+  **Fired 2026-09-04, in a different form (ADR-0034, Proposed):** no fifth
+  slice arrived, but the two that exist — this one and `unitPartName` — plus
+  the saved estimates keyed by the same file gained a name for what they share:
+  they belong to the loaded *document*. Whether the slices physically merge is
+  left to that build; the boundary they already draw is the decision.
 - Users override most kinds most of the time → the rejected third mode is
   telling us it was right after all; reconsider.

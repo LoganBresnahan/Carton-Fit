@@ -195,6 +195,28 @@ restore can set, undo must be able to unset.** The two features are one
 timeline seen from opposite ends, and a field added to one is a bug in the
 other until it is added there too.
 
+## Addendum 3, 2026-09-04: the receipts get a scope and a bin (ADR-0034, Proposed)
+
+Decisions 1 and 3 are untouched — a row is still written only on an explicit
+save, and restoring one still re-applies inputs and never replays a result.
+Two things around them change under ADR-0034:
+
+- **The list is scoped to the loaded model by default.** The sixth dogfood
+  screenshot showed thirteen `as1-oc-214.stp` rows, twelve shown; scoped, that
+  is the three that concern the part on screen. The view is scoped, never the
+  data: an *All* control shows today's list, no row is hidden from it, and a
+  load deletes nothing. Identity is the `content_hash` ADR-0007 already keyed
+  on — the name is a label. A receipt you cannot find is not one, and this is
+  what keeps the rule true as the table grows.
+- **Rows can be deleted, from the panel only.** This ADR's rejection of
+  *thinning* stands — no keep-last-N, no collapsing, nothing that decides for
+  the user which receipt was the answer. A Delete button is not thinning; it
+  is the user deciding. The wire stays append-only (ADR-0029 amendment 8),
+  since everything the drive tools do is undoable and a delete would not be.
+
+The "I wish it had recorded that" trigger below has not fired in six dogfood
+runs. The opposite did — "I wish I could remove that" — thirteen times over.
+
 ## Revisit triggers
 
 - Dogfooding produces a real "I wish it had recorded that" — reopen the

@@ -73,3 +73,12 @@ wrapper was explicitly designed to mimic — and port the reference patterns:
   dep entirely (re-evaluate this ADR).
 - Estimate history grows features (search, tags, sync) → schema grows via
   `migrations.ts`, not ad-hoc DDL.
+
+**Note, 2026-09-04 (ADR-0034, Proposed).** The `estimates_content_hash` index
+and its comment — *"have I estimated this part before?" is the other question
+the UI will ask* — were written here in v1 and left unasked for four ADRs:
+`EstimateStore.forContent()` and the `estimatesForContent` IPC exist end to end
+and had no renderer caller. ADR-0034 scopes the saved-estimates list to the
+loaded model through exactly that path. **No migration**: scoping is a query
+the schema already supports, and deleting a row is a new prepared statement
+and a new IPC channel (`storage:estimates:remove`) against the same table.

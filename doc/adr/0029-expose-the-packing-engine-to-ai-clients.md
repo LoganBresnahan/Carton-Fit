@@ -1042,6 +1042,39 @@ wrote a sentence about the only field that existed; ADR-0033 added a better
 field the same day; nothing linked the two. When a new field takes over another
 field's job, the other field's prose is part of the change, not a follow-up.
 
+### Phase-2 contract amendment 8 (2026-09-04, proposed with ADR-0034) — the document answers the provenance question
+
+Two dogfood runs (the 4th and the 6th) arrived at `get_app_state` and found the
+whole of station 4 already typed in — carton, cap, density, mode, tier — left
+by an earlier session. Neither could tell from the reply which inputs the
+session had set and which it had inherited; one "verified" `set_inputs` against
+values that never had to change, the other reported the inheritance as a
+finding against the build. The first fix reached for was a field:
+`setThisSession: boolean` per input.
+
+ADR-0034 rejects the field and changes the model instead. **File-scoped state
+belongs to the loaded document and is cleared on load** — which `load_model`
+already reports through `cleared` (amendment 6) — so a session that begins with
+`load_model` begins with a clean document, and the only inherited state left is
+the global carton, which the brief tells the reader to set. A flag would have
+been correct and the app would still have been one global workspace.
+
+What the wire does gain, all additive and therefore minor under ADR-0020 §3:
+
+- `list_saved_estimates` takes an optional `scope: 'model' | 'all'`, defaulting
+  to `'model'` when a file is loaded and `'all'` otherwise — the same rule the
+  panel follows. An assistant asking "what did we keep for this part?" stops
+  paging through every part's receipts.
+- `get_app_state.model` gains `savedEstimates: number`.
+- Nothing is removed. Estimates stay append-only on the wire: the tools'
+  everything-is-undoable rule holds and a delete is not undoable. The person at
+  the keyboard gets a Delete button; the assistant does not get a delete tool,
+  and `list_saved_estimates`'s description already says so.
+
+The brief changes with it (ADR-0032: the brief is the artifact): station 0's
+"reset what you did not set" becomes "load the model first — the document starts
+clean," which is the workflow-level fix rather than a caveat about the report.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

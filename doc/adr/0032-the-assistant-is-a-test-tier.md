@@ -166,6 +166,12 @@ reaches for it.
 
 ## Revisit triggers
 
+- **ADR-0034 ships** → station 0's "reset what you did not set" paragraph is
+  rewritten to "load the model first — the document starts clean," and station
+  6 gains the scoped `list_saved_estimates`. Two runs reported inherited state
+  as a finding; the fix is in the app, and the brief must stop describing the
+  workaround once it is.
+
 - **Three consecutive sessions find nothing.** Either the surface has stabilised
   and the brief should shrink to the claims audit alone, or the stations have
   gone stale and stopped provoking — check which before dropping the cadence.
