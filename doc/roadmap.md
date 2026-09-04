@@ -877,6 +877,40 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 
 ## Later
 
+- [ ] 24. Dogfood follow-ups — the open pieces from the 2026-09-03/04 ADR-0032
+      runs, pulled out of item 21's findings prose so they are checkable. Each
+      is small on its own; none is product work, which is why they were easy
+      to defer and easy to lose.
+      - [ ] **ADR-0022 proposed amendment: the per-axis bound over FEASIBLE
+        orientations only.** Rigorous by the argument in the ADR; needs the
+        adversarial pass a bound change costs — the differential fuzz extended
+        with the plate case and a family of only-one-orientation-fits cartons,
+        and the EPS-tolerant "fits the window" test proven against the
+        validator. Payoff: the plate tie becomes a `bound` proof instead of a
+        `search`, and "upper bound 5" stops reaching the quote block.
+      - [ ] **The unit part onto the undo stack** (ADR-0016 addendum gap).
+        Restore is one undo step, but undoing it reverts settings and
+        overrides and leaves the unit part where the restore put it. Pre-existing
+        — the picker was never on the stack — and the right time is when the
+        picker joins it.
+      - [ ] **`load_model`'s reply announces what it cleared.** The description
+        says so (amendment 3) and `request.unitPart` makes it visible
+        (amendment 5); the outcome itself still says nothing. Both readers
+        asked for the reply to carry it.
+      - [ ] **Three `otherConstraint` branches have no test** (from the
+        2026-09-03 `/shipshape`): fit-check weight-bound (the mixed-set
+        `known: false`), fit-check geometry-bound with every part under the cap
+        (`atLimit: false`), and no cap supplied. `bindingReport` moved since;
+        the branches did not.
+      - [ ] **`inspect_model` accepts and echoes a weight unit it never uses.**
+        Drop the parameter or use it — a parameter that appears to do
+        something on the one tool you would sanity-check a weight with.
+      - [ ] **`/dogfood` split** (offered 2026-09-03, undecided): handoff lives
+        only in `/deploy`, `/dogfood` processes reports. One less thing to
+        remember which direction it is in.
+      Closed with ADR-0030 open detail 1 in item 22, not here: the cold-boot
+      numbers (555 ms `windows-latest`, 757 ms Linux CI) that decide it.
+
 - [x] 14. Slim the packaged app, second pass — **shipped 2026-07-26: Windows
       `resources/` 59 MB → 13 MB, a 46 MB (78%) cut**, confirmed by unpacking
       the CI artifact rather than by trusting the config. `app.asar` 25 → 4 MB,
