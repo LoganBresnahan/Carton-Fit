@@ -16,6 +16,7 @@ import {
 import { settingsPatchFrom } from '../../../main/mcp/inputs'
 import type { OutputUnits } from '../../../main/mcp/wire'
 import type {
+  ClearedByLoad,
   DriveAction,
   DriveEnvelope,
   DriveOutcome,
@@ -135,6 +136,14 @@ async function handle(action: DriveAction): Promise<DriveResult> {
         action.bytes.byteOffset,
         action.bytes.byteOffset + action.bytes.byteLength
       ) as ArrayBuffer
+      // READ BEFORE THE IMPORT, because the import is what clears them. The
+      // reply names what was in force rather than leaving a client to infer it
+      // from a state that no longer mentions it (ADR-0029 amendment 6).
+      const before = store.getState()
+      const cleared: ClearedByLoad = {
+        unitPart: before.unitPartName,
+        overriddenKinds: Object.keys(before.partWeightsG)
+      }
       await importFile({
         name: action.name,
         size: action.bytes.byteLength,
@@ -145,7 +154,7 @@ async function handle(action: DriveAction): Promise<DriveResult> {
       if (state.status === 'failed') {
         throw new DriveRefusal(state.error ?? `could not import ${action.name}`)
       }
-      return { kind: 'outcome', outcome: await settledOutcome(action.units) }
+      return { kind: 'outcome', outcome: { ...(await settledOutcome(action.units)), cleared } }
     }
 
     case 'set_inputs': {

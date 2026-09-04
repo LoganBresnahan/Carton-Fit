@@ -62,6 +62,24 @@ export type EstimateAvailability =
 export interface DriveOutcome {
   state: AppStateReport
   estimate: EstimateAvailability
+  /** What loading a model threw away, when that is what produced this outcome
+   *  (ADR-0029 amendment 6, 4th dogfood). `load_model` has always cleared the
+   *  unit part and the per-kind overrides — kind names belong to the file that
+   *  was open — and has said so in its description since the third pass. The
+   *  description is a rule; this is the receipt, and two readers asked for it
+   *  by name. Present only on a load, and present even when it cleared
+   *  nothing, because "nothing was in force" is the answer to the same
+   *  question. */
+  cleared?: ClearedByLoad
+}
+
+/** The unit part and overrides a `load_model` dropped, named rather than
+ *  implied by their absence from the state that follows. */
+export interface ClearedByLoad {
+  /** The unit part that was in force, or null if the whole file was the unit. */
+  unitPart: string | null
+  /** Kinds whose hand-typed weights were dropped, in the order they were set. */
+  overriddenKinds: readonly string[]
 }
 
 export type DriveResult =

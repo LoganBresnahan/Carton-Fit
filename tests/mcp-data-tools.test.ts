@@ -174,6 +174,50 @@ describe('the published surface', () => {
     )
   })
 
+  it('warns about surviving overrides on apply_preset, where a client meets them', async () => {
+    // The 4th dogfood read this behaviour off a live reply and called it
+    // silent. It was not — overriddenKinds and countedWeightFrom were both in
+    // the payload — but the SENTENCE explaining it lived on save_preset, which
+    // a client that only ever applies a preset never reads. ADR-0029's rule is
+    // that a surprise is announced where a client meets it, so both tools now
+    // carry it.
+    const { tools } = await client.listTools()
+    const apply = tools.find((tool) => tool.name === 'apply_preset')
+    const save = tools.find((tool) => tool.name === 'save_preset')
+    for (const description of [apply?.description, save?.description]) {
+      expect(description).toMatch(/override/i)
+      expect(description).toMatch(/unit part/i)
+    }
+    // And the reply's own fields are named, so the warning points somewhere.
+    expect(apply?.description).toMatch(/overriddenKinds/)
+  })
+
+  it('does not offer inspect_model a weight unit it cannot use', async () => {
+    // inspect_model reports geometry and weighs nothing, but took, resolved
+    // and echoed a weight unit — a parameter that appeared to do something on
+    // the one call you would use to sanity-check a weight (4th dogfood).
+    const { tools } = await client.listTools()
+    const inspect = tools.find((tool) => tool.name === 'inspect_model')
+    const units = (inspect?.inputSchema.properties as Record<string, { properties?: object }>)
+      .outputUnits
+    expect(Object.keys(units.properties ?? {})).toEqual(['length'])
+    expect(inspect?.description).toMatch(/nothing here is weighed/i)
+  })
+
+  it('still answers when a client sends the weight unit it used to accept', async () => {
+    // Narrowing an optional input must not turn old callers into failures: an
+    // unknown key is stripped, not refused. That is what keeps this a minor
+    // change under ADR-0020 rather than a break.
+    const result = await client.callTool({
+      name: 'inspect_model',
+      arguments: {
+        path: join(__dirname, '..', 'samples', 'cube-10x10.stp'),
+        outputUnits: { length: 'in', weight: 'lb' }
+      }
+    })
+    expect(result.isError ?? false).toBe(false)
+  })
+
   it('is absent entirely when the app has no database to offer', async () => {
     // The same rule the drive tier follows: a tool that shrugs is worse than
     // absence (ADR-0029). The headless entry has a bridge for nothing and no

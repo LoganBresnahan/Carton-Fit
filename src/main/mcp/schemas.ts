@@ -88,7 +88,20 @@ export const outputUnitsInput = z
 
 export const inspectInput = {
   path: z.string().describe('Absolute path to a STEP file (.step or .stp) on this machine.'),
-  outputUnits: outputUnitsInput
+  // LENGTH ONLY, and that is the whole of the 4th dogfood's finding here: this
+  // tool weighs nothing, so a `weight` it accepted, resolved and echoed was a
+  // parameter that appeared to do something on the one call you would use to
+  // sanity-check a weight. Narrowing an optional input is not a break — an
+  // unknown key is stripped, not refused — while REMOVING `units.weight` from
+  // the output would be, under ADR-0020's rule for output schemas, so the echo
+  // stays until a major and is documented there rather than quietly dropped.
+  outputUnits: z
+    .object({ length: lengthUnit.optional() })
+    .optional()
+    .describe(
+      'Units to answer lengths and volumes in; defaults to the app’s internal mm. There is ' +
+        'no weight to choose here — this tool reports geometry, not weights.'
+    )
 }
 
 const knownFalse = z.object({ known: z.literal(false), reason: z.string() })
@@ -345,7 +358,20 @@ export const estimateAvailability = z.union([
 /** What every mutating drive tool (and get_app_state) returns. */
 export const driveOutcomeOutput = {
   state: appStateObject,
-  estimate: estimateAvailability
+  estimate: estimateAvailability,
+  // Only a load fills this in. Optional and additive, so it is a minor under
+  // ADR-0020 and no other tool's reply changes shape.
+  cleared: z
+    .object({
+      unitPart: z.union([z.string(), z.null()]),
+      overriddenKinds: z.array(z.string())
+    })
+    .optional()
+    .describe(
+      'Only on load_model: the unit part and per-kind weight overrides this load threw ' +
+        'away, since kind names belong to the file that was open. An empty list and a null ' +
+        'unit part mean there was nothing to clear — not that clearing was skipped.'
+    )
 }
 
 export const loadModelInput = {

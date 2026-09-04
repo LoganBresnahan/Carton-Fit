@@ -4,7 +4,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { readModel } from '../occt/ingest'
 import type { OcctWasmContext } from '../occt/wasmPath'
-import type { DriveBridge, DriveOutcome, EstimateAvailability } from '../../shared/mcpDrive'
+import type {
+  ClearedByLoad,
+  DriveBridge,
+  DriveOutcome,
+  EstimateAvailability
+} from '../../shared/mcpDrive'
 import { presetsReport, savedEstimatesReport, type ToolStorage } from './data'
 import { estimateParts, EstimateInputError, type EstimateInput } from './estimate'
 import type { SetInputsRequest } from './inputs'
@@ -129,7 +134,8 @@ export function createCartonFitServer(options: ServerOptions): McpServer {
         'Read a STEP file and report its geometry, grouped by part kind: how many of each, ' +
         'bounding box, enclosed volume, and whether each mesh is closed. Call this before ' +
         'estimating with a density — an open mesh makes a density-derived weight wrong ' +
-        'rather than approximate.',
+        'rather than approximate. Nothing here is weighed, so the only unit to choose is ' +
+        'length; weights need a density or an override, which is what estimate takes.',
       inputSchema: wire(inspectInput),
       outputSchema: wire(inspectOutput)
     },
@@ -196,7 +202,9 @@ export function createCartonFitServer(options: ServerOptions): McpServer {
 function stamped(
   outcome: DriveOutcome,
   version: string
-): { state: object; estimate: EstimateAvailability } {
+): { state: object; estimate: EstimateAvailability; cleared?: ClearedByLoad } {
+  // Spread first: `cleared` rides through on a load and is absent everywhere
+  // else, which is what its optionality on the wire means.
   return { ...outcome, state: { ...outcome.state, version } }
 }
 
@@ -453,6 +461,11 @@ function registerDataTools(
         'Load a saved preset into the running app’s inputs. Merged over the current inputs, ' +
         'so a preset written by an older build cannot blank out a field it never knew about. ' +
         'One call = one Ctrl+Z step. ' +
+        'A preset carries carton, clearances, cap, mode, tier and units — NOT the unit part ' +
+        'or per-kind weight overrides, which belong to the loaded file. Whatever the session ' +
+        'already carries stays in force, so a preset saved beside one answer can come back ' +
+        'beside a different one: read overriddenKinds and countedWeightFrom in the reply ' +
+        'before trusting the count. ' +
         SETTLED,
       inputSchema: wire(applyPresetInput),
       outputSchema: wire(driveOutcomeOutput)

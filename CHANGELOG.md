@@ -12,6 +12,19 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **Loading a model now tells an assistant what it threw away.** Opening a new
+  file clears the unit part and any per-kind weights you typed — kind names
+  belong to the file that was open — and the app said so only in passing. The
+  reply now names both, so an assistant reports "your plate weight went with
+  the old file" instead of quietly counting something else.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+- **Applying a preset warns about the weights it leaves in place.** A preset
+  carries the carton, not the file's per-kind weights, so applying one can
+  land a saved carton next to weights from a different session. The warning
+  existed on saving; it is now on applying too, where you meet it.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 - **An assistant can now say how many fit on space alone, whatever the weight
   cap.** Ask how many fit under a generous cap and the answer used to include
   "not asked" where the space-only count belongs — so the reply said *less*

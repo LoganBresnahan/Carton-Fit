@@ -990,10 +990,13 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         overrides and leaves the unit part where the restore put it. Pre-existing
         — the picker was never on the stack — and the right time is when the
         picker joins it.
-      - [ ] **`load_model`'s reply announces what it cleared.** The description
-        says so (amendment 3) and `request.unitPart` makes it visible
-        (amendment 5); the outcome itself still says nothing. Both readers
-        asked for the reply to carry it.
+      - [x] **`load_model`'s reply announces what it cleared** — **shipped
+        2026-09-04, ADR-0029 amendment 6.** `DriveOutcome.cleared` names the
+        unit part and the overridden kinds, read from the store before the
+        import (the import is what clears them), present on a load and absent
+        elsewhere, and present even when nothing was in force. Additive, so a
+        minor. Pinned by `e2e/mcp-drive.spec.ts` — the only layer that has a
+        store and a window — and mutation-tested there.
       - [ ] **Two `otherConstraint` branches have no test** (from the
         2026-09-03 `/shipshape`; three when it was written): fit-check
         weight-bound, the mixed-set `known: false` at `verdict.ts:242`, and no
@@ -1004,9 +1007,14 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         comfortable fit and exercises that branch to do it. Counted again
         2026-09-04, because a follow-up list that overstates what is missing is
         the same defect as one that understates it.
-      - [ ] **`inspect_model` accepts and echoes a weight unit it never uses.**
-        Drop the parameter or use it — a parameter that appears to do
-        something on the one tool you would sanity-check a weight with.
+      - [x] **`inspect_model` accepts and echoes a weight unit it never uses**
+        — **half shipped 2026-09-04, and the half is the decision.** The INPUT
+        is length-only now: narrowing an optional input is not a break (an
+        unknown key is stripped, and a test pins that an old caller still gets
+        its answer). The echoed `units.weight` in the OUTPUT stays, because
+        removing a field from an output schema is a major under ADR-0020 §4 and
+        a vacuous unit is not worth a major on its own — it rides with the next
+        one. ADR-0029 amendment 6 carries the note so the next major finds it.
       - [x] **`spaceOnlyCount` is withheld when the cap did not bind** (4th
         run) — **shipped 2026-09-04, ADR-0033 addendum 2.** A geometry-bound
         count is its own cap-free count, so the field now states it instead of
@@ -1024,12 +1032,13 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         `geometryBound` nor `spaceOnlyCount` reaches the summary or the CSV.
         The CSV is the artifact most likely to be pasted into a quote, which is
         the argument ADR-0017's addendum already made once.
-      - [ ] **`apply_preset` does not repeat `save_preset`'s warning** (4th
-        run). Overrides and the unit part are file-scoped and never in a preset
-        (`store.ts:143`) — said plainly in `save_preset`'s description
-        (`server.ts:429`), which a client that only applies presets never
-        reads. The payload is already honest (`overriddenKinds`,
-        `countedWeightFrom`); it is the description that is in the wrong place.
+      - [x] **`apply_preset` does not repeat `save_preset`'s warning** (4th
+        run) — **shipped 2026-09-04, ADR-0029 amendment 6.** The payload was
+        always honest; the sentence explaining it lived on the tool the reader
+        had not called. `apply_preset` now carries it and names
+        `overriddenKinds` and `countedWeightFrom` as the fields to read. The
+        rule restated: a surprise is announced where a client MEETS it, not
+        only where it is created.
       - [ ] **`/dogfood` split** (offered 2026-09-03, undecided): handoff lives
         only in `/deploy`, `/dogfood` processes reports. One less thing to
         remember which direction it is in.

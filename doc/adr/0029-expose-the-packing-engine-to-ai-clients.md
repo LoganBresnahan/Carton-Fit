@@ -955,6 +955,54 @@ rigorous tightening: restrict the per-axis bound to orientations that can fit
 the window at all. Recorded as a proposed amendment to ADR-0022, where the
 proof obligations live.
 
+### Phase-2 contract amendment 6 (2026-09-04) — three places a rule was written down but not answered
+
+The fourth dogfood ran in one client (the second's account ran out of credits
+mid-pass) and found no wrong number. What it found was three places where the
+surface states a rule and then leaves the individual call to imply it — the
+same shape as amendment 3's findings, one layer further in.
+
+1. **`load_model`'s reply names what it cleared.** The clearing is deliberate
+   and file-scoped: kind names belong to the file that was open, so a load
+   drops the unit part and the per-kind overrides. Its description has said so
+   since amendment 3. But the OUTCOME said nothing, and a client had to infer
+   what happened from what was missing in the state that followed — which is
+   precisely the inference amendment 3 was written to stop clients making.
+   `DriveOutcome.cleared` now names both, read from the store BEFORE the
+   import, since the import is what clears them. Present on a load and absent
+   everywhere else; present even when nothing was in force, because "nothing
+   was in force" answers the same question. Additive and optional, so a minor
+   under ADR-0020. Two readers asked for this by name in two separate runs.
+
+2. **`apply_preset` repeats the warning that lived on `save_preset`.** A preset
+   carries the carton and not the file's overrides or unit part, so applying
+   one leaves whatever the session already had — designed, and stated plainly
+   in `save_preset`'s description. The reader that met it had applied a preset,
+   and reported the behaviour as silent. It was not: `overriddenKinds` and
+   `countedWeightFrom` were both in the very reply the finding was derived
+   from, which is *how* it was derived. But the sentence explaining why lived
+   on the tool it had not called. **A surprise must be announced where a client
+   meets it, not only where it is created** — which is this ADR's own rule,
+   applied one tool over. `apply_preset`'s description now carries it and names
+   the two fields to read.
+
+3. **`inspect_model` stops accepting a weight unit it cannot use.** It reports
+   geometry and weighs nothing, yet took a `weight` in `outputUnits`, resolved
+   it and echoed it — on the one call a reader would use to sanity-check a
+   weight. The input is now length-only. Narrowing an OPTIONAL input is not a
+   break under ADR-0020: an unknown key is stripped rather than refused, so a
+   client sending the old shape still gets its answer, and a test pins that.
+   The echoed `units.weight` in the OUTPUT stays: removing a field from an
+   output schema *is* a break under ADR-0020 §4, and a vacuous unit in a
+   reply is not worth a major on its own. It goes with the next one, and this
+   paragraph is the note that says so.
+
+The distinction worth keeping from this pass: a defect in a description is not
+a defect in a payload, and the fix for each is different. Two of these three
+had honest payloads and misplaced prose. Adopting the reader's proposed fix for
+(2) — "report the overrides it leaves behind" — would have added a field that
+already existed.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

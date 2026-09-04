@@ -36,7 +36,11 @@ import {
  * proves it through the real debounce, worker, store and bridge.
  */
 
-type Outcome = { state: AppStateReport; estimate: DriveOutcome['estimate'] }
+type Outcome = {
+  state: AppStateReport
+  estimate: DriveOutcome['estimate']
+  cleared?: DriveOutcome['cleared']
+}
 
 function reportOf(outcome: Outcome): EstimateReport {
   expect(outcome.estimate.available, 'expected an estimate in the drive reply').toBe(true)
@@ -210,6 +214,41 @@ test('set_part_weight drives the ADR-0018 overrides, and refuses unknown kinds h
     expect(report.outcome).toMatchObject({ count: capped.count })
     expect(report.binding.constraint).toBe('weight')
     expect(report.qualifications.weightInput).toMatchObject({ overriddenKinds: ['cube-10x10'] })
+  } finally {
+    await client.close()
+    await stopSpawnedApp(shim.profile)
+  }
+})
+
+test('load_model’s reply names the unit part and overrides it cleared', async () => {
+  test.setTimeout(120_000)
+  const shim = shimLaunch()
+  const client = await connect(shim, nodeModeEnv())
+  try {
+    // A load into a fresh app clears nothing, and says so — "nothing was in
+    // force" is the answer to the same question, not a reason to stay silent.
+    const first = await loadCube(client)
+    expect(first.cleared).toEqual({ unitPart: null, overriddenKinds: [] })
+
+    // Now put both things in force, the way a session does.
+    await callStructured<Outcome>(client, 'set_inputs', { unitPart: 'cube-10x10' })
+    await callStructured<Outcome>(client, 'set_part_weight', {
+      kind: 'cube-10x10',
+      weight: { value: 2, unit: 'g' }
+    })
+
+    // The second load throws both away. It always did — the description has
+    // said so since the third dogfood — but the REPLY said nothing, and a
+    // client had to notice an absence to learn what happened (ADR-0029
+    // amendment 6). Two readers asked for this by name.
+    const second = await loadCube(client)
+    expect(second.cleared).toEqual({
+      unitPart: 'cube-10x10',
+      overriddenKinds: ['cube-10x10']
+    })
+    // And the state that follows agrees with the receipt.
+    expect(second.state.inputs.unitPart).toBeNull()
+    expect(second.state.inputs.overrides).toEqual([])
   } finally {
     await client.close()
     await stopSpawnedApp(shim.profile)
