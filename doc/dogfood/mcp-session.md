@@ -14,34 +14,51 @@ that has been told the answer will find the answer. The hand-computed values liv
 in `samples/goldens.ts` on the maintainer's side and come out only when the
 report comes back.
 
-### Before you paste — connect the client, and watch while you do
+### Before you paste — five things only you can answer
 
-Connecting happens before the session starts, so the brief cannot ask about it
-and the reader inside the session cannot see it. These are yours, and most are
-**one-time**: answer them on the first real machine that connects a client and
-they are closed for good (ADR-0030's remaining open details are exactly these).
+**This section is for the person at the keyboard, not for the assistant.**
+Everything below the line is what gets pasted; this part never reaches it,
+because connecting happens before the session starts and the reader inside the
+session cannot see any of it. No CI runner has either client either, so the
+fake CLI in `e2e/` proves only our half of a contract we wrote ourselves.
 
-- **Claude Desktop** — Connect, restart it, confirm the Carton Fit tools are
-  listed. A Store (MSIX) install keeps its config somewhere else entirely; that
-  it spawns the shim at all was answered on 2026-09-02.
-- **ChatGPT (Codex)** — Connect, then restart the DESKTOP APP, not the CLI.
-  `codex mcp list` will show the entry while ChatGPT still does not, which is
-  the confusing case the panel's restart line exists for.
-- **What `codex mcp add` wrote into your real `~/.codex`** (open detail 2). In
-  a throwaway home it *declined* to create PATH aliases and helper binaries; in
-  a real one it presumably makes them. It is a write nobody asked for, so say
-  what appeared.
-- **Whether the panel ever settles from `outdated` to `connected`.** If the real
-  CLI rewrites our arguments or environment, Reconnect looks like a button that
-  never finishes the job.
-- **Which `codex.exe` answered** (open detail 3), if you have more than one
-  under `%LOCALAPPDATA%\OpenAI\Codex\bin`. Discovery takes the newest by
-  modification time, which is a heuristic: if the desktop app disagrees, `codex
-  mcp get` reports the entry exists while ChatGPT never sees it — the one
-  failure this design cannot detect from inside.
+**Where the answers go: paste them into Claude Code in the same message as the
+assistant's report.** A line each is plenty. Most are **one-time** — answered
+once on a real machine, they close for good (they are ADR-0030's remaining
+open details).
 
-None of this is machine-checkable. No CI runner has either client, so the fake
-CLI in `e2e/` proves only our half of a contract we wrote down ourselves.
+1. **Claude Desktop** — after Connect and a restart, are the Carton Fit tools
+   listed? (yes / no)
+2. **ChatGPT (Codex)** — same, and the restart is of the DESKTOP APP, not the
+   CLI. `codex mcp list` shows the entry while ChatGPT still does not, which is
+   the confusing case the panel's restart line exists for. (yes / no)
+3. **Does the connect panel end up saying `connected`, or does it stay
+   `outdated` however many times you press Reconnect?** One word. If the real
+   CLI rewrites our arguments or environment, Reconnect becomes a button that
+   never finishes the job, and this is the only way that shows.
+4. **What `codex mcp add` put in your real `~/.codex`.** In a throwaway home it
+   *declined* to create PATH aliases and helper binaries; in a real one it
+   presumably makes them, and that is a write nobody asked for. In PowerShell:
+
+   ```powershell
+   Get-ChildItem -Force $HOME\.codex | Select-Object Name,Length,LastWriteTime
+   ```
+
+   Paste the output. Anything stamped around when you first connected is what
+   the CLI created.
+
+5. **Which `codex.exe` is there** — we pick the newest by modification time,
+   which is a heuristic, and if the desktop app disagrees then `codex mcp get`
+   reports the entry exists while ChatGPT never sees it. In PowerShell:
+
+   ```powershell
+   Get-ChildItem $env:LOCALAPPDATA\OpenAI\Codex\bin | Select-Object Name,LastWriteTime
+   ```
+
+   Paste the output. One directory means there is nothing to disagree about.
+
+Skip any of these that a previous pass already answered — say "already
+answered" rather than redoing them.
 
 Bring the report back to the repo and run `/dogfood` with it.
 
