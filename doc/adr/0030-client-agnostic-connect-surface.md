@@ -464,6 +464,14 @@ ways, and the split is stated because it is a real limitation:
 
 ## Revisit triggers
 
+- **A user reports a Codex connect timeout.** The cold-boot detail closed on a
+  measurement, not on a guarantee: 477–636 ms on `windows-latest` against a
+  10-second budget, plus the assumption that a real disk is slower than a
+  hosted runner's but not sixteen times slower. That assumption is the part
+  that can be wrong, and only a dogfooder can find it. If it is, the options
+  are the ones the detail already ranked — a newer CLI with the flag first, a
+  single documented exception to rule 3 second, taken with a parser and an
+  ADR-0011 notices row.
 - The two `Codex\bin` directories ever hold DIFFERENT versions, rather than two
   artifacts of one install four seconds apart: newest-by-mtime then starts
   deciding something, and the four-second margin observed on 2026-09-04 says it

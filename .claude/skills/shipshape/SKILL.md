@@ -160,20 +160,32 @@ grep -rn "occt-import-js" src
 # worse than not offering it. So what fails this check is a NEW `locateFile`
 # pointing anywhere else, or a main-process import of `occt-import-js/dist/*`
 # (packaging deletes that copy — see the ADR-0029 phase-1 addendum).
-grep -rn "^import \{" src/renderer/src --include='*.ts' --include='*.tsx' \
+# NOTE the unescaped brace. `^import \{` is what this said until 2026-09-04, and
+# it is invalid BRE — an unmatched interval open. GNU grep tolerates it; ugrep,
+# which `grep` resolves to on this dev box, exits with "Unmatched \{" and the
+# gate silently checks nothing. A convention check that errors instead of
+# counting is worse than no check, because the report says the gate ran.
+grep -rn "^import {" src/renderer/src --include='*.ts' --include='*.tsx' \
   | grep "from '.*core/packing" | grep -v "^src/renderer/src/core/"
 # Renderer only. `src/main/` is NOT scanned by this one and must not be added to
 # it: the MCP tools (ADR-0029) call `pack()` directly from the main process,
 # which is correct — there is no UI thread there to block, and the alternative is
 # a second engine. The rule that binds main is the one-shipped-wasm rule above.
-# expect exactly three, and the second filter is why: `core/packing` also matches
+# expect exactly FOUR, and the second filter is why: `core/packing` also matches
 # the FILENAME of every engine file importing its own siblings, which buries the
-# three lines that matter under ~25 lines of core-internal noise.
+# four lines that matter under ~25 lines of core-internal noise.
 #   workers/pack.worker.ts    — the engine itself, on the worker side
 #   components/ModeTierSelectors, export/format.ts — MODES/TIERS, domain
 #     constants from the contract, not engine code. The exporter needs the same
 #     mode and tier names the selectors show (ADR-0017), which is the contract
 #     doing its job rather than a leak.
+#   viewport/sceneFromPlacements.ts — `isFusedUnit` from core/packing/unit.ts.
+#     Added 2026-09-04 (f3c3552) and legitimate for the reason the rule is
+#     about: the module it comes from imports nothing but `type PackPart`, so
+#     there is no engine graph behind it, and the function is a two-line NAME
+#     predicate — it decides whether a placement is the fused multi-part unit,
+#     which is labelling, not packing. Said this was three until the same day,
+#     while the broken pattern above meant nobody was counting.
 #
 # Match on VALUE imports: `import type` is erased at build, so type-only
 # references to the contract from the store, the pack pipeline, the viewport and

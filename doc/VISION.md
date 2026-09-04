@@ -75,10 +75,17 @@ product decisions:
   measurements, never as a conclusion: a verdict of "doesn't fit" remains a best
   effort, not a proof.
 - **How many could possibly fit**, beside how many were placed (ADR-0022): max
-  quantity shows a rigorous upper bound — the one packing figure in the product
-  that is not a heuristic, since no arrangement can exceed it. The gap between
-  count and bound is the honest measure of what a better arrangement could still
-  recover; equal numbers mean the answer is provably the most that fits.
+  quantity shows a rigorous upper bound — not a heuristic, since no arrangement
+  can exceed it. The gap between count and bound is the honest measure of what a
+  better arrangement could still recover; equal numbers mean the answer is
+  provably the most that fits **under the limits as given** — the weight cap
+  among them, so a tie can mean the cap stopped it rather than the carton.
+  Which one did is a separate figure reported beside it, and *that* is the
+  number a roomy carton is told from a full one by (ADR-0033). (This line read
+  "the one packing figure that is not a heuristic… provably the most that fits"
+  until 2026-09-04. Both halves went stale together: there are three such
+  figures now, and the unqualified promise is the exact reading two dogfood
+  clients drew opposite conclusions from.)
 - 3D view: the carton as a **wireframe** with parts placed in their computed
   positions and orientations; toggle between model view and packed view.
   (Translucent walls were specified here originally and tried in 2026-07;

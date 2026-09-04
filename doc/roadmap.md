@@ -546,7 +546,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       of it — so the second gate below (dogfood evidence) no longer decides
       *whether*, only *what the goldens must contain*. The first gate stands:
       the five open details need resolving and the ADR needs its flip before
-      `adr-plan`. Order: item 22 → item 23 → this. ADR-0031's stage seam must
+      `adr-plan`. Order: item 22 (shipped) → item 23 → this, with items 26/27
+      inserted ahead of all of it on 2026-09-04 — a sidebar decision, no
+      dependency either way. ADR-0031's stage seam must
       leave room for tier 3 as a stage-1 strategy that never touches stage 2.
       **This was the frontier, gated twice:**
       - the ADR is Proposed, not Accepted — its five **open details** (voxel
