@@ -370,9 +370,39 @@ describe('every answer arrives qualified', () => {
       evidence: 'arithmetic'
     })
     expect(report.binding.note).toMatch(/not the weight cap/)
-    // The question of lifting the cap never arose, and the reply says why.
+    // No rerun happened here — and the field still answers, because this run
+    // IS the cap-free run (ADR-0033 addendum 2). It used to say "not asked",
+    // which is what a 4th-dogfood reader hit at exactly the cap where the
+    // carton is the only thing that matters.
     if (report.outcome.mode !== 'max-quantity') throw new Error('mode')
-    expect(report.outcome.spaceOnlyCount).toMatchObject({ known: false })
+    expect(report.outcome.spaceOnlyCount).toEqual({ known: true, count: 8 })
+  })
+
+  it('gives the same space-only count at a binding cap and a slack one', async () => {
+    // The finding's own shape, on the wire: same carton, same part, two caps.
+    // A reader comparing the two replies must not find the carton described in
+    // more detail by the run where the carton was NOT the limit.
+    const slack = await estimate({
+      mode: 'max-quantity',
+      carton: carton(25),
+      weight: { partWeight: { value: 1, unit: 'g' } },
+      maxWeight: { value: 1000, unit: 'g' }
+    })
+    const binding = await estimate({
+      mode: 'max-quantity',
+      carton: carton(25),
+      weight: { partWeight: { value: 1, unit: 'g' } },
+      maxWeight: { value: 3, unit: 'g' }
+    })
+    if (slack.outcome.mode !== 'max-quantity') throw new Error('mode')
+    if (binding.outcome.mode !== 'max-quantity') throw new Error('mode')
+    expect(slack.binding.constraint).toBe('geometry')
+    expect(binding.binding.constraint).toBe('weight')
+    expect(binding.outcome.count).toBe(3)
+    // Different counts, different binding constraints, ONE carton — so one
+    // space-only count, stated both times.
+    expect(slack.outcome.spaceOnlyCount).toEqual({ known: true, count: 8 })
+    expect(binding.outcome.spaceOnlyCount).toEqual({ known: true, count: 8 })
   })
 
   it('a non-fit that is also over the cap says both, not just the carton', async () => {

@@ -12,6 +12,15 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **An assistant can now say how many fit on space alone, whatever the weight
+  cap.** Ask how many fit under a generous cap and the answer used to include
+  "not asked" where the space-only count belongs — so the reply said *less*
+  about the carton in the case where the carton was the only limit. It now
+  states that count either way, which is what it always was: when the cap
+  isn't what stopped you, the number in front of you is already the
+  carton's own. On-screen wording is unchanged.
+  ([ADR-0033](doc/adr/0033-prove-the-carton-has-room.md))
+
 - **ChatGPT (Codex) now actually gets Carton Fit's tools.** Connecting worked
   and the server showed up in ChatGPT's list, but no tools appeared: ChatGPT
   starts a connected app with only the settings its own entry names, and ours

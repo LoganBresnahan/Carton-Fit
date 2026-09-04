@@ -143,10 +143,12 @@ export type EstimateOutcome =
        *  fits another copy; a value above it proves nothing, because a bound is
        *  allowed to be loose — this one is, routinely, by more than one. */
       geometryBound: Known<{ count: number }>
-      /** The same search with the cap lifted (ADR-0033). Above `count` it is
-       *  an arrangement we hold — room, proven constructively. Equal to it,
-       *  the search found no more: evidence, not proof. Absent, with the
-       *  reason, when the question did not arise. */
+      /** How many the CARTON ALONE takes (ADR-0033). Above `count` it is an
+       *  arrangement we hold — room, proven constructively. Equal to it, and
+       *  the count was weight-bound: the search found no more, which is
+       *  evidence, not proof. Equal to it on a geometry-bound count: that is
+       *  the run itself, since a cap that did not bind hid nothing. Absent in
+       *  one case only, with the reason. */
       spaceOnlyCount: Known<{ count: number }>
       /** Whether the placements behind the count were all materialized. */
       layout: { complete: true } | { complete: false; shown: number; counted: number; note: string }
@@ -323,12 +325,17 @@ function outcomeOf(
         ? { known: true, count: result.spaceOnlyCount }
         : {
             known: false,
+            // One case left, and it is the one where a STRONGER field already
+            // answers: a weight-bound count whose geometry bound meets it.
+            // `geometryBound === count` proves the carton full over every
+            // arrangement, which is more than any rerun could return, so the
+            // rerun is skipped and this says which field to read instead. The
+            // old third branch ("not asked — the carton, not the cap, stopped
+            // this count") is gone with the gap it described.
             reason:
-              result.binding !== 'weight'
-                ? 'not asked — the carton, not the cap, stopped this count'
-                : result.geometryBound !== undefined && result.geometryBound <= result.count
-                  ? 'not needed — the geometry bound already proves the carton is full'
-                  : 'no finite cap to lift'
+              result.geometryBound !== undefined && result.geometryBound <= result.count
+                ? 'not needed — the geometry bound already proves the carton is full'
+                : 'no finite cap to lift'
           },
     layout:
       truncated === null

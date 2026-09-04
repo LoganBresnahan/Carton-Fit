@@ -399,6 +399,19 @@ function maxQuantity(request: PackRequest, provider: OrientationProvider): MaxQu
     // discipline as the bounds above: the wording layer reads EQUALITY here as
     // "the carton stops it too", and a dip below the count would say so falsely.
     result.spaceOnlyCount = Math.max(uncapped.count, winner.count)
+  } else if (winner.binding !== 'weight') {
+    // THE CAP DID NOT BIND, SO THIS RUN IS ALREADY THE CAP-FREE ONE (ADR-0033
+    // addendum 2, 4th dogfood). A capped count is min(geometry, weight); when
+    // geometry is what stopped it, the cap allowed at least as many, so lifting
+    // it cannot place fewer and cannot place more than the geometry that just
+    // stopped it. The answer is the count in hand — no second pack, and no
+    // question about which of the two searches produced it.
+    //
+    // It reads as a no-op and is not: the field was absent here, so a reader
+    // asking "how many does the carton alone take?" got "not asked" at exactly
+    // the cap where the carton is the only thing that matters. That is this
+    // ADR's own opening sentence pointed the other way.
+    result.spaceOnlyCount = winner.count
   }
   return result
 }

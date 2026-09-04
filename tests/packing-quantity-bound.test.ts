@@ -330,17 +330,53 @@ describe('pack — upperBound field', () => {
     expect(r.spaceOnlyCount).toBe(1000)
   })
 
-  it('does not rerun when the bound already settled it, or when space bound the count', () => {
+  it('does not rerun when the bound already settled it — the stronger field answers', () => {
     // Tie: 8 by geometry, 8 by weight — the rigorous bound proves it, no search.
+    // This is the ONE case the field is absent, and it is absent because
+    // `geometryBound === count` is a proof over every arrangement, which is
+    // more than a rerun could ever return.
     const tie = pack(req([cubePart('u', [10, 10, 10], 1000)], [25, 25, 25], 8000))
     if (tie.mode !== 'max-quantity') throw new Error('mode')
     expect(tie.geometryBound).toBe(8)
     expect('spaceOnlyCount' in tie).toBe(false)
-    // Geometry-bound: the cap was never the limit, so lifting it is no question.
-    const roomy = pack(req([cubePart('u', [10, 10, 10], 1)], [25, 25, 25], 1_000_000))
-    if (roomy.mode !== 'max-quantity') throw new Error('mode')
-    expect(roomy.binding).toBe('geometry')
-    expect('spaceOnlyCount' in roomy).toBe(false)
+  })
+
+  // ADR-0033 addendum 2 (4th dogfood): the same carton at two caps, side by
+  // side, which is the shape the finding arrived in — a reader got a known 3
+  // at 35 lb and "not asked" at 100 lb for geometry that had not changed.
+  it('states the space-only count at BOTH caps — the same carton cannot know less', () => {
+    const part = cubePart('u', [10, 10, 10], 1000) // 1 kg per 10-cube
+    const carton: [number, number, number] = [25, 25, 25] // 2 per axis = 8 by space
+
+    // Cap binds at 3: the rerun runs and reports what the carton alone takes.
+    const capped = pack(req([part], carton, 3000))
+    if (capped.mode !== 'max-quantity') throw new Error('mode')
+    expect(capped.binding).toBe('weight')
+    expect(capped.count).toBe(3)
+    expect(capped.spaceOnlyCount).toBe(8)
+
+    // Cap way off: geometry stops it, so THIS run is already the cap-free one.
+    // No rerun, same answer, and the field says it rather than declining to.
+    const uncapped = pack(req([part], carton, 1_000_000))
+    if (uncapped.mode !== 'max-quantity') throw new Error('mode')
+    expect(uncapped.binding).toBe('geometry')
+    expect(uncapped.count).toBe(8)
+    expect(uncapped.spaceOnlyCount).toBe(8)
+
+    // The invariant that makes both lines true at once: whatever the cap, the
+    // carton alone takes the same number.
+    expect(capped.spaceOnlyCount).toBe(uncapped.spaceOnlyCount)
+  })
+
+  it('never reports a space-only count below the count it accompanies', () => {
+    // The clamp is float insurance on the weight-bound path; on the new path it
+    // is identity. Both must hold, since the wording layer reads equality as
+    // "the carton stops it here too" and a dip would say that falsely.
+    for (const capG of [1000, 2000, 5000, 8000, 20_000, Infinity]) {
+      const r = pack(req([cubePart('u', [10, 10, 10], 1000)], [25, 25, 25], capG))
+      if (r.mode !== 'max-quantity') throw new Error('mode')
+      if (r.spaceOnlyCount !== undefined) expect(r.spaceOnlyCount).toBeGreaterThanOrEqual(r.count)
+    }
   })
 
   it('is absent exactly when no finite geometric bound exists', () => {

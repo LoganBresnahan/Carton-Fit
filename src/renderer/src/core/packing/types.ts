@@ -251,8 +251,14 @@ export interface MaxQuantityResult extends PackResultBase {
    *  count proves nothing, but an arrangement of more copies is a constructive
    *  proof that the carton has room — and equality is honest heuristic
    *  evidence that it does not, which is a weaker claim and must be worded as
-   *  one. Computed only where the question exists: a weight-bound count that
-   *  the geometry bound did not already settle. Always ≥ `count`. */
+   *  one. Always ≥ `count`.
+   *
+   *  Present whenever the answer is available, which is not the same as
+   *  "whenever a rerun ran" (addendum 2): a geometry-bound count IS its own
+   *  cap-free count, since the cap that did not bind cannot have hidden a
+   *  placement. Absent in exactly one case — a weight-bound count the geometry
+   *  bound already settled — where `geometryBound === count` is the stronger
+   *  field and says so. */
   spaceOnlyCount?: number
 }
 

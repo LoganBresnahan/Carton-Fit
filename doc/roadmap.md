@@ -1007,13 +1007,17 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       - [ ] **`inspect_model` accepts and echoes a weight unit it never uses.**
         Drop the parameter or use it — a parameter that appears to do
         something on the one tool you would sanity-check a weight with.
-      - [ ] **`spaceOnlyCount` is withheld when the cap did not bind** (4th
-        run). `pack.ts:395` runs the cap-lifted rerun only when weight bound,
-        so a geometry-bound answer reports `known: false, "not asked"` — at the
-        exact cap where space is the only thing that matters. When the cap did
-        not bind the count already IS the space-only count (removing a cap that
-        allowed more cannot place fewer), so this is free to state and is
-        currently declined. See ADR-0033 addendum 2.
+      - [x] **`spaceOnlyCount` is withheld when the cap did not bind** (4th
+        run) — **shipped 2026-09-04, ADR-0033 addendum 2.** A geometry-bound
+        count is its own cap-free count, so the field now states it instead of
+        answering "not asked" at the exact cap where the carton is the only
+        thing that matters. The rerun still runs only where it can change
+        something; what changed is that a rerun is no longer the only way the
+        field gets a value. `known: false` survives in one case, where
+        `geometryBound === count` is the stronger answer and the reason names
+        it. The `evidence` taxonomy is untouched on purpose — no sentence reads
+        the new value, so nothing had to invent a word for "the run itself".
+        Mutation-tested; both caps pinned side by side at the core and the wire.
       - [ ] **The exports carry neither bound** (4th run). `Upper bound` in the
         CSV is the cap-folded number, unlabelled as such — the same carton at a
         higher cap writes a different value into that row — and neither

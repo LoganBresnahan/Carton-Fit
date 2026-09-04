@@ -184,17 +184,34 @@ same argument the clamp on line 401 rests on. No second pack is needed; the
 field is `known: true, count` with the run itself as its evidence, and the
 `reason` string that exists today is answering a question nobody asked.
 
-**Proposed, not shipped** — it is a wire-contract change (a `Known` flipping
-from false to true in a case clients may have learned to read as "geometry
-bound, no rerun"), so it goes through ADR-0029's amendment path with a test
-that pins both caps side by side rather than riding in as a fix. Pinned as an
-item 24 follow-up.
+**Shipped 2026-09-04**, the same day it was found. The gate keeps its
+optimisation and loses its silence: the rerun still runs only where a rerun can
+change something, and the geometry-bound branch now sets `spaceOnlyCount` to
+the count in hand. One `else if`, no second pack, no new field.
 
-Two notes for whoever takes it. The `evidence` label must not become `search`
-here — nothing was searched a second time; if the taxonomy has no word for
-"the run itself", that gap is part of the work. And the honest reading of the
-gate is that it was never wrong, only incomplete: it asked "is a rerun needed
-to answer this?" when the question was "is the answer available?".
+The gate was never wrong, only incomplete — it asked *is a rerun needed to
+answer this?* when the question was *is the answer available?*
+
+**What did NOT change, deliberately.** The `evidence` taxonomy is untouched.
+`otherConstraint` consults `spaceOnlyCount` only on a weight-bound count, so a
+geometry-bound run's new value reaches no sentence — and that is the point:
+nothing was searched a second time here, so nothing may be labelled `search`.
+Had the field fed the wording layer, "the run itself" would have needed a word
+the taxonomy does not have, and that would have been a larger decision than
+this one.
+
+**One case still answers `known: false`**, and it is the case where a stronger
+field already answers: a weight-bound count whose `geometryBound` meets it.
+That equality proves the carton full over *every* arrangement, which is more
+than any rerun could return, so the reason now names the field to read instead
+of describing a rerun that did not happen. The rule the field follows is
+therefore "present whenever the answer is available", not "present whenever a
+rerun ran" — which is what a reader was entitled to assume all along.
+
+Pinned by `tests/packing-quantity-bound.test.ts` (both caps side by side, plus
+a sweep asserting `spaceOnlyCount >= count` at six caps) and
+`tests/mcp-qualifications.test.ts` on the wire. Mutation-tested: disabling the
+new branch fails three specs, two of them at the wire.
 
 ## Revisit triggers
 
