@@ -1256,6 +1256,77 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       Closed with ADR-0030 open detail 1 in item 22, not here: the cold-boot
       numbers (555 ms `windows-latest`, 757 ms Linux CI) that decide it.
 
+- [ ] 28. Dogfood follow-ups, 7th run — the 2026-09-04 Claude (Cowork) pass
+      against `1.2.0+b0b4c4f`, the build staged an hour after the 6th run's
+      fixes. **The three fixes held**: the reader derived station 4 by hand and
+      the app matched to four decimals on both paths, character for character;
+      the exports carried their qualifications; the co-binding tie reported as
+      a tie. What the reader found is the same defect class *one surface over*.
+      - [ ] **The saved-estimate receipt flattens its binding — and drops it
+        entirely on a geometry-bound row** (worst). `summary.ts:76` reads
+        `if (binding === 'weight' || binding === 'space')`, and
+        `BindingConstraint` is `'geometry' | 'weight'` — **`'space'` is the
+        DISPLAY word** (`verdict.ts:204` maps geometry→space), never a stored
+        value. So the comparison is dead on one side: a weight-bound receipt
+        says "weight-limited" while dropping `otherConstraint.atLimit` (the
+        reader's finding), and a **geometry-bound receipt says nothing about
+        its limit at all** (the half no reader could see, because every
+        station-4 save is weight-bound). Confirmed against the user's own
+        sidebar screenshot from the same day: rows read "3 fit · 11×6×10 in"
+        beside "2 fit · 11×6×10 in · weight-limited" — the bare ones are the
+        geometry rows, silently unlabelled. **Every one of the six assertions
+        in `tests/estimate-summary.test.ts` uses a weight-bound row**, which is
+        exactly why a dead branch survived in a file with tests. One function,
+        two surfaces: the panel and `list_saved_estimates` both render it
+        (`data.ts:69`). The reader's judgement of the cost is the one to keep —
+        pull that row into a quote, and "weight-limited" invites "so a lighter
+        alloy buys more per carton", which buys nothing: a 4th plate needs
+        3.90 in on an axis with 3.5 in usable, and the field proving it
+        (`geometryBound === count`) was thrown away one layer earlier.
+      - [ ] **`estimate` never repeats `inspect_model`'s mixed-instance
+        qualification.** `EstimateQualifications` has exactly four keys —
+        heuristic, weightInput, clearances, openMesh — and `instancesAlike`
+        lives only in `inspect.ts`. But the pack uses each instance's OWN
+        positions, so for a kind with `instancesAlike: false` the answer
+        depends on per-instance boxes that no field in the estimate reply
+        describes. The reader's example: the nut's reported box is
+        0.118 × 0.591 × 0.787 in — a hex nut is not 6.7× longer on one axis
+        than another, so that is one arbitrarily-rotated instance, and the
+        other seven differ. At 1.4% fill it cost nothing; where nuts bind it
+        moves the answer in either direction with nothing on screen. This is
+        **ADR-0029 amendment 6's own rule pointed at a new pair of tools**: a
+        surprise is announced where a client MEETS it, not only where it is
+        created. The stateless `estimate` takes a path, not an inspect result,
+        so for many callers it is the only tool they run.
+      - [ ] **`list_presets` gives no hint at the point of choice.**
+        `presetsOutput` is `{ name, savedAt }`. Applying a preset saved beside
+        an answer of 3 returned 0, because a 40 lb/plate override from a
+        restored row survived the apply. Not a correctness defect — it is
+        documented on both `save_preset` and (since the 6th run's fix)
+        `apply_preset`, and `overriddenKinds`/`countedWeightFrom` make it
+        structurally visible. What is new is WHERE: the warning lives on the
+        tool you call second, and the list is where you decide. The app knows
+        its live overrides, so the list can say "3 kinds currently overridden;
+        applying a preset will not clear them" — cheap, and it puts the
+        sentence at the moment of the choice.
+      - [ ] **`inputs.weight.source` deserves a `.describe()`, on the third
+        sighting.** Reports 5, 6 and 7 have each read `source: "density"`
+        beside an active override as a claim about provenance. It is not — it
+        is the MODE, and `countedWeightFrom` carries provenance in the same
+        reply (`get_app_state` returns a `driveOutcome`, so it is there too).
+        My refutation was correct twice and is the wrong response a third
+        time: **three independent readers misreading one field is evidence
+        about the name, not about the readers.** Renaming is a major under
+        ADR-0020 §3; a `.describe()` saying "the mode, not the provenance —
+        see countedWeightFrom" is additive and free.
+      Not a defect, recorded: `packedWeight: 0` with no weight supplied is a
+      value rather than a null, and `weightInput` says "every part weighs
+      nothing" in as many words — disclosed, not hidden.
+      **Inherited state reported for the THIRD time** (station 0: the whole
+      station-4 spec present before the reader set anything). Not pinned here —
+      it is item 26's job, and the third sighting is the argument for item 26
+      sitting at the head of Next rather than a reason to add a fourth entry.
+
 - [ ] 25. Dogfood follow-ups, 6th run — the 2026-09-04 Claude (Cowork) pass
       against `1.2.0+384deb5`, and **the first run whose every NUMBER
       reconciled**: the reader derived the counts, both weights and both fill
