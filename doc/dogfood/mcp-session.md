@@ -14,6 +14,35 @@ that has been told the answer will find the answer. The hand-computed values liv
 in `samples/goldens.ts` on the maintainer's side and come out only when the
 report comes back.
 
+### Before you paste — connect the client, and watch while you do
+
+Connecting happens before the session starts, so the brief cannot ask about it
+and the reader inside the session cannot see it. These are yours, and most are
+**one-time**: answer them on the first real machine that connects a client and
+they are closed for good (ADR-0030's remaining open details are exactly these).
+
+- **Claude Desktop** — Connect, restart it, confirm the Carton Fit tools are
+  listed. A Store (MSIX) install keeps its config somewhere else entirely; that
+  it spawns the shim at all was answered on 2026-09-02.
+- **ChatGPT (Codex)** — Connect, then restart the DESKTOP APP, not the CLI.
+  `codex mcp list` will show the entry while ChatGPT still does not, which is
+  the confusing case the panel's restart line exists for.
+- **What `codex mcp add` wrote into your real `~/.codex`** (open detail 2). In
+  a throwaway home it *declined* to create PATH aliases and helper binaries; in
+  a real one it presumably makes them. It is a write nobody asked for, so say
+  what appeared.
+- **Whether the panel ever settles from `outdated` to `connected`.** If the real
+  CLI rewrites our arguments or environment, Reconnect looks like a button that
+  never finishes the job.
+- **Which `codex.exe` answered** (open detail 3), if you have more than one
+  under `%LOCALAPPDATA%\OpenAI\Codex\bin`. Discovery takes the newest by
+  modification time, which is a heuristic: if the desktop app disagrees, `codex
+  mcp get` reports the entry exists while ChatGPT never sees it — the one
+  failure this design cannot detect from inside.
+
+None of this is machine-checkable. No CI runner has either client, so the fake
+CLI in `e2e/` proves only our half of a contract we wrote down ourselves.
+
 Bring the report back to the repo and run `/dogfood` with it.
 
 ---

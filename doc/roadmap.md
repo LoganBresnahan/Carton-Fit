@@ -1040,9 +1040,16 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         `overriddenKinds` and `countedWeightFrom` as the fields to read. The
         rule restated: a surprise is announced where a client MEETS it, not
         only where it is created.
-      - [ ] **`/dogfood` split** (offered 2026-09-03, undecided): handoff lives
-        only in `/deploy`, `/dogfood` processes reports. One less thing to
-        remember which direction it is in.
+      - [x] **`/dogfood` split** — **decided 2026-09-04, ADR-0032 addendum,
+        and not the way it was offered.** Not "handoff only in `/deploy`": both
+        skills hand the brief out, because a pass does not always follow a
+        deploy. What changed is that neither RESTATES it — the brief owns every
+        instruction, including a "Before you paste" section for connecting,
+        which the reader inside the session cannot see. The fourth run decided
+        it by producing the failure: `/deploy`'s connect steps sat under *when
+        the build touched the connect panel*, this build touched it only in
+        docs, and ADR-0030's dogfooder-only open details went unasked a fourth
+        time. The observations are about the machine, not the build.
       Closed with ADR-0030 open detail 1 in item 22, not here: the cold-boot
       numbers (555 ms `windows-latest`, 757 ms Linux CI) that decide it.
 

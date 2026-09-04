@@ -108,6 +108,39 @@ against `server.ts`'s registrations before handing it out.
 - **`/deploy` gains a real handoff.** It already promised "a dogfood script" and
   handed over an ad-hoc paragraph; it now points at the brief.
 
+## Addendum, 2026-09-04 (after the fourth run): where the handoff lives
+
+Offered on 2026-09-03 and left undecided: should the handoff live only in
+`/deploy`, leaving `/dogfood` to process reports? The fourth run decided it, by
+producing the failure the ambiguity predicts.
+
+`/deploy`'s handoff carried the connect steps under a heading that began *when
+the build touched the connect panel*. The build being staged had touched it
+only in documentation, so the steps were not read out — and ADR-0030's
+remaining open details, all of which can only be answered by a person watching
+a client connect, went unasked for the fourth pass running. The condition was
+sound and the placement was wrong: **the observations are not about the build,
+they are about the machine**, and most are one-time.
+
+**Decision: the brief owns every instruction the dogfooder follows; both skills
+hand it out.**
+
+- Everything the dogfooder does lives in `doc/dogfood/mcp-session.md`,
+  including a "Before you paste" section for connecting — which the reader
+  inside the session cannot see, because it happens before the session starts.
+- `/deploy` and `/dogfood` both hand the brief over, because a pass does not
+  always follow a deploy: re-running against an installed build needs no new
+  bytes. Neither restates it. A handoff is a pointer, the build's `+<sha>`, and
+  one line on what is new.
+- The reason is the same one this ADR was written for: two copies of an
+  instruction drift, and the copy that drifts is the one nobody ran.
+
+The station-0 half of this was already right and is worth naming as the
+counter-example: the brief tells the reader to reset inherited state, and the
+fourth run's reader did exactly that and reported it. An instruction in the
+brief gets followed; an instruction in a skill gets followed only if the skill
+reaches for it.
+
 ## Alternatives considered
 
 - **Assert the sentences in vitest** — rejected as a substitute, adopted as a

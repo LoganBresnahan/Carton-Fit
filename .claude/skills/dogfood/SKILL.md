@@ -16,6 +16,14 @@ The brief lives at `doc/dogfood/mcp-session.md`. It is the artifact, not this
 file — keep it current when the tool surface changes, and treat a station that
 no longer matches the tools as a bug in the brief.
 
+**The split, decided 2026-09-04 (ADR-0032 addendum).** Both this skill and
+`/deploy` hand the brief out, because a dogfood pass does not always follow a
+deploy — a re-run against an installed build needs no new bytes. What neither
+of them does is *restate* it: the handoff is a pointer, the build's `+<sha>`,
+and one line on what is new. Every instruction the dogfooder follows, including
+the connect steps that happen before the session starts, lives in the brief.
+Two copies drift, and the copy that drifts is the one nobody ran.
+
 Two directions. Read the user's message to see which one you are in.
 
 ## A. Handing out the brief
