@@ -934,14 +934,24 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       one. VISION already named both confirmed clients; CHANGELOG already
       carried the ADR-0030 line from the env fix, and nothing in phase 5 is
       visible to someone using the app, so it adds none.
-      — carry-ins, all of them **verification, not code** — ADR-0030's
-      remaining open details, which only a dogfooder can close: `codex mcp add`
-      side effects in a real `~/.codex` (the throwaway home refused to create
-      PATH aliases, a real one presumably does not), which `codex.exe` is the
-      desktop app's when the newest-by-mtime heuristic and the app disagree,
-      and Codex discovery on macOS and Linux (designed via `PATH`, proven
-      nowhere). The next `/dogfood` pass on a current build is where each is
-      answered.
+      — carry-ins were **verification, not code** — and the 2026-09-04 pass on
+      `+2b1f856` answered all but one, the first time this was asked at all
+      (the brief's new pre-paste section is what asked it; see item 24's
+      `/dogfood` split). **`codex mcp add` writes one file** — `config.toml`,
+      5 KB of the desktop app's own configuration with our entry inside it; the
+      PATH aliases and helper binaries it declines to create under `Temp` are
+      absent in a real home too, since the CLI makes those on install. **The
+      two `codex.exe` directories do not disagree** — the entry written through
+      the newest is visible in the desktop app's settings, and structurally they
+      cannot differ, since both resolve the same `CODEX_HOME`. What that
+      observation corrected is the ADR's guess about the margin: four SECONDS
+      apart, not minutes, so the heuristic ranks two artifacts of one install
+      rather than two versions (now a revisit trigger). **The panel settles on
+      `connected`** — the real CLI normalises nothing, so `sameEntry` reads its
+      own entry back and the ADR's budgeted fix-up is not needed.
+      — carry-in still open: **Codex discovery on macOS and Linux**, designed
+      via `PATH` and proven nowhere. Every dogfooder so far is on Windows
+      (ADR-0019), so this one waits for a machine, not a pass.
       Corrected 2026-09-04, hours after being written: this list said four and
       included "whether the Store (MSIX) Claude Desktop can spawn the shim at
       all". It does — the `c81dd82` pass on 2026-09-02 got the handshake and

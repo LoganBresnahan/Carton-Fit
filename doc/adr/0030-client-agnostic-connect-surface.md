@@ -363,16 +363,34 @@ ways, and the split is stated because it is a real limitation:
   a dogfooder sees Codex report no tools *slowly* where `codex mcp get` shows
   the entry present: that is this timeout, and it looks exactly like addendum
   3's environment bug from the outside.
-- **`codex mcp add` side effects in the real home.** In the throwaway home it
-  warned that it *refused* to create "PATH aliases / helper binaries" because
-  the home was under `Temp`. In `~/.codex` it presumably creates them. Observe
-  on first real run; expected harmless, but it is a write we did not ask for
-  and the dogfood note should say what appeared.
-- **Which `codex.exe` is the desktop app's.** Newest-by-mtime is a heuristic;
-  the two versions on the requesting machine were installed minutes apart by
-  the same update. If the desktop app and the newest CLI ever disagree about
-  `config.toml`'s location, `codex mcp get` will say the entry exists while the
-  app does not see it. Revisit if that is ever observed.
+- ~~**`codex mcp add` side effects in the real home.**~~ **Closed 2026-09-04,
+  and the answer is one file.** A listing of the real `~/.codex` after
+  connecting shows exactly one entry stamped from the connect: `config.toml`,
+  5 KB, the desktop app's whole configuration with our four-line server entry
+  inside it. The PATH aliases and helper binaries the CLI announced it was
+  *declining* to create under `Temp` are not there — the candidates
+  (`.sandbox-bin`, `vendor_imports`, `plugins`, `skills`) all predate the
+  connect by a day or more, so the CLI creates those on install, not on add.
+  Our footprint is one file edit, which is what the design assumed. It also
+  vindicates rule 3 concretely: 5 KB of someone else's configuration, and we
+  never open it. Method noted for honesty — inferred from timestamps, not
+  watched; a Reconnect plus a re-listing would upgrade it to an observation.
+- ~~**Which `codex.exe` is the desktop app's.**~~ **Closed 2026-09-04: no
+  disagreement, and the reason it is unlikely.** Two hashed directories under
+  `%LOCALAPPDATA%\OpenAI\Codex\bin`, and the entry written through the
+  newest is visible in the desktop app's own settings screen — so the binary we
+  pick and the app the user runs agree about where `config.toml` lives, which
+  is the only thing this heuristic has to get right. Structurally they must:
+  both resolve the same `CODEX_HOME`, so the pick decides which program writes,
+  not which file is written.
+  **What the observation corrects is the ADR's own guess about the margin.**
+  This ADR said "installed minutes apart by the same update"; they are **four
+  seconds** apart. So newest-by-mtime is not ranking versions, it is ranking
+  two artifacts of a single install — and a directory's mtime moves for reasons
+  unrelated to being newer (a repair, an antivirus quarantine-and-restore, a
+  partial update). Today either choice behaves identically, which is why this
+  closes rather than escalating; the margin is recorded because a tiebreak of
+  seconds is not the tiebreak the design imagined it was.
 - **macOS and Linux Codex are untested.** Discovery via `PATH` is designed,
   not proven; the requesting machine is Windows, and so is every dogfooder so
   far (ADR-0019).
@@ -446,6 +464,10 @@ ways, and the split is stated because it is a real limitation:
 
 ## Revisit triggers
 
+- The two `Codex\bin` directories ever hold DIFFERENT versions, rather than two
+  artifacts of one install four seconds apart: newest-by-mtime then starts
+  deciding something, and the four-second margin observed on 2026-09-04 says it
+  was never designed to.
 - Codex's `codex mcp add` gains a startup-timeout flag, or changes its
   `--json` shape: update the fake CLI and the adapter together, and re-run the
   dogfood pass.
