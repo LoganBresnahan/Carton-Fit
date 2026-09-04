@@ -922,11 +922,16 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         says so (amendment 3) and `request.unitPart` makes it visible
         (amendment 5); the outcome itself still says nothing. Both readers
         asked for the reply to carry it.
-      - [ ] **Three `otherConstraint` branches have no test** (from the
-        2026-09-03 `/shipshape`): fit-check weight-bound (the mixed-set
-        `known: false`), fit-check geometry-bound with every part under the cap
-        (`atLimit: false`), and no cap supplied. `bindingReport` moved since;
-        the branches did not.
+      - [ ] **Two `otherConstraint` branches have no test** (from the
+        2026-09-03 `/shipshape`; three when it was written): fit-check
+        weight-bound, the mixed-set `known: false` at `verdict.ts:242`, and no
+        cap supplied at `verdict.ts:268`. `bindingReport` moved since; these two
+        did not. The third — fit-check geometry-bound with every part under the
+        cap (`atLimit: false`) — was covered the same night by
+        `tests/pack-verdict.test.ts:170`, which pins the evidence label on a
+        comfortable fit and exercises that branch to do it. Counted again
+        2026-09-04, because a follow-up list that overstates what is missing is
+        the same defect as one that understates it.
       - [ ] **`inspect_model` accepts and echoes a weight unit it never uses.**
         Drop the parameter or use it — a parameter that appears to do
         something on the one tool you would sanity-check a weight with.
