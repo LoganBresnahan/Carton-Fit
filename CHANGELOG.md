@@ -12,6 +12,21 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **The warning about parts sitting at different angles now appears everywhere,
+  not just to assistants.** When a file places several copies of a part at
+  different orientations, their measured boxes differ and the count depends on
+  how the file was saved. The app said so when an assistant asked, but the
+  results panel and both exports stayed silent — so a copied summary or CSV
+  carried the number without the caveat. All four now say the same sentence.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+- **"Fill" now says what it is a percentage OF at both ends.** It read
+  "bounding boxes", which describes what is being counted but not what it is
+  divided by — so "34% full" looked like "66% still usable" when clearances
+  mean less than that is reachable. It now reads "part bounding boxes ÷ carton
+  interior" and notes that clearances are not deducted.
+  ([ADR-0017](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+
 - **A saved estimate's one-line summary now says what actually limited it.**
   Rows limited by the carton showed no limit at all, and rows where the carton
   and the weight cap landed on the same number said only "weight-limited" —

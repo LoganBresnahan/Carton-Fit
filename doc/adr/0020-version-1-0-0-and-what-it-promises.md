@@ -96,6 +96,29 @@ purity rule buys.
 - A schema change now costs a migration rather than a shrug. That is the point,
   and it is affordable: the machinery already exists and is tested.
 
+## Waiting for a major (opened 2026-09-05)
+
+Changes this ADR's own rules forbid before 2.0.0, recorded here so the next
+major is planned rather than assembled from memory. Roadmap item 30 carries
+them as work.
+
+- **`get_app_state`'s `inputs.weight.source` → `mode`.** The field names the
+  weight MODE the panel is set to; `source` promises provenance, which lives in
+  the estimate's `countedWeightFrom`. **Four dogfood readers have misread it**
+  (5th, 6th, 7th, 8th runs) — and the 8th was reading a build whose schema
+  already carried a `.describe()` saying it is not provenance, which is the
+  evidence that settles it: **a schema description does not reach a reader who
+  is reading values.** Renaming a field is a major under decision §3, so it
+  waits, but it stops accruing cosmetic patches in the meantime.
+- **`inspect_model`'s `units.weight` echo.** The tool reports geometry and
+  weighs nothing; the input was narrowed to `{ length }` on the 4th run
+  (narrowing an optional input strips an unknown key rather than refusing it,
+  so it is not a break), while removing the field from the OUTPUT is. The echo
+  stays, documented at `schemas.ts:91`, and goes with the same major.
+
+Both are **wording**, not behaviour, which is why neither justifies a major on
+its own and why both should ride the first one that happens for another reason.
+
 ## Alternatives considered
 
 - **Stay on 0.x.** Honest about maturity and free of obligations. Rejected

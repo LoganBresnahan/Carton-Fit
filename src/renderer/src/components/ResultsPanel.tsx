@@ -3,6 +3,7 @@ import {
   bindingHeading,
   bindingLabel,
   freeSpaceNote,
+  mixedInstancesWarning,
   openMeshWarning,
   packedWeightG,
   truncatedLayoutNote,
@@ -12,7 +13,8 @@ import {
   verdictCaption,
   verdictHeadline
 } from '../packing/verdict'
-import { openMeshParts } from '../packing/request'
+import { openMeshParts, partsForRequest } from '../packing/request'
+import { mixedInstanceKinds } from '../packing/kinds'
 import SaveEstimateButton from './SaveEstimateButton'
 import CopySummaryButton from './CopySummaryButton'
 import ExportFileButtons from './ExportFileButtons'
@@ -44,6 +46,13 @@ export default function ResultsPanel() {
   // with an entered weight no longer depends on its volume (ADR-0018 §4).
   const openMesh = openMeshWarning(
     openMeshParts(parts, settings, unitPartName, partWeightsG)
+  )
+  // Scoped to the parts the pack used, like the open-mesh warning above. Added
+  // on the 8th dogfood: the qualification shipped to the MCP surface a day
+  // earlier and to nothing else, so the screen this panel IS stayed silent
+  // about a caveat the app was telling assistants about.
+  const mixedInstances = mixedInstancesWarning(
+    mixedInstanceKinds(partsForRequest(parts, settings, unitPartName))
   )
 
   if (status === 'idle' && !result) return null
@@ -118,6 +127,12 @@ export default function ResultsPanel() {
       {openMesh && (
         <p className="results-warning" data-testid="results-open-mesh" role="alert">
           {openMesh}
+        </p>
+      )}
+
+      {mixedInstances && (
+        <p className="results-warning" data-testid="results-mixed-instances" role="alert">
+          {mixedInstances}
         </p>
       )}
 

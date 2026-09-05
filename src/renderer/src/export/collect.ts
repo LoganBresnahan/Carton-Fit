@@ -1,7 +1,8 @@
 import { lengthUnitLabel, mmToLength } from '../core/units'
-import { openMeshParts } from '../packing/request'
+import { openMeshParts, partsForRequest } from '../packing/request'
 import { meshVolume } from '../core/geometry'
-import { openMeshWarning, truncatedLayoutNote } from '../packing/verdict'
+import { mixedInstanceKinds } from '../packing/kinds'
+import { mixedInstancesWarning, openMeshWarning, truncatedLayoutNote } from '../packing/verdict'
 import { useAppStore } from '../store'
 import type { EstimateExport } from './types'
 
@@ -31,6 +32,11 @@ export function collectExport(): EstimateExport | null {
   // means adding it here, in one obvious place.
   const warnings = [
     openMeshWarning(openMeshParts(parts, settings, unitPartName, state.partWeightsG)),
+    // Scoped to the parts the PACK used, like the open-mesh warning above it:
+    // a max-quantity run over one kind is not qualified by kinds it never
+    // counted. Added on the 8th dogfood — the comment above was written before
+    // that miss and named this exact line as the place to touch.
+    mixedInstancesWarning(mixedInstanceKinds(partsForRequest(parts, settings, unitPartName))),
     truncatedLayoutNote(packResult)
   ].filter((warning): warning is string => warning !== null)
 

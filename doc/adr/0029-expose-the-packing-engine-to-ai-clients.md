@@ -1140,6 +1140,43 @@ evidence about the name, not about the readers.** Renaming is a major under
 ADR-0020 §3, so the field keeps its name and gains a sentence saying what it is
 not, and where the answer actually lives.
 
+### Phase-2 contract amendment 11 (2026-09-05, eighth dogfood) — the qualification reached one surface of four
+
+Amendment 10 added `mixedInstances` to `estimate` and scoped it **wire only**,
+on the reasoning that whether the panel should say it too was a product
+question. That reasoning was wrong, and the next run proved it in a day.
+
+A qualification that changes what an answer is MADE of is not a feature the
+screen may decline. The panel said nothing, and neither export carried it —
+while `collectExport`'s own comment, written long before the miss, named the
+exact line: *"adding a third warning to the panel means adding it here, in one
+obvious place."* The reader's evidence is the part to keep: the CSV printed
+`nut` at 0.118 × 0.591 × 0.787 for two instances and 0.787 × 0.591 × 0.118 for
+six others — **the artifact carried the proof of the caveat and not the
+caveat**, and a quote built from it would defend a number whose one real
+weakness the app had deleted on the way out.
+
+**The rule, now stated so it does not need re-deriving:** a qualification
+belongs to the ANSWER, not to the tool that computed it. Every surface that
+presents the answer — panel, wire, summary, CSV — carries it, or none should.
+Amendment 6 said this about a surprise being announced where a client meets it;
+this is the same sentence with "client" widened to "reader", which is what it
+should have said.
+
+Mechanically the fix was small, and its smallness is the argument: one
+`mixedInstancesWarning` in `verdict.ts` beside `openMeshWarning`, called from
+the panel and from `collectExport`. **Both exports came free** — they iterate
+`warnings` generically — and `estimate.ts` now reads that sentence rather than
+holding its own copy, so the wire and the screen cannot drift.
+
+**The reader asked for a test rather than the fix, and was right.** It asserts
+that every warning `collectExport` produces appears verbatim in BOTH export
+formats — by identity, not by keyword, so a build that drops one and adds
+another still fails. It closes the shape of the defect rather than this
+instance of it, and it incidentally answered a question nobody had asked: the
+open-mesh warning does survive an export. Nothing had ever checked, and that
+run could not — `closedMesh` was true for all five kinds of its only sample.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

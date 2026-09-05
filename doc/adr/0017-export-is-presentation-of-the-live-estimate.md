@@ -220,6 +220,33 @@ while meaning something the exports no longer say. `tests/export-builders.test.t
 asserts the row, the parenthetical, and that the token and the label remain two
 spellings of one basis.
 
+## Addendum 5, 2026-09-05 (eighth dogfood): the fill percentage names both ends now
+
+Addendum 4 gave `Fill` a basis four hours after a reader asked "of what?". The
+next reader answered the same question one level deeper: `bounding boxes` names
+the **numerator**. The denominator was never stated, and it is the carton
+INTERIOR — `clampUtilization(occupied, boxVolume(request.carton))` — not the
+clearance-reduced space a part can actually reach. On the reference plate that is
+288 in³ against 223.125 in³ usable, so "34.3% full" invited "65.7% still usable"
+when the honest figure was 43%.
+
+**The label was wrong, not the number.** The interior is the right denominator
+for "how full is the box": deducting clearances would make an empty carton's fill
+depend on a setting, and a fill that moves when you change a gap is worse than
+one that needs a label. So `UTILIZATION_BASIS` keeps its wire `token` — a client
+matches on it, and changing a matched value is a break under ADR-0020 §3 — while
+its human halves name both ends: `part bounding boxes ÷ carton interior`, with
+the note adding that clearances are not deducted.
+
+The token/label invariant from addendum 4 relaxed from equality to
+**containment**: the label must still contain the numerator the enum names, but
+it is now deliberately more honest than the enum, and an equality check would
+have forbidden exactly that.
+
+Two runs, two layers of the same label. Worth naming the pattern: a number that
+needs a qualifier usually needs the *whole* qualifier, and shipping half of one
+buys a single release of quiet.
+
 ## Revisit triggers
 
 - A real request to hand a formatted document to a customer → PDF, seeded from

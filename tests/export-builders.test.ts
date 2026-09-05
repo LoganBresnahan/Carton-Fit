@@ -331,12 +331,22 @@ describe('buildCsv', () => {
     expect(csv).toContain(`Fill basis,${UTILIZATION_BASIS.label}`)
     // Beside `Fill`, never folded into it: a script already reads that cell.
     expect(csv).toContain('Fill,90%')
-    // The wire's enum and the human label must stay two spellings of ONE
-    // basis. Nothing else can catch a drift here: both are string literals, so
-    // a hand-written 'bounding-boxes' on the wire typechecks perfectly while
+    // The wire's enum and the human halves must keep describing ONE basis.
+    // Nothing else can catch a drift here: all three are string literals, so a
+    // hand-written 'bounding-boxes' on the wire typechecks perfectly while
     // meaning something the exports no longer say.
-    expect(UTILIZATION_BASIS.token.replace('-', ' ')).toBe(UTILIZATION_BASIS.label)
-    expect(UTILIZATION_BASIS.note.toLowerCase()).toContain(UTILIZATION_BASIS.label)
+    //
+    // CONTAINMENT, not equality, since the 8th dogfood: the token names the
+    // NUMERATOR (all it ever named, and it cannot change — a client matches on
+    // it), while the label and note now name the denominator too. Equality
+    // would forbid the label from being more honest than the enum.
+    const numerator = UTILIZATION_BASIS.token.replace('-', ' ')
+    expect(UTILIZATION_BASIS.label).toContain(numerator)
+    expect(UTILIZATION_BASIS.note.toLowerCase()).toContain(numerator)
+    // Both ends named, which is the fix itself: a percentage that names only
+    // what it counts invites the reader to assume the rest is free space.
+    expect(UTILIZATION_BASIS.label).toContain('carton interior')
+    expect(UTILIZATION_BASIS.note).toContain('clearances are not deducted')
   })
 
   it('omits a bound row rather than writing an empty one', () => {
@@ -420,7 +430,10 @@ describe('buildSummary', () => {
     // The basis rides with the number (6th dogfood): "25%" of what was a
     // question the quote could not answer, while the wire and a panel tooltip
     // both said. A percentage in an email outlives the session that made it.
-    expect(text).toContain('Fill: 25% (bounding boxes)')
+    // Both ENDS of the ratio since the 8th run — naming the numerator alone
+    // still let "25% full" read as "75% still usable".
+    expect(text).toContain(`Fill: 25% (${UTILIZATION_BASIS.label})`)
+    expect(text).toContain('carton interior')
   })
 
   it('carries the binding sentence the panel and the wire carry (ADR-0017 §2)', () => {

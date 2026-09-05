@@ -405,9 +405,21 @@ export function bindingReport(result: PackResult, request: PackRequest): Binding
  * behind the panel's tooltip.
  */
 export const UTILIZATION_BASIS = {
+  // The WIRE token cannot change: it is pinned by a zod literal, and changing
+  // a value a client matches on is a break under ADR-0020 §3. It names the
+  // numerator, which is what it always named.
   token: 'bounding-boxes',
-  label: 'bounding boxes',
-  note: 'Share of the carton filled by part bounding boxes'
+  // The human halves name BOTH ENDS since the 8th dogfood. `basis:
+  // "bounding boxes"` shipped for the 6th run and described the numerator
+  // alone, so "34.3% full" still invited "65.7% still usable" — and the
+  // denominator is the carton INTERIOR, not the clearance-reduced space a part
+  // can actually reach. On the reference plate that is 288 in³ against
+  // 223.125 in³, so the honest remaining-usable figure was 43%, not 65.7%.
+  // Fixing the label rather than the number: the interior is the right
+  // denominator for "how full is the box", and deducting clearances would make
+  // the fill of an empty carton depend on a setting.
+  label: 'part bounding boxes ÷ carton interior',
+  note: 'Share of the carton interior filled by part bounding boxes — clearances are not deducted'
 } as const
 
 /** Carton fill as a percentage. See `UTILIZATION_BASIS` for what it is a share
@@ -459,6 +471,38 @@ export function openMeshWarning(openParts: readonly string[]): string | null {
   return (
     `${subject}, so the volume behind this weight is unreliable — and weight is a ` +
     `hard limit here. Enter the part weight directly for a trustworthy count.`
+  )
+}
+
+/**
+ * The warning for kinds whose instances arrive at DIFFERENT orientations, so
+ * their bounding boxes differ — or null when every kind agrees with itself.
+ *
+ * Lives beside `openMeshWarning` because it is the same kind of thing and needs
+ * the same reach. ADR-0029 amendment 10 put this qualification on the wire and
+ * **only** on the wire, calling the screen a product question. The 8th dogfood
+ * settled that: it changes what an answer is MADE of, so every surface that
+ * presents an answer owes it. The reader's evidence was the CSV itself, which
+ * printed `nut` at 0.118 × 0.591 × 0.787 for two instances and
+ * 0.787 × 0.591 × 0.118 for six others — carrying the PROOF of the caveat while
+ * suppressing the caveat.
+ *
+ * Worded like `openMeshWarning`: what it means for the number, not what is
+ * unusual about the file. "Instances differ" is a modelling remark; "the count
+ * depends on how the file was saved" is the thing a quote needs.
+ */
+export function mixedInstancesWarning(mixedKinds: readonly string[]): string | null {
+  if (mixedKinds.length === 0) return null
+  const shown = mixedKinds.slice(0, 3).map((name) => `“${name}”`)
+  const rest = mixedKinds.length - shown.length
+  const list = rest > 0 ? `${shown.join(', ')} and ${rest} more` : shown.join(', ')
+  // "Instances of X" is plural whatever X is — one KIND still has several
+  // instances, which is the only way it can disagree with itself.
+  return (
+    `Instances of ${list} do not share one bounding box — the assembly places them at ` +
+    `different orientations, and STEP geometry arrives with that placement baked in. ` +
+    `Each instance was packed with its OWN box, so this answer depends on how the file ` +
+    `happened to orient them.`
   )
 }
 

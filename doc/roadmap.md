@@ -1256,6 +1256,28 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       Closed with ADR-0030 open detail 1 in item 22, not here: the cold-boot
       numbers (555 ms `windows-latest`, 757 ms Linux CI) that decide it.
 
+- [ ] 30. Carton Fit 2.0.0 — the wording a major is owed. **Not scheduled, and
+      deliberately not urgent**: everything here is a NAME, not a behaviour, so
+      none of it justifies a major on its own. The item exists because the
+      alternative is remembering, and four dogfood runs have proved what that is
+      worth. ADR-0020's "Waiting for a major" section holds the reasoning; this
+      is the checkbox that survives between releases.
+      - [ ] **`get_app_state.inputs.weight.source` → `mode`.** Four readers
+            (5th–8th runs) took it for provenance. The 8th was reading a build
+            whose schema already said it is not, which is the finding that
+            closed the argument: **a schema description does not reach a reader
+            who is reading values.** Provenance is `countedWeightFrom`, already
+            in the same reply.
+      - [ ] **Drop `units.weight` from `inspect_model`'s output.** The tool
+            weighs nothing. The input was narrowed on the 4th run; the output
+            echo is a field asserting something the reply does not contain, and
+            removing it is a major under ADR-0020 §3.
+      - [ ] **Sweep ADR-0020's list before tagging**, since anything deferred
+            between now and then lands there rather than here.
+      Whatever forces the major — a real contract change — carries these with
+      it. Tagging one FOR them would be the wrong trade: a major costs every
+      client a re-check, and no client is currently getting a wrong answer.
+
 - [ ] 29. Dogfood follow-ups, 8th run — the 2026-09-05 Claude (Cowork) pass
       against `1.2.0+b9a494f`, the deepest read the surface has had: all 15
       tools exercised, every count derived by hand first, four weight figures
@@ -1264,7 +1286,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       ceiling (720 nuts against 792) to check the hedge comes back. It did.
       **Every number held. The finding is that yesterday's fix only reached
       one of four surfaces.**
-      - [ ] **`mixedInstances` reaches the wire and nothing else** (worst).
+      - [x] **`mixedInstances` reaches the wire and nothing else** (worst).
         ADR-0029 amendment 10 added the qualification to `estimate` yesterday
         and scoped it "wire only, for now" on the grounds that the panel was a
         product question. This reader shows that scoping was wrong: the
@@ -1285,7 +1307,19 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the fix: assert that every `qualifications.*` entry with
         `affected: true` appears in both export formats, so the NEXT warning
         cannot go missing the same way.
-      - [ ] **The fill percentage does not name its denominator.** ADR-0017
+        **Shipped 2026-09-05, ADR-0029 amendment 11 + ADR-0017 addendum 5.**
+        `mixedInstancesWarning` joins `openMeshWarning` in `verdict.ts`, so
+        the wire, the panel and both exports read ONE sentence — the wire's
+        own copy is gone. Both exports came free: they iterate `warnings`
+        generically, so the whole fix was one builder and two call sites.
+        **The reader's test was adopted and is the better half**: it asserts
+        every warning in `collectExport().warnings` appears verbatim in BOTH
+        formats, by identity rather than by keyword, so a build that drops
+        one and adds another still fails. It also answers the question that
+        run could not — the open-mesh warning DOES survive an export, which
+        nobody had ever checked. Scoping to the packed parts needed its own
+        case again: a mutation widening it passes everything else.
+      - [x] **The fill percentage does not name its denominator.** ADR-0017
         addendum 4 shipped `basis: "bounding boxes"` for the 6th run — which
         names the NUMERATOR only. `clampUtilization(occupied,
         boxVolume(request.carton))` divides by the INNER carton, while
@@ -1294,7 +1328,16 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         usable" when the true remaining usable fraction is 43%. Nothing is
         wrong; the label is thinner than the number, one level deeper than the
         thing it just fixed.
-      - [ ] **`inputs.weight.source` — fourth sighting, and the `.describe()`
+        **Shipped 2026-09-05, ADR-0017 addendum 5.** The wire token is
+        untouched — a client matches on it, so changing it is a break — and
+        the human halves now name both ends: `part bounding boxes ÷ carton
+        interior`, with the note adding that clearances are not deducted.
+        The label, not the number: the interior is the right denominator for
+        "how full is the box", since deducting clearances would make an
+        empty carton's fill depend on a setting. The token/label invariant
+        from the 6th run relaxed from equality to containment, because the
+        label is now deliberately more honest than the enum.
+      - [x] **`inputs.weight.source` — fourth sighting, and the `.describe()`
         did not work.** Shipped in `b9a494f` on the reasoning that three
         readers misreading a field is evidence about its name. A fourth reader
         on that very build flagged it again, which says the rest: **a schema
@@ -1303,6 +1346,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         renaming it is a major under ADR-0020 §3. Stop patching it: this is now
         a v2.0.0 line item, and the record should say so rather than accrue a
         fourth cosmetic attempt.
+        **Recorded 2026-09-05, ADR-0020 "Waiting for a major".** No code
+        change: the field keeps its name until 2.0.0 and the reasoning lives
+        where the next major will be planned. Carried as work by **item 30**
+        so it is not remembered only in an ADR nobody opens between releases.
       Refuted, with the reason already at the code site: **`inspect_model`'s
       reply advertising `units.weight`** is not an oversight. The 4th run found
       the same thing and it was half-fixed on purpose — the INPUT was narrowed

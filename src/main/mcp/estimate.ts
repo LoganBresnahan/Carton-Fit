@@ -19,6 +19,7 @@ import {
   packedWeightG,
   truncatedLayoutNote,
   UTILIZATION_BASIS,
+  mixedInstancesWarning,
   verdictCaption,
   type BindingReport
 } from '../../renderer/src/packing/verdict'
@@ -439,11 +440,10 @@ function qualificationsOf(
         : {
             affected: true,
             kinds: mixed,
-            note:
-              `Instances of ${mixed.join(', ')} do not share one bounding box — the assembly ` +
-              'places them at different orientations, and STEP geometry arrives with that ' +
-              'placement baked in. Each instance was packed with its OWN box, so a count or a ' +
-              'fit here depends on how the file happened to orient them.'
+            // The SENTENCE comes from verdict.ts now, like every other one the
+            // wire shares with the screen (8th dogfood): this note existed here
+            // alone for a day, and the panel and both exports said nothing.
+            note: mixedInstancesWarning(mixed) ?? ''
           }
   }
 }
