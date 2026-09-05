@@ -12,6 +12,22 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **An assistant can now tell whether a count is provably the best, or just the
+  best one found.** The reply used to carry a single "heuristic" flag that was
+  always on, sitting beside a sentence that sometimes claimed no arrangement
+  could beat the answer — two assistants read that pair as the app contradicting
+  itself. It now says both things separately: the search is always a heuristic,
+  and *this* answer is either proven optimal or not. Breaking change to that
+  surface; an assistant reads the descriptions fresh each session.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
+- **The app now tells assistants that your inputs are remembered between
+  sessions.** They always were — the carton, clearances and cap you set are
+  still there next time — but nothing said so, and five assistant sessions in a
+  row started work on numbers a previous session had typed. Saving a preset or
+  an estimate already announced itself; this one didn't.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 - **Two fields an AI assistant reads have been renamed, which is a breaking
   change to that surface.** `weight.source` is now `weight.mode` — it says which
   way the app is set to get a base weight, and never meant "where this answer's

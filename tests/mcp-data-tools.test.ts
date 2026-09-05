@@ -236,6 +236,35 @@ describe('the published surface', () => {
   })
 })
 
+describe('the drive tools say what they persist', () => {
+  it('discloses that the inputs survive the session, on both tools that touch them', async () => {
+    // 9th dogfood, and the fifth sighting of inherited state: `save_preset` and
+    // `save_estimate` both announce that they write, while the INPUTS were
+    // written silently — the only write on this surface no description
+    // mentioned. A reader who trusts what they find derives against inputs a
+    // previous session chose, and the hazard is not hypothetical: an inherited
+    // density of 2.70 instead of 7.85 returns the same COUNT on the reference
+    // plate for an entirely different reason.
+    //
+    // Lives with the DRIVE tools, not the goldens: these two are registered
+    // only when a drive is present (ADR-0029's tiers), so the goldens' v1-only
+    // server cannot see them.
+    const { tools } = await client.listTools()
+    const setInputs = tools.find((tool) => tool.name === 'set_inputs')
+    const appState = tools.find((tool) => tool.name === 'get_app_state')
+    // The AFFIRMATIVE claim, not the word: both descriptions also contain
+    // "do NOT persist" about the file-scoped half, so a bare /persist/ passed
+    // even with the disclosure deleted. Caught by mutation, which is the only
+    // thing that could have caught it.
+    expect(setInputs?.description).toMatch(/inputs persist between/i)
+    expect(appState?.description).toMatch(/inputs persist between/i)
+    // And the exception, which is what keeps the disclosure honest: file-scoped
+    // state does NOT survive a load.
+    expect(setInputs?.description).toMatch(/cleared on load_model/)
+    expect(appState?.description).toMatch(/cleared whenever a file loads/)
+  })
+})
+
 describe('reads answer from the database, not the window', () => {
   it('lists presets with absolute timestamps', async () => {
     const report = await call<{ presets: Array<{ name: string; savedAt: string }> }>('list_presets')

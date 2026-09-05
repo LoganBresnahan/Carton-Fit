@@ -1177,6 +1177,63 @@ instance of it, and it incidentally answered a question nobody had asked: the
 open-mesh warning does survive an export. Nothing had ever checked, and that
 run could not — `closedMesh` was true for all five kinds of its only sample.
 
+### Phase-2 contract amendment 12 (2026-09-05, ninth dogfood) — a constant cannot qualify the sentence beside it
+
+`qualifications.heuristic` read `{ heuristic: true, note }`. Two readers (6th and
+9th runs) saw an optimality note beside that flag — *"no arrangement beats this
+under these limits"* — and reported the reply as contradicting itself.
+
+**Both times the finding was refuted and both refutations were correct.** The
+caption is gated on `upperBound === count`; the case the 9th reader feared —
+geometry binding with a loose bound — cannot produce that sentence, which is
+exactly why they could not produce it, and the 8th reader had already
+demonstrated the hedge returning by forcing 720 nuts against a ceiling of 792.
+
+Being right twice was not the same as being useful. The flag those readers were
+checking the note against is `true` at all three of `pack.ts`'s construction
+sites, with no branch, and that file says so in its own comment. **A field that
+never varies cannot be what qualifies the sentence next to it** — so a reader
+looking for the qualification finds a constant, and infers a contradiction
+rather than a distinction.
+
+The engine already separates the two facts; only the names did not:
+
+- the **search** is heuristic, always — grid fill and EP refinement are both
+  lower bounds (ADR-0003's standing promise, which is why the constant is worth
+  keeping rather than deleting);
+- the **answer** is proven optimal when a rigorous bound meets the count, which
+  is a property of *this* result and varies.
+
+So: `searchIsHeuristic` keeps the promise under a name that says what it is
+about, and `provenOptimal` exposes the caption's own gate as a field a reader can
+check instead of a claim they must trust. Additive plus a rename, affordable
+under ADR-0020's amendment because nothing persists these names; the CHANGELOG
+carries it as a breaking wire change regardless.
+
+The rule this generalises, and the reason it is worth writing down: **when two
+readers infer the same wrong thing from a reply, the reply is the problem even
+when every field in it is true.** That is the third time this surface has learned
+it — after the `binding` enum that named a limit nothing had hit, and after
+`weight.source` — and the pattern each time was a field whose NAME described
+something other than what a reader beside it was trying to establish.
+
+### Amendment 12b — the inputs persist, and now say so
+
+Five dogfood runs opened on an app carrying a previous session's inputs.
+`save_preset` and `save_estimate` both announce that they write; the inputs were
+written silently, and the 9th reader named it precisely: the only write on this
+surface that no tool description mentions. Their hazard is not hypothetical — an
+inherited `density: 2.70` instead of 7.85 returns the same COUNT on the reference
+plate for an entirely different reason, and no field would have said the density
+was not theirs.
+
+`set_inputs` and `get_app_state` now say the inputs persist, and say the
+exception in the same breath: per-kind overrides and the unit part belong to the
+loaded file and are cleared by `load_model`, which reports what it cleared
+(amendment 6). ADR-0034 fixes the model; this fixes the disclosure, and the two
+are independent — the carton stays global by design, so it will still persist
+after item 26 ships and will still deserve saying.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

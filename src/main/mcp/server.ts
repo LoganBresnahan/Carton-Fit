@@ -268,6 +268,12 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'To run with NO weight at all (a space-only answer, as the stateless estimate gives ' +
         'when weight is omitted), set partWeight to 0 — an empty weight object changes ' +
         'nothing, because omitted means keep. ' +
+        'THESE INPUTS PERSIST between app sessions, so whatever you set here is what the next ' +
+        'session finds — and whatever you found was set by someone before you. Said plainly ' +
+        'because save_preset and save_estimate both announce that they write and this one did ' +
+        'not, which left five dogfood readers deriving answers against inputs they had not ' +
+        'chosen. The per-kind overrides and the unit part do NOT persist: they belong to the ' +
+        'loaded file and are cleared on load_model, which reports what it cleared. ' +
         SETTLED,
       inputSchema: wire(setInputsInput),
       outputSchema: wire(driveOutcomeOutput)
@@ -353,7 +359,11 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
       description:
         'The running app’s state: which file is loaded, every input as the app understands it, ' +
         'mode, tier, display units, and this build’s version. Does not wait for an in-flight ' +
-        'recompute — the estimate field says one is running instead.',
+        'recompute — the estimate field says one is running instead. ' +
+        'THE INPUTS PERSIST between sessions and nothing here distinguishes one you set from ' +
+        'one inherited from an earlier run, so set what your answer depends on rather than ' +
+        'trusting what you find. Overrides and the unit part are the exception — they are ' +
+        'cleared whenever a file loads.',
       inputSchema: wire(getAppStateInput),
       outputSchema: wire(driveOutcomeOutput)
     },

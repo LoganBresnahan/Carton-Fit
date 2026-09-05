@@ -172,8 +172,21 @@ export type EstimateOutcome =
 export type Known<T> = ({ known: true } & T) | { known: false; reason: string }
 
 export interface EstimateQualifications {
-  /** ADR-0003: heuristic placement must be labeled, never sold as a proof. */
-  heuristic: { heuristic: boolean; note: string }
+  /** ADR-0003: heuristic placement must be labeled, never sold as a proof.
+   *
+   *  TWO FACTS, TWO FIELDS SINCE THE 9TH DOGFOOD. `searchIsHeuristic` was
+   *  called `heuristic`, and it is `true` at every one of `pack.ts`'s three
+   *  construction sites — a constant. Beside it sat a note that sometimes says
+   *  "no arrangement beats this", and two readers (6th and 9th runs) read the
+   *  pair as a reply contradicting itself. Both times the note was correct and
+   *  the refutation missed the point: a field that never varies cannot be what
+   *  qualifies the sentence next to it.
+   *
+   *  The engine already distinguishes them. The SEARCH is heuristic, always —
+   *  grid fill and EP refinement are both lower bounds. The ANSWER is proven
+   *  optimal when a rigorous bound MEETS the count, which is the same
+   *  `upperBound === count` gate the note itself is written against. */
+  heuristic: { searchIsHeuristic: boolean; provenOptimal: boolean; note: string }
   /** Whether a weight was supplied at all — with none, the cap cannot bind and
    *  `binding` says "geometry" for a reason the caller did not choose. */
   weightInput:
@@ -406,7 +419,16 @@ function qualificationsOf(
   const cap = fromG(request.maxWeightG, units.weight)
 
   return {
-    heuristic: { heuristic: result.heuristic, note: verdictCaption(result) },
+    heuristic: {
+      searchIsHeuristic: result.heuristic,
+      // The note's own gate, exposed rather than left for a reader to infer:
+      // the caption drops its hedge on exactly this condition.
+      provenOptimal:
+        result.mode === 'max-quantity' &&
+        result.upperBound !== undefined &&
+        result.upperBound === result.count,
+      note: verdictCaption(result)
+    },
     weightInput: supplied
       ? {
           supplied: true,

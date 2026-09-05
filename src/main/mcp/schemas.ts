@@ -189,7 +189,23 @@ export const estimateInput = {
   outputUnits: outputUnitsInput
 }
 
-export const heuristicQualification = z.object({ heuristic: z.boolean(), note: z.string() })
+export const heuristicQualification = z.object({
+  searchIsHeuristic: z
+    .boolean()
+    .describe(
+      'Whether the SEARCH that produced this count is heuristic. Always true: grid fill and ' +
+        'extreme-point refinement are both lower bounds (ADR-0003). It says nothing about ' +
+        'whether this particular answer is optimal — that is provenOptimal.'
+    ),
+  provenOptimal: z
+    .boolean()
+    .describe(
+      'Whether a rigorous bound MEETS the count, which proves no arrangement beats it under ' +
+        'these limits — the cap among them. True is a proof, not a hope; false means only ' +
+        'that nothing here rules out a better arrangement.'
+    ),
+  note: z.string()
+})
 
 export const estimateOutput = {
   request: z.object({

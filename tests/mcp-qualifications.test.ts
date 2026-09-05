@@ -160,13 +160,46 @@ describe('the schema rejects a reply with a hedge missing', () => {
 // --- 3. behaviour, across the shapes where each hedge matters -------------
 
 describe('every answer arrives qualified', () => {
+  it('says the answer is NOT proven optimal when the bound leaves room', async () => {
+    // The discriminating case, and it needs many SMALL parts: a grid of nuts
+    // cannot reach the volumetric ceiling, so the joint bound stays strictly
+    // above the count and the answer is genuinely unproven. Without this a
+    // mutation pinning `provenOptimal: true` passes every other case here,
+    // since the plate cases are all exact ties.
+    //
+    // The 9th dogfood's reader could not produce this shape and said so, which
+    // is why they read the note as unconditional; the 8th's did produce it
+    // (720 nuts against a ceiling of 792) and saw the hedge come back.
+    const report = await estimate({
+      path: AS1,
+      mode: 'max-quantity',
+      carton: carton(12, 'in'),
+      unitPart: 'nut'
+    })
+    if (report.outcome.mode !== 'max-quantity') throw new Error('mode')
+    expect(report.outcome.upperBound.known).toBe(true)
+    if (!report.outcome.upperBound.known) throw new Error('bound')
+    expect(report.outcome.upperBound.count).toBeGreaterThan(report.outcome.count)
+    // The search is heuristic here as everywhere — that flag never moves…
+    expect(report.qualifications.heuristic.searchIsHeuristic).toBe(true)
+    // …and THIS is the field that does, which is the whole point of splitting
+    // them: a reader can tell the two apart without parsing the sentence.
+    expect(report.qualifications.heuristic.provenOptimal).toBe(false)
+    expect(report.qualifications.heuristic.note).toMatch(/may fit more/)
+  })
+
   it('labels a count as heuristic and pairs it with a rigorous bound', async () => {
     const report = await estimate({ mode: 'max-quantity', carton: carton(12, 'in') })
     // The flag is the claim about METHOD and never lapses. The note's hedge is
     // a claim about the RESULT, and this carton is an exact-fit grid whose
     // rigorous bound meets its count — so the note states optimality instead of
     // inviting a search the bound in the same payload forecloses (2026-09-03).
-    expect(report.qualifications.heuristic.heuristic).toBe(true)
+    // RENAMED on the 9th dogfood. The comment above always said method and
+    // result are different claims; the field names did not, and two readers
+    // read `heuristic: true` beside an optimality note as a contradiction.
+    expect(report.qualifications.heuristic.searchIsHeuristic).toBe(true)
+    // The note's own gate, now a field a reader can check instead of infer.
+    expect(report.qualifications.heuristic.provenOptimal).toBe(true)
     expect(report.qualifications.heuristic.note).toMatch(/no arrangement beats this/)
     expect(report.outcome.mode === 'max-quantity' && report.outcome.upperBound.known).toBe(true)
     if (report.outcome.mode === 'max-quantity' && report.outcome.upperBound.known) {

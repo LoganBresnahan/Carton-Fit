@@ -1294,7 +1294,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       was read as a mode. That last one is the measurable win — five runs
       called `source` *contradicted*; this reader calls `mode` **backed**, and
       files it as "clarity, low". The rename worked.
-      - [ ] **`qualifications.heuristic.heuristic` is a constant, sitting
+      - [x] **`qualifications.heuristic.heuristic` is a constant, sitting
         beside a note that sometimes claims optimality.** Two readers (6th and
         9th runs) have now read that object as self-contradicting: `{ heuristic:
         true, note: "…no arrangement beats this under these limits." }`.
@@ -1314,7 +1314,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         reads it — so `provenOptimal` (or the flag renamed to say it describes
         placement) rather than a third attempt at rewording the note. **ADR-0020's
         new tier 3 makes this affordable**: nothing persists the name.
-      - [ ] **The inputs are written to disk silently, and it is the only write
+        **Shipped 2026-09-05, ADR-0029 amendment 12.** `searchIsHeuristic`
+        keeps ADR-0003's standing promise under a name that says what it
+        describes; `provenOptimal` exposes the caption's own
+        `upperBound === count` gate as a field a reader can CHECK rather
+        than a claim they must trust. The loose-bound case had to be written
+        from scratch — every existing fixture is an exact tie, so a mutation
+        pinning `provenOptimal: true` passed all of them. Three mutations,
+        three caught.
+      - [x] **The inputs are written to disk silently, and it is the only write
         no tool description mentions.** Fifth sighting of inherited state, and
         the first to name the mechanism rather than the symptom: `save_preset`
         and `save_estimate` both document that they write; the inputs persist
@@ -1327,6 +1335,14 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         (ADR-0034: a load starts the document clean); what belongs HERE is the
         smaller half it does not cover — the tool surface should say the inputs
         persist, in the same place `save_preset` says it writes.
+        **Shipped 2026-09-05, ADR-0029 amendment 12b.** `set_inputs` and
+        `get_app_state` both say the inputs persist, and both name the
+        exception in the same breath — overrides and the unit part belong to
+        the file and are cleared by `load_model`. **The first version of the
+        test passed with the disclosure deleted**: it matched the word
+        "persist", which also appears in the "do NOT persist" clause about
+        the file-scoped half. Only the mutation caught that; the assertion
+        now matches the affirmative claim.
       Refuted, both with reasons already in the code. (a) **"no arrangement
       beats this" is not emitted unconditionally** — `verdict.ts`'s `atBound`
       gate is `upperBound === count`, and where the reader feared it (`geometry`

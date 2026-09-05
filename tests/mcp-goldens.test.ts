@@ -205,7 +205,7 @@ describe('estimate against GOLDEN_PACKS', () => {
       // caught. Method and result are different claims, so they are asserted
       // separately rather than by grepping one string for both.
       if (golden.mode === 'max-quantity' && (golden.count ?? 0) > 0) {
-        expect(report.qualifications.heuristic.heuristic, because).toBe(true)
+        expect(report.qualifications.heuristic.searchIsHeuristic, because).toBe(true)
         const note = report.qualifications.heuristic.note
         const outcome = report.outcome
         const bound =
