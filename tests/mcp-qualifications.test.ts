@@ -461,7 +461,7 @@ describe('every answer arrives qualified', () => {
     expect(report.binding).toMatchObject({ constraint: 'geometry', bound: true })
   })
 
-  it('names the weight source when one was given', async () => {
+  it('names the weight MODE when one was given', async () => {
     const report = await estimate({
       mode: 'max-quantity',
       carton: carton(100),
@@ -470,7 +470,10 @@ describe('every answer arrives qualified', () => {
     })
     expect(report.qualifications.weightInput).toEqual({
       supplied: true,
-      source: 'direct',
+      // `mode`, not `source` — renamed 2026-09-05 after four readers took the
+      // old name for provenance (ADR-0020 amendment; the app has always called
+      // it `weightMode` internally, and only the wire said otherwise).
+      mode: 'direct',
       overriddenKinds: [],
       // With nothing overridden the two agree — which is why the disagreement
       // below went unnoticed for as long as it did.
@@ -493,8 +496,8 @@ describe('every answer arrives qualified', () => {
       overrides: [{ kind: 'plate', weight: { value: 10, unit: 'lb' } }]
     })
     if (report.qualifications.weightInput.supplied !== true) throw new Error('supplied')
-    // The setting is reported honestly, and is now clearly labelled as such…
-    expect(report.qualifications.weightInput.source).toBe('density')
+    // The setting is reported honestly, and is now NAMED as such…
+    expect(report.qualifications.weightInput.mode).toBe('density')
     // …while the answer's own provenance is the hand-entered number.
     expect(report.qualifications.weightInput.countedWeightFrom).toBe('override')
   })

@@ -96,28 +96,66 @@ purity rule buys.
 - A schema change now costs a migration rather than a shrug. That is the point,
   and it is affordable: the machinery already exists and is tested.
 
-## Waiting for a major (opened 2026-09-05)
+## Amendment, 2026-09-05: §4's promise binds to an audience, not to a number
 
-Changes this ADR's own rules forbid before 2.0.0, recorded here so the next
-major is planned rather than assembled from memory. Roadmap item 30 carries
-them as work.
+This section replaces a "Waiting for a major" list that stood for one afternoon.
+It listed two wire fields whose names were wrong and parked them behind a 2.0.0
+that nothing else was asking for. The question that dissolved it was blunt:
+*is it even user-facing?*
 
-- **`get_app_state`'s `inputs.weight.source` → `mode`.** The field names the
-  weight MODE the panel is set to; `source` promises provenance, which lives in
-  the estimate's `countedWeightFrom`. **Four dogfood readers have misread it**
-  (5th, 6th, 7th, 8th runs) — and the 8th was reading a build whose schema
-  already carried a `.describe()` saying it is not provenance, which is the
-  evidence that settles it: **a schema description does not reach a reader who
-  is reading values.** Renaming a field is a major under decision §3, so it
-  waits, but it stops accruing cosmetic patches in the meantime.
-- **`inspect_model`'s `units.weight` echo.** The tool reports geometry and
-  weighs nothing; the input was narrowed to `{ length }` on the 4th run
-  (narrowing an optional input strips an unknown key rather than refusing it,
-  so it is not a break), while removing the field from the OUTPUT is. The echo
-  stays, documented at `schemas.ts:91`, and goes with the same major.
+It is not. `inputs.weight.source` and `qualifications.weightInput.source` exist
+only in `src/main/mcp/` — the app's own UI never reads either, and **nothing
+stores them**: presets and saved estimates serialise `PackingSettings`, whose
+field has always been called `weightMode`. The wire invented the word "source"
+for a thing the app calls a mode. Renaming it was never introducing a new name;
+it was ending a disagreement the wire started with itself.
 
-Both are **wording**, not behaviour, which is why neither justifies a major on
-its own and why both should ride the first one that happens for another reason.
+**What §4 was actually protecting.** Its stated reason is that "the SDK
+validates structured output against those schemas, so a dropped qualification is
+not a smaller answer, it is a failed call." That reason is about *dropping* a
+field — our own payload failing our own schema. **A rename applied atomically to
+schema and payload still validates.** What a rename breaks is a client holding
+the old name, and today every client is an assistant that re-reads the tool
+schema at the start of each session. Nothing compiles against these names.
+Nothing persists them.
+
+So the rule was protecting a consumer profile that does not exist yet, at the
+cost of a field four readers misread across five dogfood runs — the last of them
+on a build whose schema already carried a description saying it was not
+provenance. **That is the finding that settles it: a schema description does not
+reach a reader who is reading values.** A wrong name stays wrong however well it
+is annotated.
+
+**Decision — §4 is refined, not waived.** Three tiers, by what actually breaks:
+
+1. **Still a major, unconditionally: tool NAMES, and removing a tool.** A
+   renamed tool breaks a session already in flight, before any schema is
+   re-read. No audience argument applies.
+2. **Still a major once anything persists these names**: a script, a saved
+   prompt quoting fields, a stored payload, any client that compiles against the
+   schema rather than re-deriving from it. **The first such consumer ends this
+   amendment** — that is its expiry condition, and it is a fact about the world
+   rather than a date.
+3. **A minor, until then**: renaming or removing a FIELD inside an input or
+   output schema, applied atomically so the payload never disagrees with its
+   schema, and recorded in the CHANGELOG as a breaking wire change anyway,
+   because it is one.
+
+**Taken under tier 3 today**, and the list is now empty:
+
+- **`weight.source` → `weight.mode`**, in both places it appeared: the
+  `get_app_state` inputs block and the estimate's own `weightInput`
+  qualification — where it sat directly beside `countedWeightFrom`, which is the
+  provenance, which is what readers thought `source` meant.
+- **`units.weight` dropped from `inspect_model`'s output.** The tool reports
+  geometry and weighs nothing. The input was narrowed on the 4th run and the
+  output echo was parked for a major; the two halves now agree.
+
+**The honest risk.** This lets a rule be relaxed by arguing about who is
+listening, which is exactly how promises erode. Tier 2 is the guard: the
+argument is available only while the answer to "who holds this name?" is
+*nobody*, and it is a question with a checkable answer rather than a judgement
+call. If that ever takes more than a moment to answer, the answer is no.
 
 ## Alternatives considered
 

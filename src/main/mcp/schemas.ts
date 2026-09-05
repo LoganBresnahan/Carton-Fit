@@ -106,6 +106,12 @@ export const inspectInput = {
 
 const knownFalse = z.object({ known: z.literal(false), reason: z.string() })
 
+/** Lengths only — `inspect_model` weighs nothing, so its reply names no weight
+ *  unit. The INPUT was narrowed on the 4th dogfood and the output echo was left
+ *  for a major; ADR-0020's amendment moved that boundary, so the two halves
+ *  finally agree (8th run). */
+export const lengthOnlyUnits = z.object({ length: lengthUnit })
+
 export const inspectOutput = {
   file: z.object({ path: z.string(), name: z.string() }),
   totals: z.object({ parts: z.number(), kinds: z.number(), triangles: z.number() }),
@@ -131,7 +137,7 @@ export const inspectOutput = {
       z.object({ affected: z.literal(true), kinds: z.array(z.string()), note: z.string() })
     ])
   }),
-  units: outputUnits
+  units: lengthOnlyUnits
 }
 
 // --- estimate -------------------------------------------------------------
@@ -291,11 +297,17 @@ export const estimateOutput = {
     weightInput: z.union([
       z.object({
         supplied: z.literal(true),
-        source: z
+        // RENAMED from `source` on 2026-09-05, the 8th dogfood (ADR-0020
+        // amendment). Four readers took `source` for provenance across five
+        // runs — the last of them on a build whose schema already said it was
+        // not, which is what settled it: a description does not reach a reader
+        // who is reading values. It is a mode, the app has always called it
+        // `weightMode`, and the wire was the only thing calling it a source.
+        mode: z
           .enum(['direct', 'density'])
           .describe('The weight MODE that was set. An input, not a claim about this answer.'),
         overriddenKinds: z.array(z.string()),
-        // The 2026-09-03 finding: `source` described the setting while a script
+        // The 2026-09-03 finding: the mode described the setting while a script
         // reading it drew a conclusion about the answer. Scoped to the parts
         // this pack actually weighed.
         countedWeightFrom: z
@@ -365,15 +377,14 @@ export const appStateObject = z.object({
     maxWeight: weightValue,
     weight: z
       .union([
-        z.object({ source: z.literal('direct'), partWeight: weightValue }),
-        z.object({ source: z.literal('density'), densityGPerCm3: z.number() })
+        z.object({ mode: z.literal('direct'), partWeight: weightValue }),
+        z.object({ mode: z.literal('density'), densityGPerCm3: z.number() })
       ])
       .describe(
-        'The weight MODE the panel is set to — not where the counted weight came from. A ' +
-          'per-kind override in `overrides` beats it for that kind, so this can read ' +
-          '"density" while every gram in the answer was typed by hand; the estimate’s ' +
-          '`countedWeightFrom` is the provenance field. Three dogfood readers took this for ' +
-          'provenance (5th, 6th and 7th runs), which is a fact about the name.'
+        'Which way the panel is set to get a base weight: a figure typed once for every ' +
+          'part, or a density to derive it from. NOT where the counted weight came from — a ' +
+          'per-kind override beats this for that kind, and the estimate’s ' +
+          '`countedWeightFrom` is the provenance field.'
       ),
     overrides: z.array(z.object({ kind: z.string(), weight: weightValue })),
     unitPart: z.union([z.string(), z.null()]),

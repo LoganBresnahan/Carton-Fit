@@ -10,6 +10,18 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
+### Changed
+
+- **Two fields an AI assistant reads have been renamed, which is a breaking
+  change to that surface.** `weight.source` is now `weight.mode` — it says which
+  way the app is set to get a base weight, and never meant "where this answer's
+  weight came from", which is what four separate assistants read it as. And
+  `inspect_model` no longer reports a weight unit, because it reports geometry
+  and weighs nothing. Nothing in the app's own window changes, and no saved
+  preset or estimate is affected. An assistant reads the tool descriptions fresh
+  each session, so this needs nothing from you.
+  ([ADR-0020](doc/adr/0020-version-1-0-0-and-what-it-promises.md))
+
 ### Fixed
 
 - **The warning about parts sitting at different angles now appears everywhere,

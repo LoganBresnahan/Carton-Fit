@@ -39,8 +39,8 @@ export interface AppStateReport {
     clearances: { betweenParts: LengthValue; wall: LengthValue }
     maxWeight: WeightValue
     weight:
-      | { source: 'direct'; partWeight: WeightValue }
-      | { source: 'density'; densityGPerCm3: number }
+      | { mode: 'direct'; partWeight: WeightValue }
+      | { mode: 'density'; densityGPerCm3: number }
     overrides: Array<{ kind: string; weight: WeightValue }>
     unitPart: string | null
     displayUnits: { length: 'mm' | 'in'; maxWeight: WeightUnit; partWeight: WeightUnit }
@@ -91,8 +91,8 @@ export function buildAppState(
       maxWeight: fromG(settings.maxWeightG, units.weight),
       weight:
         settings.weightMode === 'density'
-          ? { source: 'density', densityGPerCm3: settings.densityGPerCm3 }
-          : { source: 'direct', partWeight: fromG(settings.partWeightG, units.weight) },
+          ? { mode: 'density', densityGPerCm3: settings.densityGPerCm3 }
+          : { mode: 'direct', partWeight: fromG(settings.partWeightG, units.weight) },
       overrides: Object.entries(source.overrides).map(([kind, grams]) => ({
         kind,
         weight: fromG(grams, units.weight)

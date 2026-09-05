@@ -141,7 +141,7 @@ describe('inspect_model against the hand-computed goldens', () => {
       path: join(SAMPLES, CUBE_STEP.file),
       outputUnits: { length: 'in' }
     })
-    expect(report.units).toEqual({ length: 'in', weight: 'g' })
+    expect(report.units).toEqual({ length: 'in' })
     expect(report.boundingBox.x).toBeCloseTo(10 / 25.4, 6)
     expect(report.kinds[0].volume.unit).toBe('in3')
   })

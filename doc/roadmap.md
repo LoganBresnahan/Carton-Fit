@@ -1256,27 +1256,36 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       Closed with ADR-0030 open detail 1 in item 22, not here: the cold-boot
       numbers (555 ms `windows-latest`, 757 ms Linux CI) that decide it.
 
-- [ ] 30. Carton Fit 2.0.0 — the wording a major is owed. **Not scheduled, and
-      deliberately not urgent**: everything here is a NAME, not a behaviour, so
-      none of it justifies a major on its own. The item exists because the
-      alternative is remembering, and four dogfood runs have proved what that is
-      worth. ADR-0020's "Waiting for a major" section holds the reasoning; this
-      is the checkbox that survives between releases.
-      - [ ] **`get_app_state.inputs.weight.source` → `mode`.** Four readers
-            (5th–8th runs) took it for provenance. The 8th was reading a build
-            whose schema already said it is not, which is the finding that
-            closed the argument: **a schema description does not reach a reader
-            who is reading values.** Provenance is `countedWeightFrom`, already
-            in the same reply.
-      - [ ] **Drop `units.weight` from `inspect_model`'s output.** The tool
-            weighs nothing. The input was narrowed on the 4th run; the output
-            echo is a field asserting something the reply does not contain, and
-            removing it is a major under ADR-0020 §3.
-      - [ ] **Sweep ADR-0020's list before tagging**, since anything deferred
-            between now and then lands there rather than here.
-      Whatever forces the major — a real contract change — carries these with
-      it. Tagging one FOR them would be the wrong trade: a major costs every
-      client a re-check, and no client is currently getting a wrong answer.
+- [x] 30. The wording a major was owed — **opened and closed 2026-09-05**, and
+      the closing is the more useful half. It was written as a 2.0.0 shopping
+      list: two wire fields whose names were wrong, parked behind a major that
+      nothing else was asking for. One question retired it — *is it even
+      user-facing?* — and the answer was no. Both fields live only in
+      `src/main/mcp/`; the app's UI reads neither, and **nothing stores them**
+      (presets and estimates serialise `PackingSettings`, whose field has always
+      been `weightMode`). The wire invented "source" for a thing the app calls a
+      mode.
+      **ADR-0020 amendment: §4's promise binds to an audience, not a number.**
+      Its own reason — the SDK validates our output against our schema — is
+      about DROPPING a field; a rename applied atomically to schema and payload
+      still validates. What a rename breaks is a client holding the old name,
+      and every client today re-reads the schema each session. Three tiers now:
+      tool names stay a major unconditionally (a rename breaks a session in
+      flight); field renames become a major the moment anything persists the
+      names — a script, a saved prompt, a compiled client — which is the
+      amendment's expiry condition and a checkable fact rather than a date; and
+      until then they are a minor, applied atomically, with a loud CHANGELOG
+      line because it is still a break.
+      - [x] **`weight.source` → `weight.mode`**, in BOTH places it appeared —
+            `get_app_state`'s inputs block and the estimate's own `weightInput`,
+            where it sat directly beside `countedWeightFrom`, the provenance
+            field readers thought `source` was.
+      - [x] **`units.weight` dropped from `inspect_model`'s output.** Input
+            narrowed on the 4th run, output echo parked for a major on the same
+            day; the halves agree now.
+      The guard against this reasoning eroding the rule is written into the
+      amendment: it is available only while "who holds this name?" answers
+      *nobody*, and if that question ever takes thought, the answer is no.
 
 - [ ] 29. Dogfood follow-ups, 8th run — the 2026-09-05 Claude (Cowork) pass
       against `1.2.0+b9a494f`, the deepest read the surface has had: all 15
@@ -1346,10 +1355,12 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         renaming it is a major under ADR-0020 §3. Stop patching it: this is now
         a v2.0.0 line item, and the record should say so rather than accrue a
         fourth cosmetic attempt.
-        **Recorded 2026-09-05, ADR-0020 "Waiting for a major".** No code
-        change: the field keeps its name until 2.0.0 and the reasoning lives
-        where the next major will be planned. Carried as work by **item 30**
-        so it is not remembered only in an ADR nobody opens between releases.
+        **Shipped 2026-09-05 after all — see item 30.** Recorded first as a
+        2.0.0 line item, then reconsidered the same day: the field is not
+        user-facing, nothing stores it, and every client re-reads the schema
+        each session, so ADR-0020's major rule was protecting an audience that
+        does not exist yet. Renamed to `mode` in both places it appeared, with
+        the rule refined rather than waived.
       Refuted, with the reason already at the code site: **`inspect_model`'s
       reply advertising `units.weight`** is not an oversight. The 4th run found
       the same thing and it was half-fixed on purpose — the INPUT was narrowed

@@ -182,7 +182,7 @@ export interface EstimateQualifications {
         /** The MODE that was set — `direct` or `density`. It is an input, not
          *  a description of the answer: a per-kind override reaches the engine
          *  whatever this says. */
-        source: 'direct' | 'density'
+        mode: 'direct' | 'density'
         overriddenKinds: string[]
         /** Where the grams this answer actually counted came from (2026-09-03
          *  dogfood). `source` alone said `density` for a max-quantity count
@@ -410,7 +410,7 @@ function qualificationsOf(
     weightInput: supplied
       ? {
           supplied: true,
-          source: settings.weightMode,
+          mode: settings.weightMode,
           overriddenKinds: Object.keys(overrides),
           countedWeightFrom: countedWeightFrom(context)
         }

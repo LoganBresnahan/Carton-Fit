@@ -54,7 +54,8 @@ export interface InspectReport {
   boundingBox: DimensionsValue
   kinds: KindReport[]
   qualifications: InspectQualifications
-  units: OutputUnits
+  /** Lengths only: this tool weighs nothing (ADR-0020, 8th dogfood). */
+  units: { length: OutputUnits['length'] }
 }
 
 /**
@@ -160,6 +161,6 @@ export function inspectParts(
                 'unaffected.'
             }
     },
-    units
+    units: { length: units.length }
   }
 }

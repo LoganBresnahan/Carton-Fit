@@ -238,12 +238,18 @@ describe('inspect_model measures in the caller’s units too', () => {
     expect(inch.kinds[0].volume.value * 25.4 ** 3).toBeCloseTo(mm.kinds[0].volume.value, 6)
   })
 
-  it('length units do not drag weight units along', async () => {
+  it('names no weight unit at all, because it weighs nothing', async () => {
+    // WAS "length units do not drag weight units along", asserting
+    // `units.weight === 'g'`. The 4th dogfood narrowed the INPUT to length and
+    // left the output echo for a major; the 8th pointed out the reply was still
+    // advertising a unit for a quantity it does not contain. ADR-0020's
+    // amendment let the two halves finally agree.
     const report = await call<InspectReport>('inspect_model', {
       path: CUBE,
       outputUnits: { length: 'in' }
     })
-    expect(report.units.weight).toBe('g')
+    expect(report.units).toEqual({ length: 'in' })
+    expect('weight' in report.units).toBe(false)
   })
 })
 
