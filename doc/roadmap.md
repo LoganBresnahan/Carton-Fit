@@ -1256,6 +1256,70 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       Closed with ADR-0030 open detail 1 in item 22, not here: the cold-boot
       numbers (555 ms `windows-latest`, 757 ms Linux CI) that decide it.
 
+- [ ] 29. Dogfood follow-ups, 8th run — the 2026-09-05 Claude (Cowork) pass
+      against `1.2.0+b9a494f`, the deepest read the surface has had: all 15
+      tools exercised, every count derived by hand first, four weight figures
+      (13.2294, 27.5494, 44.0463, 8.2938 lb) reproduced to four decimals or
+      better, and the optimality wording deliberately provoked with a LOOSE
+      ceiling (720 nuts against 792) to check the hedge comes back. It did.
+      **Every number held. The finding is that yesterday's fix only reached
+      one of four surfaces.**
+      - [ ] **`mixedInstances` reaches the wire and nothing else** (worst).
+        ADR-0029 amendment 10 added the qualification to `estimate` yesterday
+        and scoped it "wire only, for now" on the grounds that the panel was a
+        product question. This reader shows that scoping was wrong: the
+        qualification changes what an answer is MADE of, so every surface that
+        presents an answer needs it. The panel does not show it
+        (`mixedInstanceKinds` has no renderer caller), and neither export
+        carries it — `collectExport` builds `warnings` from exactly
+        `openMeshWarning` and `truncatedLayoutNote`, and **its own comment names
+        the place I failed to touch**: "adding a third warning to the panel
+        means adding it here, in one obvious place."
+        The reader's evidence is the sharp part: the CSV prints `nut` at
+        0.118 × 0.591 × 0.787 for instances 1–2 and 0.787 × 0.591 × 0.118 for
+        3–8 — **the artifact contains the proof of the caveat and not the
+        caveat**. An engineer pasting that summary into a quote hands over a
+        number whose one real weakness was deleted on the way out of the app,
+        by the app.
+        Adopt the reader's proposed regression test too, which is better than
+        the fix: assert that every `qualifications.*` entry with
+        `affected: true` appears in both export formats, so the NEXT warning
+        cannot go missing the same way.
+      - [ ] **The fill percentage does not name its denominator.** ADR-0017
+        addendum 4 shipped `basis: "bounding boxes"` for the 6th run — which
+        names the NUMERATOR only. `clampUtilization(occupied,
+        boxVolume(request.carton))` divides by the INNER carton, while
+        clearances make only part of it reachable: on the plate case 288 in³
+        against 223.125 in³ usable, so "34.3% full" invites "65.7% still
+        usable" when the true remaining usable fraction is 43%. Nothing is
+        wrong; the label is thinner than the number, one level deeper than the
+        thing it just fixed.
+      - [ ] **`inputs.weight.source` — fourth sighting, and the `.describe()`
+        did not work.** Shipped in `b9a494f` on the reasoning that three
+        readers misreading a field is evidence about its name. A fourth reader
+        on that very build flagged it again, which says the rest: **a schema
+        description does not reach a reader who is reading VALUES.** The field
+        is misnamed — `source` promises provenance and delivers mode — and
+        renaming it is a major under ADR-0020 §3. Stop patching it: this is now
+        a v2.0.0 line item, and the record should say so rather than accrue a
+        fourth cosmetic attempt.
+      Refuted, with the reason already at the code site: **`inspect_model`'s
+      reply advertising `units.weight`** is not an oversight. The 4th run found
+      the same thing and it was half-fixed on purpose — the INPUT was narrowed
+      to `{ length }` (narrowing an optional input strips an unknown key rather
+      than refusing it, so it is not a break), while removing `units.weight`
+      from the OUTPUT would be a major under ADR-0020's output-schema rule. The
+      echo stays until that major and `schemas.ts:91-97` says so in five lines.
+      A reader could not have known; the decision is right.
+      **Inherited state, FOURTH sighting** — and this reader named the cost
+      most precisely: a reader who skipped station 0 "would have derived station
+      4's numbers against inputs it never chose and gotten the right answer for
+      the wrong reason." Still item 26's job, not a fifth entry here.
+      Scope caveat the reader volunteered, worth keeping: one file, one
+      material, and `closedMesh` true for all five kinds — so the open-mesh
+      warning never fired and nobody has checked whether IT survives an export
+      either. The regression test above would answer that without a new fixture.
+
 - [ ] 28. Dogfood follow-ups, 7th run — the 2026-09-04 Claude (Cowork) pass
       against `1.2.0+b0b4c4f`, the build staged an hour after the 6th run's
       fixes. **The three fixes held**: the reader derived station 4 by hand and
