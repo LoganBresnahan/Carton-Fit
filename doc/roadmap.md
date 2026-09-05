@@ -1287,6 +1287,64 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       amendment: it is available only while "who holds this name?" answers
       *nobody*, and if that question ever takes thought, the answer is no.
 
+- [ ] 31. Dogfood follow-ups, 9th run — the 2026-09-05 Claude (Cowork) pass
+      against `1.2.0+6b4e5be`. **Every number matched again**, both paths
+      character-identical, and the 8th run's fixes held: the mixed-instance
+      caveat is on the estimate, the fill names both ends, and `weight.mode`
+      was read as a mode. That last one is the measurable win — five runs
+      called `source` *contradicted*; this reader calls `mode` **backed**, and
+      files it as "clarity, low". The rename worked.
+      - [ ] **`qualifications.heuristic.heuristic` is a constant, sitting
+        beside a note that sometimes claims optimality.** Two readers (6th and
+        9th runs) have now read that object as self-contradicting: `{ heuristic:
+        true, note: "…no arrangement beats this under these limits." }`.
+        **Both times I refuted the finding and both times the refutation was
+        right and beside the point.** The caption is gated on `upperBound ===
+        count`, so the case this reader feared — geometry binding with a loose
+        bound — *cannot* produce that sentence, which is exactly why they could
+        not produce it. But the flag they read it against is `true` at every one
+        of `pack.ts`'s three construction sites, with no branch, and the file
+        says so itself at line 433. **A field that never varies cannot be the
+        thing qualifying the note beside it**, and two readers have now inferred
+        a contradiction from the pair.
+        The engine's own vocabulary already separates these: the SEARCH is
+        heuristic (always), while the ANSWER is proven optimal when a rigorous
+        bound meets the count (sometimes). One object, one name, two facts.
+        The project's standing rule says the fix is a field plus a sentence that
+        reads it — so `provenOptimal` (or the flag renamed to say it describes
+        placement) rather than a third attempt at rewording the note. **ADR-0020's
+        new tier 3 makes this affordable**: nothing persists the name.
+      - [ ] **The inputs are written to disk silently, and it is the only write
+        no tool description mentions.** Fifth sighting of inherited state, and
+        the first to name the mechanism rather than the symptom: `save_preset`
+        and `save_estimate` both document that they write; the inputs persist
+        with nothing saying so and no `restoredFrom`/`savedAt` anywhere in
+        `get_app_state`. The reader's hazard is the precise one — had the prior
+        session left `density: 2.70` instead of 7.85, their station-4
+        derivation (9.183 lb/plate → 3) would have been audited against a
+        3.16 lb/plate app answer that *also* returns 3, and no field would have
+        said the density was not theirs. **Item 26 owns the model fix**
+        (ADR-0034: a load starts the document clean); what belongs HERE is the
+        smaller half it does not cover — the tool surface should say the inputs
+        persist, in the same place `save_preset` says it writes.
+      Refuted, both with reasons already in the code. (a) **"no arrangement
+      beats this" is not emitted unconditionally** — `verdict.ts`'s `atBound`
+      gate is `upperBound === count`, and where the reader feared it (`geometry`
+      binding, `geometryBound > count`) `upperBound` exceeds the count and the
+      hedge returns instead. The 8th run's reader proved this constructively by
+      forcing 720 nuts against a ceiling of 792 and getting the hedge. It is
+      *true* at count 2 with `geometryBound: 3` too: under a 100 lb cap and
+      40 lb plates, 2 IS the maximum, and the note beside it says the carton
+      would take 3. (b) **The summary dropping `geometryBound`/`spaceOnlyCount`
+      is deliberate** — ADR-0017 addendum 3 gave those rows to the CSV and left
+      the summary alone on the grounds that it is prose and its binding note
+      already says it in words. This reader confirms the mitigation in the same
+      breath as raising it: "the next line of the same summary does say 'the
+      carton itself would take 3'".
+      Recorded, not new: no delete verb (item 26 slice 2), now **14 presets and
+      16 saved estimates** of dogfood debris — the cost the reader calls
+      "understandable ≠ pleasant" is growing about five rows a session.
+
 - [ ] 29. Dogfood follow-ups, 8th run — the 2026-09-05 Claude (Cowork) pass
       against `1.2.0+b9a494f`, the deepest read the surface has had: all 15
       tools exercised, every count derived by hand first, four weight figures
