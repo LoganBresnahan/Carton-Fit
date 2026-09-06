@@ -117,9 +117,39 @@ describe('inspect_model against the hand-computed goldens', () => {
       expect(report.boundingBox[axis]).toBeCloseTo(CUBE_STEP.sizeMm![0], 3)
     }
     const [kind] = report.kinds
-    expect(kind.volume).toEqual({ value: expect.closeTo(CUBE_STEP.volumeMm3!, 3), unit: 'mm3' })
+    expect(kind.volumePerInstance).toEqual({ value: expect.closeTo(CUBE_STEP.volumeMm3!, 3), unit: 'mm3' })
     expect(kind.closedMesh).toBe(true)
     expect(report.qualifications.openMesh.affected).toBe(false)
+  })
+
+  it('says per-what in the names, and the numbers agree with them', async () => {
+    // 10th dogfood: this object reported a KIND TOTAL (`triangles`) between two
+    // PER-INSTANCE figures (`size`, `volume`), adjacent, with nothing on the
+    // wire saying which was which. The reader got it right by noticing one
+    // nut's volume was 74% of one nut's bounding box, and said plainly that a
+    // less lopsided ratio would have been a coin flip.
+    const report = await call<InspectReport>('inspect_model', {
+      path: join(SAMPLES, AS1_ASSEMBLY.file)
+    })
+
+    // `trianglesTotal` really is a total — it reconciles to the file's own.
+    const summed = report.kinds.reduce((n, kind) => n + kind.trianglesTotal, 0)
+    expect(summed).toBe(report.totals.triangles)
+
+    // `volumePerInstance` really is ONE instance, and this is the reader's own
+    // check promoted to an invariant: an enclosed mesh volume cannot exceed its
+    // own bounding box. A kind total would blow through it by roughly `count`,
+    // so this fails the moment the field changes meaning — which no naming
+    // convention can guarantee on its own.
+    for (const kind of report.kinds) {
+      const box = kind.sizePerInstance.x * kind.sizePerInstance.y * kind.sizePerInstance.z
+      expect(kind.volumePerInstance.value, `${kind.kind} (count ${kind.count})`).toBeLessThanOrEqual(
+        box * (1 + 1e-9)
+      )
+    }
+    // And at least one kind has instances to be wrong about, or the check above
+    // proves nothing: with count 1 a total and a per-instance figure agree.
+    expect(report.kinds.some((kind) => kind.count > 1)).toBe(true)
   })
 
   it('counts AS1’s 18 solids as 5 kinds', async () => {
@@ -143,7 +173,7 @@ describe('inspect_model against the hand-computed goldens', () => {
     })
     expect(report.units).toEqual({ length: 'in' })
     expect(report.boundingBox.x).toBeCloseTo(10 / 25.4, 6)
-    expect(report.kinds[0].volume.unit).toBe('in3')
+    expect(report.kinds[0].volumePerInstance.unit).toBe('in3')
   })
 })
 

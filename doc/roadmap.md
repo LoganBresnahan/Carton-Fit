@@ -1295,7 +1295,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       weight-limited quote, built the case (plate at 40 lb, cap 100 → count 2,
       geometryBound 3), and found the sentence present. **Hypothesis wrong, and
       they said so** — which is the behaviour ADR-0032 wants from this tier.
-      - [ ] **`inspect_model` mixes per-instance and per-kind-total semantics in
+      - [x] **`inspect_model` mixes per-instance and per-kind-total semantics in
         one object, and the wire says nothing** (worst). For `{kind: "nut",
         count: 8}` it reports `triangles: 1216` — a KIND TOTAL, summed across
         every instance and reconciling to `totals.triangles` — beside
@@ -1316,7 +1316,16 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         NAME, not only the description — `volumePerInstance`, `trianglesTotal`
         — since two runs have now shown a `.describe()` does not reach a reader
         who is reading values. Affordable under ADR-0020's tier 3.
-      - [ ] **`get_app_state` answers in grams while the person is looking at
+        **Shipped 2026-09-06, ADR-0029 amendment 13.** `trianglesTotal`,
+        `sizePerInstance`, `volumePerInstance` — all three renamed, since
+        renaming two and leaving the third bare is ambiguous by omission.
+        **The reader's own check became the test**: an enclosed mesh volume
+        cannot exceed its own bounding box, so a per-instance figure that
+        silently became a kind total blows through it by roughly `count`.
+        Plus `trianglesTotal` reconciling to the file's total, and an
+        assertion that some kind has `count > 1` — without which neither
+        check proves anything, because at count 1 the two conventions agree.
+      - [x] **`get_app_state` answers in grams while the person is looking at
         pounds.** `maxWeight: {value: 15875.73295, unit: "g"}` sits in the same
         reply as `displayUnits.maxWeight: "lb"`. Both are true and the output
         units default to mm/g by documented design, so this is a hazard rather
@@ -1330,6 +1339,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         run: values come back in output units while `displayUnits` says what the
         screen shows. Tool descriptions demonstrably DO reach these readers —
         this one quoted three of them.
+        **Shipped 2026-09-06, ADR-0029 amendment 13b.** One clause on
+        `get_app_state`, beside the persistence sentence from the 9th run,
+        carrying the 15875.73 g / 35 lb example and a nudge to pass
+        `outputUnits` on this call in particular. Defaults untouched.
       - [ ] **The no-delete decision has no companion decision about growth.**
         15 presets and 17 saved estimates, all but three from four days of
         dogfood runs, and **eleven of the estimates read

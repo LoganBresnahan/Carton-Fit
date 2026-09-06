@@ -120,9 +120,21 @@ export const inspectOutput = {
     z.object({
       kind: z.string(),
       count: z.number(),
-      triangles: z.number(),
-      size: dimensionsValue,
-      volume: volumeValue,
+      // SCOPE IN THE NAME, not only in a description (10th dogfood): this was
+      // `triangles` / `size` / `volume`, a kind total between two per-instance
+      // figures with nothing saying so, and it was the one object on this
+      // surface whose members carried no description at all.
+      trianglesTotal: z
+        .number()
+        .describe('Triangles across ALL instances of this kind — the only total here.'),
+      sizePerInstance: dimensionsValue.describe(
+        'Bounding box of ONE instance, as placed. When instancesAlike is false this is the ' +
+          'instance we measured, not a description of the others.'
+      ),
+      volumePerInstance: volumeValue.describe(
+        'Enclosed volume of ONE instance. Multiply by count for the kind; a reader who ' +
+          'divided it by count would be wrong by that factor.'
+      ),
       closedMesh: z.boolean(),
       instancesAlike: z.boolean()
     })

@@ -224,8 +224,8 @@ describe('inspect_model measures in the caller’s units too', () => {
       outputUnits: { length: 'in' }
     })
     expect(report.boundingBox.x).toBeCloseTo(10 / 25.4, 9)
-    expect(report.kinds[0].volume.unit).toBe('in3')
-    expect(report.kinds[0].volume.value).toBeCloseTo(1000 / 25.4 ** 3, 9)
+    expect(report.kinds[0].volumePerInstance.unit).toBe('in3')
+    expect(report.kinds[0].volumePerInstance.value).toBeCloseTo(1000 / 25.4 ** 3, 9)
   })
 
   it('metric and imperial reports describe the same cube', async () => {
@@ -235,7 +235,7 @@ describe('inspect_model measures in the caller’s units too', () => {
       outputUnits: { length: 'in' }
     })
     expect(inch.boundingBox.x * 25.4).toBeCloseTo(mm.boundingBox.x, 9)
-    expect(inch.kinds[0].volume.value * 25.4 ** 3).toBeCloseTo(mm.kinds[0].volume.value, 6)
+    expect(inch.kinds[0].volumePerInstance.value * 25.4 ** 3).toBeCloseTo(mm.kinds[0].volumePerInstance.value, 6)
   })
 
   it('names no weight unit at all, because it weighs nothing', async () => {

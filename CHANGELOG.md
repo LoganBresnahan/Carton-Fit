@@ -12,6 +12,15 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **Three fields an assistant reads now say whether they describe one part or
+  all of them.** When a file contains eight copies of a nut, the app reported
+  the triangle count for all eight beside the volume of one, with nothing saying
+  which was which — an assistant that divided would have been eight times wrong
+  about the weight. They are now `trianglesTotal`, `sizePerInstance` and
+  `volumePerInstance`. Breaking change to that surface; nothing in the app
+  window changes.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 - **An assistant can now tell whether a count is provably the best, or just the
   best one found.** The reply used to carry a single "heuristic" flag that was
   always on, sitting beside a sentence that sometimes claimed no arrangement

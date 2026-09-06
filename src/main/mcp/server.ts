@@ -363,7 +363,12 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'THE INPUTS PERSIST between sessions and nothing here distinguishes one you set from ' +
         'one inherited from an earlier run, so set what your answer depends on rather than ' +
         'trusting what you find. Overrides and the unit part are the exception — they are ' +
-        'cleared whenever a file loads.',
+        'cleared whenever a file loads. ' +
+        'Values come back in the OUTPUT units (mm and g unless you ask otherwise), which are ' +
+        'not the units the person is looking at: `displayUnits` says what the window shows. A ' +
+        'cap reported as 15875.73 g is the 35 lb on their screen. Pass outputUnits to be told ' +
+        'in their units — worth doing on this call in particular, since checking what you ' +
+        'inherited is the reason to make it.',
       inputSchema: wire(getAppStateInput),
       outputSchema: wire(driveOutcomeOutput)
     },

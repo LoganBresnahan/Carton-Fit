@@ -262,6 +262,14 @@ describe('the drive tools say what they persist', () => {
     // state does NOT survive a load.
     expect(setInputs?.description).toMatch(/cleared on load_model/)
     expect(appState?.description).toMatch(/cleared whenever a file loads/)
+    // 10th dogfood: the same reply carries a cap in GRAMS and a displayUnits
+    // saying the person reads pounds. Both true, and the default is documented
+    // — but station 0's whole job is checking what you inherited, so the reader
+    // most likely to be burned is the one who did not know to ask for units.
+    // Said on the tool rather than changed in the defaults: one tool defaulting
+    // differently from the rest trades one surprise for another.
+    expect(appState?.description).toMatch(/displayUnits/)
+    expect(appState?.description).toMatch(/output units/i)
   })
 })
 

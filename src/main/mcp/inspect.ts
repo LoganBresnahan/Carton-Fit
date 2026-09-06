@@ -28,14 +28,23 @@ export interface KindReport {
   kind: string
   /** How many instances of it the file contains. */
   count: number
-  /** Triangles across every instance. */
-  triangles: number
-  /** Bounding box of ONE instance, as placed. See `instancesAlike`. */
-  size: DimensionsValue
+  /** Triangles across every instance — a KIND TOTAL, and the only one here.
+   *
+   *  THE SUFFIXES ARE THE FIX (10th dogfood, 2026-09-06). This object carried
+   *  `triangles`, `size` and `volume`: a total between two per-instance
+   *  figures, adjacent, with nothing on the wire saying which was which. A
+   *  reader got it right by noticing that one nut's volume was 74% of one
+   *  nut's bounding box — and said plainly that a less lopsided ratio would
+   *  have been a coin flip. Reading `count: 8` and dividing is 8× wrong. */
+  trianglesTotal: number
+  /** Bounding box of ONE instance, as placed. See `instancesAlike`: when that
+   *  is false this is the instance we happened to measure, not a description of
+   *  the others. */
+  sizePerInstance: DimensionsValue
   /** Enclosed volume of one instance — rotation-invariant, so it describes
    *  every instance whatever `instancesAlike` says. Meaningless when
    *  `closedMesh` is false; that is what the flag is for. */
-  volume: VolumeValue
+  volumePerInstance: VolumeValue
   /** False when the mesh is not watertight, which makes `volume` — and any
    *  weight derived from it — wrong rather than approximate (ADR-0015). */
   closedMesh: boolean
@@ -103,9 +112,12 @@ export function inspectParts(
     kinds.push({
       kind,
       count: instances.length,
-      triangles: instances.reduce((sum, part) => sum + part.indices.length / 3, 0),
-      size: dimsFromMm(sampleSize, units.length),
-      volume: volumeFromMm3(meshVolume(sample.positions, sample.indices), units.length),
+      trianglesTotal: instances.reduce((sum, part) => sum + part.indices.length / 3, 0),
+      sizePerInstance: dimsFromMm(sampleSize, units.length),
+      volumePerInstance: volumeFromMm3(
+        meshVolume(sample.positions, sample.indices),
+        units.length
+      ),
       closedMesh: closed,
       instancesAlike: alike
     })
@@ -131,7 +143,7 @@ export function inspectParts(
     totals: {
       parts: parts.length,
       kinds: kinds.length,
-      triangles: kinds.reduce((sum, kind) => sum + kind.triangles, 0)
+      triangles: kinds.reduce((sum, kind) => sum + kind.trianglesTotal, 0)
     },
     boundingBox: dimsFromMm(span, units.length),
     kinds,

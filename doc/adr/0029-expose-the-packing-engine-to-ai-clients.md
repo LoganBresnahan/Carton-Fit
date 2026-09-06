@@ -1234,6 +1234,56 @@ loaded file and are cleared by `load_model`, which reports what it cleared
 are independent — the carton stays global by design, so it will still persist
 after item 26 ships and will still deserve saying.
 
+### Phase-2 contract amendment 13 (2026-09-06, tenth dogfood) — scope belongs in the name, not only in the doc comment
+
+`inspect_model`'s per-kind block reported `triangles` — a KIND TOTAL, summed
+across every instance and reconciling to `totals.triangles` — between `size` and
+`volume`, both of ONE instance. Two opposite conventions, adjacent, and
+`inspectOutput.kinds` turned out to be **the one object on this surface whose
+members carried no `.describe()` at all**. The TypeScript doc comments state it
+correctly, which reaches whoever edits `inspect.ts` and not the reader on the
+wire — the same gap amendment 7 closed for the three bound fields and did not
+generalise beyond them.
+
+The reader's account of getting it right is the argument for fixing it: they
+inferred per-instance from a RATIO — one nut's volume at 74% of one nut's
+bounding box, where eight nuts would have needed 592% of it — and confirmed it
+two stations later from the CSV's `Quantity` column. **"Had the ratio been less
+lopsided, I'd have had a coin flip."** An engineer who reads `count: 8` and
+divides is wrong by 8× on nut mass, and nothing in that reply would have caught
+them.
+
+So: `trianglesTotal`, `sizePerInstance`, `volumePerInstance`, with descriptions
+as well. **The scope goes in the NAME** because two runs have now shown a
+`.describe()` does not reach a reader who is reading values — and all three are
+renamed rather than the odd one out, since renaming two and leaving the third
+bare makes it ambiguous by omission. Affordable under ADR-0020's amendment;
+CHANGELOG carries it as a breaking wire change.
+
+**A name is a convention, so the numbers are pinned too.** The reader's own
+check became the test: an enclosed mesh volume cannot exceed its own bounding
+box, so a per-instance volume that silently became a kind total blows through it
+by roughly `count`. Plus `trianglesTotal` reconciling to the file's total, and
+an assertion that at least one kind has `count > 1` — without which both checks
+prove nothing, since at count 1 a total and a per-instance figure agree.
+
+### Amendment 13b — the state reply says which units it answered in
+
+`get_app_state` returns `maxWeight: {value: 15875.73295, unit: "g"}` beside
+`displayUnits.maxWeight: "lb"`. Both true: output units default to mm/g by
+documented design and the display units are the person's. But station 0's whole
+job is *check what you inherited before deriving anything*, so the call answers
+by default in units the person at the window is not using, and the reader most
+likely to be burned is the one who did not know to pass `outputUnits`.
+
+**Not a defaults change.** Making one tool default differently from the rest
+trades one surprise for another and breaks the single rule a reader can hold
+about this surface. The description now says it instead — that values come back
+in output units while `displayUnits` says what the window shows, with the
+15875.73 g / 35 lb example, and a nudge to pass `outputUnits` on this call in
+particular. Tool descriptions demonstrably reach these readers: this one quoted
+three of them back.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The
