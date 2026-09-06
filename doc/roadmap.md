@@ -1287,6 +1287,68 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       amendment: it is available only while "who holds this name?" answers
       *nobody*, and if that question ever takes thought, the answer is no.
 
+- [ ] 32. Dogfood follow-ups, 10th run — the 2026-09-06 Claude (Cowork) pass
+      against `1.2.0+0df4925`. **Every number matched again**, both paths
+      byte-identical in wording, and the reader confirmed the 8th and 9th runs'
+      fixes by trying to break them: they hypothesised that the summary export
+      drops `spaceOnlyCount` and hides "the carton would take more" from a
+      weight-limited quote, built the case (plate at 40 lb, cap 100 → count 2,
+      geometryBound 3), and found the sentence present. **Hypothesis wrong, and
+      they said so** — which is the behaviour ADR-0032 wants from this tier.
+      - [ ] **`inspect_model` mixes per-instance and per-kind-total semantics in
+        one object, and the wire says nothing** (worst). For `{kind: "nut",
+        count: 8}` it reports `triangles: 1216` — a KIND TOTAL, summed across
+        every instance and reconciling to `totals.triangles` — beside
+        `volume: 0.0406 in³`, which is ONE nut. Two opposite conventions,
+        adjacent, with no field to tell them apart: `inspectOutput.kinds` is the
+        one object on this surface whose members carry **no `.describe()` at
+        all** (`triangles: z.number()`, `size: dimensionsValue`,
+        `volume: volumeValue`). The TS doc comments state it correctly, which
+        reaches whoever edits `inspect.ts` and not the reader on the wire — the
+        exact gap ADR-0029 amendment 7 closed for the three bound fields and did
+        not generalise.
+        The reader's own account is the argument: they inferred per-instance
+        from a RATIO (0.0406 against a 0.0549 in³ single-instance box; eight
+        nuts would need 0.325) and only confirmed it two stations later from the
+        CSV's `Quantity` column. **"Had the ratio been less lopsided, I'd have
+        had a coin flip."** An engineer reading `count: 8` and dividing is out
+        by 8× on nut mass with nothing in the reply to catch them. Fix in the
+        NAME, not only the description — `volumePerInstance`, `trianglesTotal`
+        — since two runs have now shown a `.describe()` does not reach a reader
+        who is reading values. Affordable under ADR-0020's tier 3.
+      - [ ] **`get_app_state` answers in grams while the person is looking at
+        pounds.** `maxWeight: {value: 15875.73295, unit: "g"}` sits in the same
+        reply as `displayUnits.maxWeight: "lb"`. Both are true and the output
+        units default to mm/g by documented design, so this is a hazard rather
+        than a bug — and the reader named where it bites: station 0's whole job
+        is *check what you inherited before deriving anything*, and it answers
+        by default in units the person at the window is not using, so the reader
+        most likely to be burned is the one who did not know to pass
+        `outputUnits`. **Not a defaults change** — one tool defaulting
+        differently from the rest trades one surprise for another. One clause in
+        the tool description, beside the persistence sentence added on the 9th
+        run: values come back in output units while `displayUnits` says what the
+        screen shows. Tool descriptions demonstrably DO reach these readers —
+        this one quoted three of them.
+      - [ ] **The no-delete decision has no companion decision about growth.**
+        15 presets and 17 saved estimates, all but three from four days of
+        dogfood runs, and **eleven of the estimates read
+        `"3 fit · 11×6×10 in · …"`** — near-indistinguishable in a picker. Item
+        26 covers the delete (slice 2) and the scoping (slice 1); what this run
+        adds is that scoping alone will not fix legibility when eleven rows of
+        ONE part differ only by a suffix. The reader's suggestion — a saved-by
+        or session tag, or an archive flag — costs nothing against ADR-0016,
+        whose objection was to the app deciding which receipts matter, not to
+        the user labelling them. Feed into item 26 slice 3 rather than building
+        separately.
+      Refuted, and worth answering rather than filing: **`export_estimate`'s
+      "nothing lands on disk" is true and establishable from the code** — the
+      tool has no filesystem call at all; it returns text plus a `suggestedName`
+      the caller may ignore. The reader was right that they could not verify it
+      from a sandbox with no view of that machine, and right to say *I cannot
+      tell* rather than *no*. It is a claim about what the tool does NOT do, so
+      no field can back it; code review is the only place it can live.
+
 - [ ] 31. Dogfood follow-ups, 9th run — the 2026-09-05 Claude (Cowork) pass
       against `1.2.0+6b4e5be`. **Every number matched again**, both paths
       character-identical, and the 8th run's fixes held: the mixed-instance
