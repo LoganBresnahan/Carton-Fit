@@ -56,13 +56,23 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       Presets stay global — a carton library, not a part property. Slices,
       dependency-ordered and small enough to scope inline rather than through
       `adr-plan`:
-      - [ ] **Scope the saved-estimates list to the loaded model** (ADR-0034
+      - [x] **Scope the saved-estimates list to the loaded model** (ADR-0034
         §3). `refreshSavedEstimates` learns a scope; the panel lists
         `estimatesForContent(contentHash)` when a file is loaded and the full
         list otherwise, with an *All* control. Identity is the hash, the name
         is a label, an empty hash matches nothing. Never hides a row from
         *All*. e2e: save on part A, load part B, the list is B's; *All* shows
-        both.
+        both. *Shipped 2026-09-08:* `estimatesScope` on the store (a view
+        setting — off the undo stack by construction, since undo diffs only
+        settings and overrides; not persisted), `documentHash()` as the one
+        place that decides there is something to scope to (status done and a
+        non-empty hash — a hash that failed reads as "nothing loaded", so
+        `''` is never queried), and a stale-reply guard in the refresh so a
+        load landing mid-query cannot overwrite the newer list. The panel's
+        scope line says *For <file>* / *All models* / *All — load a model…*
+        and carries the one toggle. Pinned in `tests/storage-estimates.test.ts`
+        (six cases, including same-name-different-hash staying apart) and the
+        e2e scenario named above.
       - [ ] **Versions: a document is a set of hashes** (§3, raised
         2026-09-04 — rev B is the normal case, not the edge case). Migration to
         `user_version` 2 adding `document_versions (content_hash →

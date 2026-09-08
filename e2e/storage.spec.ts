@@ -284,6 +284,55 @@ test.describe('saved configurations UI', () => {
     }
   })
 
+  test('the saved-estimates list is scoped to the loaded model; All shows everything (ADR-0034 §3)', async () => {
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    const items = page.locator('[data-testid="estimate-item"]')
+    const scope = page.locator('[data-testid="estimates-scope"]')
+    const toggle = page.locator('[data-testid="estimates-scope-toggle"]')
+    try {
+      // Nothing loaded: nothing to scope to, and the line says so.
+      await expect(scope).toHaveAttribute('data-scope', 'all')
+      await expect(toggle).toHaveCount(0)
+
+      // Save on part A.
+      await importSample(page, 'cube-10x10.stp')
+      await waitForEstimate(page)
+      await expect(scope).toHaveAttribute('data-scope', 'model')
+      await expect(scope).toContainText('cube-10x10.stp')
+      await page.click('[data-testid="save-estimate"]')
+      await expect(items).toHaveCount(1)
+
+      // Load part B: the list is B's — empty — and no row was deleted.
+      await importSample(page, 'as1-oc-214.stp')
+      await waitForEstimate(page)
+      await expect(scope).toContainText('as1-oc-214.stp')
+      await expect(items).toHaveCount(0)
+      await expect(page.locator('[data-testid="estimates-empty"]')).toContainText('this model')
+      expect(await page.evaluate(() => window.api.storage.recentEstimates())).toHaveLength(1)
+
+      // Save on B, then All shows both, newest first.
+      await page.click('[data-testid="save-estimate"]')
+      await expect(items).toHaveCount(1)
+      await expect(items.first()).toContainText('as1-oc-214.stp')
+      await expect(toggle).toHaveText('All')
+      await toggle.click()
+      await expect(scope).toHaveAttribute('data-scope', 'all')
+      await expect(items).toHaveCount(2)
+      await expect(items.nth(0)).toContainText('as1-oc-214.stp')
+      await expect(items.nth(1)).toContainText('cube-10x10.stp')
+
+      // And back: the scope is a view, not a filter that lost anything.
+      await expect(toggle).toHaveText('This model')
+      await toggle.click()
+      await expect(items).toHaveCount(1)
+      await expect(items.first()).toContainText('as1-oc-214.stp')
+    } finally {
+      await app.close()
+    }
+  })
+
   test('a saved estimate survives a restart', async () => {
     const profile = [`--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`]
 

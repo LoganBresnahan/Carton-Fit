@@ -870,6 +870,40 @@ input[type='number']::-webkit-outer-spin-button {
 .estimate-more {
   font-size: 0.7rem;
 }
+/* The scope line (ADR-0034 §3): whose receipts the list shows, and the one
+   control that widens or narrows it. Same button as the rows' Restore, so the
+   two read as one surface. */
+.estimate-scope {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  font-size: 0.75rem;
+  min-width: 0;
+}
+.estimate-scope > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.estimate-scope .estimate-file {
+  color: var(--text);
+}
+.estimate-scope button {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.7rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.estimate-scope button:hover {
+  border-color: var(--accent);
+}
 
 /* The connect panel (ADR-0030): one row per MCP client, in the same scrolling
    column as the inputs, so it borrows their spacing rather than introducing a

@@ -12,6 +12,13 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **The saved-estimates list shows the loaded model's receipts.** Load a
+  part and the list is that part's saved estimates, found by the file's
+  content, not its name; an **All** control widens it to every saved estimate.
+  Nothing is hidden from All and nothing is deleted by a load. With no model
+  loaded the list is the full one and says so.
+  ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
+
 - **Three fields an assistant reads now say whether they describe one part or
   all of them.** When a file contains eight copies of a nut, the app reported
   the triangle count for all eight beside the volume of one, with nothing saying

@@ -109,6 +109,18 @@ function savePanelWidth(panelWidth: number): void {
   }
 }
 
+export type EstimatesScope = 'model' | 'all'
+
+/**
+ * The hash the saved-estimates list scopes to, or null when there is nothing
+ * to scope to. Null covers no file, an import still in flight, and a file whose
+ * hashing failed: `saveEstimate` writes `''` for those rows, and ADR-0034 §3
+ * says an empty hash matches nothing — so it is never queried as one.
+ */
+export function documentHash(s: Pick<AppState, 'status' | 'contentHash'>): string | null {
+  return s.status === 'done' && s.contentHash ? s.contentHash : null
+}
+
 interface AppState {
   // --- import slice ---
   status: ImportStatus
@@ -193,8 +205,19 @@ interface AppState {
   // --- saved configurations slice (ADR-0007) ---
   /** Named presets, as listed by the main process. */
   configurations: ConfigurationSummary[]
-  /** Estimates the user chose to keep, newest first (ADR-0016). */
+  /** Estimates the user chose to keep, newest first (ADR-0016) — the rows
+   *  the current `estimatesScope` selects, not the whole table. */
   savedEstimates: EstimateRow[]
+  /**
+   * Which receipts the saved-estimates list shows (ADR-0034 §3). `'model'` is
+   * the loaded document's rows, found by `content_hash`; `'all'` is the whole
+   * table, newest first. With nothing loaded there is no document to scope
+   * to, so `'model'` reads as `'all'` (see `documentHash`). A view setting,
+   * never an input: off the undo stack, not persisted, and it hides nothing
+   * from *All*.
+   */
+  estimatesScope: EstimatesScope
+  setEstimatesScope: (estimatesScope: EstimatesScope) => void
   /** Last storage failure, for surfacing rather than swallowing. */
   storageError: string | null
   setConfigurations: (configurations: ConfigurationSummary[]) => void
@@ -321,6 +344,8 @@ export const useAppStore = create<AppState>((set) => ({
   ...NO_PACK,
   configurations: [],
   savedEstimates: [],
+  estimatesScope: 'model',
+  setEstimatesScope: (estimatesScope) => set({ estimatesScope }),
   storageError: null,
   setConfigurations: (configurations) => set({ configurations, storageError: null }),
   setSavedEstimates: (savedEstimates) => set({ savedEstimates, storageError: null }),

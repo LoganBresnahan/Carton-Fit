@@ -57,7 +57,7 @@ function withEstimate(result: PackResult = RESULT): void {
 
 beforeEach(() => {
   useAppStore.getState().resetImport()
-  useAppStore.setState({ savedEstimates: [], storageError: null })
+  useAppStore.setState({ savedEstimates: [], storageError: null, estimatesScope: 'model' })
 })
 
 describe('the unit part travels with the receipt (2026-09-04)', () => {
@@ -209,6 +209,88 @@ describe('refreshSavedEstimates', () => {
     ]
     await refreshSavedEstimates(fakeApi(rows))
     expect(useAppStore.getState().savedEstimates.map((r) => r.fileName)).toEqual(['b.stp', 'a.stp'])
+  })
+
+  // ADR-0034 §3: the list is scoped to the loaded document by content hash;
+  // *All* is the whole table; nothing is hidden from *All*.
+  describe('is scoped to the loaded model (ADR-0034 §3)', () => {
+    const row = (id: number, fileName: string, contentHash: string): EstimateRow => ({
+      id,
+      fileName,
+      contentHash,
+      settings: {},
+      result: {},
+      createdAt: id
+    })
+    // Two parts, one of which shares its NAME with a third row under a
+    // different hash — the case name-matching would merge and hash identity
+    // must keep apart.
+    const rows = [
+      row(3, 'bracket.stp', 'hash-other'),
+      row(2, 'plate.stp', 'hash-b'),
+      row(1, 'bracket.stp', 'hash-a')
+    ]
+    const loaded = (name: string, hash: string | null): void => {
+      useAppStore.getState().beginImport({ name, sizeBytes: 1 })
+      useAppStore
+        .getState()
+        .importSucceeded([], { elapsedMs: 1, partCount: 1, triangleCount: 1 }, hash)
+    }
+    const listed = (): number[] => useAppStore.getState().savedEstimates.map((r) => r.id)
+
+    it("lists the loaded document's rows by hash, never by name", async () => {
+      loaded('bracket.stp', 'hash-a')
+      await refreshSavedEstimates(fakeApi(rows))
+      expect(listed()).toEqual([1])
+    })
+
+    it('follows a load to the new document', async () => {
+      loaded('bracket.stp', 'hash-a')
+      await refreshSavedEstimates(fakeApi(rows))
+      loaded('plate.stp', 'hash-b')
+      await refreshSavedEstimates(fakeApi(rows))
+      expect(listed()).toEqual([2])
+    })
+
+    it('All shows every row, with a document loaded', async () => {
+      loaded('bracket.stp', 'hash-a')
+      useAppStore.getState().setEstimatesScope('all')
+      await refreshSavedEstimates(fakeApi(rows))
+      expect(listed()).toEqual([3, 2, 1])
+    })
+
+    it('with nothing loaded there is nothing to scope to: the full list', async () => {
+      await refreshSavedEstimates(fakeApi(rows))
+      expect(listed()).toEqual([3, 2, 1])
+    })
+
+    it('never queries an empty hash — a file whose hashing failed lists everything', async () => {
+      const api = fakeApi([row(4, 'unhashed.stp', ''), ...rows])
+      let askedFor: string | null = null
+      api.estimatesForContent = async (hash) => {
+        askedFor = hash
+        return []
+      }
+      loaded('unhashed.stp', null)
+      await refreshSavedEstimates(api)
+      expect(askedFor).toBeNull()
+      expect(listed()).toEqual([4, 3, 2, 1])
+    })
+
+    it('a reply to an older scope does not overwrite the newer list', async () => {
+      const api = fakeApi(rows)
+      let release: (rows: EstimateRow[]) => void = () => {}
+      api.estimatesForContent = () => new Promise((resolve) => (release = resolve))
+      loaded('bracket.stp', 'hash-a')
+      const slow = refreshSavedEstimates(api)
+      // The user widens to All while the scoped query is still in flight.
+      useAppStore.getState().setEstimatesScope('all')
+      await refreshSavedEstimates(api)
+      expect(listed()).toEqual([3, 2, 1])
+      release([rows[2]])
+      await slow
+      expect(listed()).toEqual([3, 2, 1])
+    })
   })
 
   it('reports a failure instead of leaving an empty list looking like no history', async () => {

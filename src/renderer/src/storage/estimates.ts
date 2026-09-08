@@ -1,4 +1,4 @@
-import { useAppStore, type PackingSettings } from '../store'
+import { documentHash, useAppStore, type PackingSettings } from '../store'
 import { pruneOverrides, prunedUnitPart, type PartWeightOverrides } from '../packing/kinds'
 import { storageMessage } from './message'
 import type { EstimateRow, StorageApi } from '../../../shared/storage'
@@ -73,10 +73,32 @@ export async function saveEstimate(injected?: StorageApi): Promise<boolean> {
   }
 }
 
-/** Load the saved-estimate list into the store. Safe to call on mount and after writes. */
+/**
+ * Load the saved-estimate list into the store, under the store's current scope
+ * (ADR-0034 §3). Safe to call on mount, after writes, and whenever the scope
+ * or the loaded document changes.
+ *
+ * `'model'` with a document loaded asks `estimatesForContent` — the path
+ * ADR-0007 plumbed end to end and nothing called for four decisions. Every
+ * other case is the full newest-first list: `'all'` by choice, and `'model'`
+ * with nothing to scope to (no file, or a file whose hash failed — that file's
+ * rows carry `''`, and an empty hash matches nothing, so it is never queried).
+ */
 export async function refreshSavedEstimates(injected?: StorageApi): Promise<void> {
+  const state = useAppStore.getState()
+  const hash = state.estimatesScope === 'model' ? documentHash(state) : null
   try {
-    useAppStore.getState().setSavedEstimates(await api(injected).recentEstimates())
+    const rows =
+      hash === null
+        ? await api(injected).recentEstimates()
+        : await api(injected).estimatesForContent(hash)
+    // A load or a scope change can land while a query is in flight; the reply
+    // to the older question must not overwrite the newer list.
+    const now = useAppStore.getState()
+    if (now.estimatesScope !== state.estimatesScope || documentHash(now) !== documentHash(state)) {
+      return
+    }
+    now.setSavedEstimates(rows)
   } catch (error) {
     fail(error)
   }
