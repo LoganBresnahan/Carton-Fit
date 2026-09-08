@@ -5,7 +5,7 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { findCodexCli, parseCodexGet } from '../src/main/connect/codexCli'
 import { MCP_SERVER_KEY } from '../src/shared/connect'
-import { launchApp } from './harness'
+import { launchApp, openConnect } from './harness'
 
 /**
  * The same contract, against the real `codex` (ADR-0030 Decision 7, slice
@@ -107,6 +107,7 @@ test('the real Codex CLI still answers the way ADR-0030 recorded it', async () =
   } finally {
     delete process.env.CODEX_HOME
   }
+  await openConnect(app.page)
 
   try {
     // A fresh home has no entry, so the row is the ordinary starting state —

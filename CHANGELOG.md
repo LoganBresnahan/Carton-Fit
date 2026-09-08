@@ -27,6 +27,12 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   the geometry loaded now. The database schema moves to version 2 to record the
   link; existing rows are untouched.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
+- **AI assistants moved to the header.** The connect surface, which sat at
+  the bottom of the scrolling column beneath every preset and receipt, is now
+  a button beside the theme picker that opens it in a dialog. Nothing about
+  connecting changes; it is just where you find it. The app no longer checks
+  for installed assistants at launch, only when the dialog opens.
+  ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
 - **Saved estimates fold away.** The section is collapsed by default with its
   count in the heading, *3 for this model*, and opens with a click; the app
   remembers whether you left it open. The presets and AI assistants below it

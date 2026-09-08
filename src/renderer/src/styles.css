@@ -109,6 +109,54 @@ body {
   overflow: hidden;
 }
 
+/* The connect surface's trigger (ADR-0034 §5): as quiet as the theme select
+   beside it, and like it never shrinks — a setup control the header must not
+   truncate into a mystery. */
+.connect-open {
+  flex-shrink: 0;
+  padding: 0.25rem 0.55rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.connect-open:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.connect-dialog {
+  /* Explicit: the global margin reset would otherwise pin a native dialog to
+     the top-left corner instead of the centre it gets by default. */
+  margin: auto;
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+}
+.connect-dialog::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+.connect-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.8rem;
+}
+.connect-dialog-actions button {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.connect-dialog-actions button:hover {
+  border-color: var(--accent);
+}
+
 /* The theme control (ADR-0025 §6). Sized in rem and `flex-shrink: 0`, because
    the header's stability rules are about layout, not just height: this is the
    one item in the status area that must keep its full width, and it holds that
@@ -970,11 +1018,10 @@ input[type='number']::-webkit-outer-spin-button {
   border-color: var(--accent);
 }
 
-/* The connect panel (ADR-0030): one row per MCP client, in the same scrolling
-   column as the inputs, so it borrows their spacing rather than introducing a
-   second visual language. Rows are separated by a rule rather than boxed —
-   there are two of them, and two boxes at the bottom of a column already
-   carrying a preset list and a receipts list is one border too many. */
+/* The connect panel (ADR-0030): one row per MCP client. It lived in the
+   scrolling column until ADR-0034 §5 moved it into the header's dialog; it
+   keeps the column's spacing so it reads as the same app. Rows are separated
+   by a rule rather than boxed — there are two of them. */
 .connect-list {
   list-style: none;
   margin: 0;

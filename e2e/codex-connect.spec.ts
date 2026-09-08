@@ -6,7 +6,7 @@ import { CUBE_STL } from '../samples/goldens'
 import type { AppStateReport } from '../src/main/mcp/appState'
 import { MCP_SERVER_KEY } from '../src/shared/connect'
 import { expectCarriesSession } from './sessionEnv'
-import { REPO_ROOT, importSample, launchApp, type AppHandle } from './harness'
+import { REPO_ROOT, importSample, launchApp, openConnect, type AppHandle } from './harness'
 import { appModeEnv, callStructured, connect, stopSpawnedApp } from './mcpClient'
 
 /**
@@ -95,13 +95,17 @@ async function launchWith(
   process.env.CODEX_CLI = FAKE_CLI
   process.env.CODEX_HOME = home
   if (options.addExit !== undefined) process.env.FAKE_CODEX_ADD_EXIT = String(options.addExit)
+  let app: AppHandle
   try {
-    return await launchApp([`--user-data-dir=${profile}`])
+    app = await launchApp([`--user-data-dir=${profile}`])
   } finally {
     delete process.env.CODEX_CLI
     delete process.env.CODEX_HOME
     delete process.env.FAKE_CODEX_ADD_EXIT
   }
+  // ADR-0034 §5: the surface opens from the header; see claude-connect.spec.
+  await openConnect(app.page)
+  return app
 }
 
 test('the button runs Codex’s own CLI, and what it stored actually reaches this window', async () => {

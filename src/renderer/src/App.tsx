@@ -9,7 +9,7 @@ import StorageBanner from './components/StorageBanner'
 import ThemeSelect from './components/ThemeSelect'
 import UpdateBanner from './components/UpdateBanner'
 import UnitPicker from './components/UnitPicker'
-import ConnectPanel from './components/ConnectPanel'
+import ConnectButton from './components/ConnectButton'
 import { ConfigurationsPanel } from './components/ConfigurationsPanel'
 import SavedEstimatesPanel from './components/SavedEstimatesPanel'
 import ViewToggle from './components/ViewToggle'
@@ -33,6 +33,9 @@ export default function App() {
           {/* Left of the chips, and it never shrinks: the chips are what absorb
               truncation (ADR-0021 §7), and a half-width select is unusable
               where a truncated sentence is merely shorter. */}
+          {/* Setup, done once: the connect surface opens from here (ADR-0034
+              §5) instead of sitting at the bottom of the scrolling column. */}
+          <ConnectButton />
           <ThemeSelect />
           <StorageBanner />
           <UpdateBanner />
@@ -56,11 +59,6 @@ export default function App() {
             <PartWeightsPanel />
             <ConfigurationsPanel />
             <SavedEstimatesPanel />
-            {/* Last in the column: setup, not an input. Nobody reaches for it
-                while estimating, and it is the one section a user touches once
-                (ADR-0029, slice `connect-to-claude-button`; one row per MCP
-                client since ADR-0030). */}
-            <ConnectPanel />
           </div>
           <ResultsPanel />
           {/* Last child and absolutely positioned: it overlays the column's

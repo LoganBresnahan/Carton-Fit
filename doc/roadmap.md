@@ -131,11 +131,21 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the triangle is what says the heading folds. e2e helper
         `openSavedEstimates` for the specs that click inside; counts and text
         assertions see through a closed `<details>`, clicks do not.
-      - [ ] **AI assistants move to the header** (§5). A control beside
+      - [x] **AI assistants move to the header** (§5). A control beside
         `ThemeSelect` opens the connect UI (popover or dialog — decide in the
         build). `e2e/connect*.spec.ts` reach the panel through the header from
         then on; nothing about ADR-0030's contracts changes, only where the
-        trigger sits.
+        trigger sits. *Shipped 2026-09-08, awaiting the feel verdict:* a
+        **dialog**, not a popover — the by-hand fields are blocks of JSON and
+        need the width a 360px column cannot give, and a native `<dialog>`
+        brings Escape and a backdrop for free. `ConnectButton` in the header
+        mounts `ConnectPanel` **on open only**: the status check spawns a
+        client's CLI (ADR-0030), and the app must not run one to draw a
+        header — pinned by the new e2e (nothing in the DOM at launch; Escape
+        and Close both unmount it). `openConnect` in the harness; the three
+        connect specs' launch helpers call it. The global `* { margin: 0 }`
+        reset pins a native dialog to the corner — `margin: auto` restores
+        the centre.
       - [ ] **Presets become a picker beside the carton inputs** (§5). Select +
         save + delete next to the fields a preset fills; the standalone list
         goes. The "no part attached" hint stays, in whatever words fit a

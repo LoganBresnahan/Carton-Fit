@@ -138,6 +138,16 @@ export async function importSample(page: Page, fileName: string): Promise<void> 
 }
 
 /**
+ * Open the connect surface from the header (ADR-0034 §5). The panel mounts on
+ * open — nothing about it exists in the DOM before this — so every spec that
+ * reaches a `connect-*` row goes through here.
+ */
+export async function openConnect(page: Page): Promise<void> {
+  await page.click('[data-testid="connect-open"]')
+  await page.waitForSelector('[data-testid="connect-panel"]')
+}
+
+/**
  * Open the saved-estimates section if it is folded (ADR-0034 §5). Counts and
  * text assertions see through a closed `<details>`; clicks do not.
  */

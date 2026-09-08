@@ -6,7 +6,7 @@ import { CUBE_STL } from '../samples/goldens'
 import type { AppStateReport } from '../src/main/mcp/appState'
 import { MCP_SERVER_KEY } from '../src/shared/connect'
 import { expectCarriesSession } from './sessionEnv'
-import { importSample, launchApp, type AppHandle } from './harness'
+import { importSample, launchApp, openConnect, type AppHandle } from './harness'
 import { appModeEnv, callStructured, connect, stopSpawnedApp } from './mcpClient'
 
 /**
@@ -55,12 +55,44 @@ function configPath(dir: string): string {
  */
 async function launchWith(dir: string, profile: string): Promise<AppHandle> {
   process.env.CLAUDE_DESKTOP_CONFIG_DIR = dir
+  let app: AppHandle
   try {
-    return await launchApp([`--user-data-dir=${profile}`])
+    app = await launchApp([`--user-data-dir=${profile}`])
   } finally {
     delete process.env.CLAUDE_DESKTOP_CONFIG_DIR
   }
+  // ADR-0034 §5: the surface opens from the header. Every test here is about
+  // what is inside it, so the helper opens it.
+  await openConnect(app.page)
+  return app
 }
+
+test('the surface opens from the header, and does not exist before that (ADR-0034 §5)', async () => {
+  const profile = mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))
+  const { app, page } = await launchApp([`--user-data-dir=${profile}`])
+  try {
+    // Nothing mounted at launch: the status check spawns a CLI, and the app
+    // must not run one to draw a header.
+    await expect(page.locator('[data-testid="connect-panel"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="connect-open"]')).toBeVisible()
+
+    await openConnect(page)
+    await expect(page.locator('[data-testid="connect-dialog"]')).toBeVisible()
+    await expect(page.locator('[data-testid="connect-claude-desktop-row"]')).toBeVisible()
+
+    // Escape closes it, as a native dialog does; the panel unmounts with it.
+    await page.keyboard.press('Escape')
+    await expect(page.locator('[data-testid="connect-dialog"]')).not.toBeVisible()
+    await expect(page.locator('[data-testid="connect-panel"]')).toHaveCount(0)
+
+    // And the Close button is the same act.
+    await openConnect(page)
+    await page.click('[data-testid="connect-close"]')
+    await expect(page.locator('[data-testid="connect-dialog"]')).not.toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
 
 test('the button writes an invocation that actually reaches this window', async () => {
   test.setTimeout(180_000)
