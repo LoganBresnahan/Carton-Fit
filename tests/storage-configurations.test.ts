@@ -14,7 +14,10 @@ import type { ConfigurationRow, ConfigurationSummary, StorageApi } from '../src/
 // `storageError` instead of an unhandled rejection, and that loading a preset
 // cannot corrupt live settings.
 
+const saved: [string, number | null][] = []
+
 function fakeApi(rows: ConfigurationRow[] = []): StorageApi {
+  saved.length = 0
   const store = new Map(rows.map((r) => [r.name, r]))
   let nextId = store.size + 1
   return {
@@ -28,6 +31,7 @@ function fakeApi(rows: ConfigurationRow[] = []): StorageApi {
       })),
     getConfiguration: async (name) => store.get(name) ?? null,
     saveConfiguration: async (name, settings, customerId) => {
+      saved.push([name, customerId ?? null])
       store.set(name, {
         id: nextId++,
         name,
@@ -174,5 +178,20 @@ describe('storageMessage', () => {
     // An empty banner is worse than an ugly one: it says nothing is wrong.
     const raw = "Error invoking remote method 'x': Error:"
     expect(storageMessage(new Error(raw))).toBe(raw)
+  })
+})
+
+// ADR-0035 §2: a preset is saved for whoever the app is working for.
+describe('saveConfiguration tags the active customer', () => {
+  it('passes the active customer, and null for house', async () => {
+    const api = fakeApi()
+    useAppStore.getState().setActiveCustomer(7)
+    await saveConfiguration('Acme box', api)
+    useAppStore.getState().setActiveCustomer(null)
+    await saveConfiguration('House box', api)
+    expect(saved).toEqual([
+      ['Acme box', 7],
+      ['House box', null]
+    ])
   })
 })

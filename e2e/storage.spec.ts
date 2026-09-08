@@ -463,6 +463,58 @@ test.describe('saved configurations UI', () => {
     }
   })
 
+  test('both lists filter on the customer; saves carry the tag; All widens both (ADR-0035 §3)', async () => {
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    const customer = page.locator('[data-testid="customer-select"]')
+    const picker = page.locator('[data-testid="preset-select"]')
+    const items = page.locator('[data-testid="estimate-item"]')
+    try {
+      // A house preset and a house receipt.
+      await importSample(page, 'cube-10x10.stl')
+      await waitForEstimate(page)
+      await page.fill('[data-testid="config-name"]', 'House box')
+      await page.click('[data-testid="config-save"]')
+      await page.click('[data-testid="save-estimate"]')
+      await expect(items).toHaveCount(1)
+
+      // Working for Acme: an Acme preset and an Acme receipt.
+      await customer.selectOption('__new__')
+      await page.fill('[data-testid="customer-name"]', 'Acme')
+      await page.click('[data-testid="customer-create"]')
+      await expect(page.locator('[data-testid="config-save-for"]')).toContainText('Acme')
+      await page.fill('[data-testid="config-name"]', 'Acme box')
+      await page.click('[data-testid="config-save"]')
+      await page.click('[data-testid="save-estimate"]')
+      // Acme sees both receipts (its own plus house) and both presets, ungrouped.
+      await expect(items).toHaveCount(2)
+      await expect(page.locator('[data-testid="estimate-customer"]')).toHaveCount(1)
+      await expect(page.locator('[data-testid="estimate-customer"]')).toContainText('Acme')
+      await expect(picker.locator('[data-testid="config-others"]')).toHaveCount(0)
+
+      // Back to house: Acme's receipt leaves the scoped list, and Acme's
+      // preset moves under "Other customers" — still one pick away.
+      await customer.selectOption('')
+      await expect(items).toHaveCount(1)
+      await expect(page.locator('[data-testid="estimate-customer"]')).toHaveCount(0)
+      const others = picker.locator('[data-testid="config-others"] option')
+      await expect(others).toHaveCount(1)
+      await expect(others.first()).toHaveText('Acme box — Acme')
+
+      // All widens both axes at once.
+      await openSavedEstimates(page)
+      await page.click('[data-testid="estimates-scope-all"]')
+      await expect(items).toHaveCount(2)
+
+      // The tag is on the row in the database, set at save.
+      const rows = await page.evaluate(() => window.api.storage.recentEstimates())
+      expect(rows.map((r) => r.customerId)).toEqual([1, null])
+    } finally {
+      await app.close()
+    }
+  })
+
   test('every saved estimate is listed, not the first twelve', async () => {
     const { app, page } = await launchApp([
       `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`

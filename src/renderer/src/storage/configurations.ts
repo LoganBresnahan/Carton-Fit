@@ -29,10 +29,15 @@ export async function refreshConfigurations(injected?: StorageApi): Promise<void
   }
 }
 
-/** Save the CURRENT settings under `name`, then refresh the list. */
+/**
+ * Save the CURRENT settings under `name`, tagged for the active customer
+ * (ADR-0035 §2), then refresh the list. Re-saving a name under another
+ * customer moves the preset: that is how a preset's tag changes.
+ */
 export async function saveConfiguration(name: string, injected?: StorageApi): Promise<boolean> {
   try {
-    await api(injected).saveConfiguration(name, useAppStore.getState().settings)
+    const state = useAppStore.getState()
+    await api(injected).saveConfiguration(name, state.settings, state.activeCustomerId)
     await refreshConfigurations(injected)
     return true
   } catch (error) {

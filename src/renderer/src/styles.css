@@ -1088,6 +1088,11 @@ input[type='number']::-webkit-outer-spin-button {
 .estimate-scope button:hover {
   border-color: var(--accent);
 }
+/* Whose receipt (ADR-0035 §2); house is never labelled. */
+.estimate-customer {
+  color: var(--muted);
+  font-weight: normal;
+}
 /* A receipt saved against an earlier version of the loaded document. */
 .estimate-version {
   color: var(--accent);

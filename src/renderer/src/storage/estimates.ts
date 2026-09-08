@@ -63,7 +63,9 @@ export async function saveEstimate(injected?: StorageApi): Promise<boolean> {
         partWeightsG: state.partWeightsG,
         unitPartName: state.unitPartName
       },
-      result: state.packResult
+      result: state.packResult,
+      // Tagged for whoever the app is working for, once, at save (ADR-0035 §2).
+      customerId: state.activeCustomerId
     })
     await refreshSavedEstimates(injected)
     return true
@@ -89,15 +91,26 @@ export async function saveEstimate(injected?: StorageApi): Promise<boolean> {
 export async function refreshSavedEstimates(injected?: StorageApi): Promise<void> {
   const state = useAppStore.getState()
   const hash = state.estimatesScope === 'model' ? documentHash(state) : null
+  // One "All" widens both axes (ADR-0035 §3): the scoped list is the
+  // document's receipts for the active customer plus house; All is every
+  // document's for every customer. With nothing to scope to, the customer
+  // still filters — a shop working for Acme sees Acme's and house's.
+  const customer =
+    state.estimatesScope === 'model' ? { activeId: state.activeCustomerId } : undefined
   try {
     const rows =
       hash === null
-        ? await api(injected).recentEstimates()
-        : await api(injected).estimatesForDocument(hash)
-    // A load or a scope change can land while a query is in flight; the reply
-    // to the older question must not overwrite the newer list.
+        ? await api(injected).recentEstimates(undefined, customer)
+        : await api(injected).estimatesForDocument(hash, undefined, customer)
+    // A load, a scope change or a customer switch can land while a query is
+    // in flight; the reply to the older question must not overwrite the
+    // newer list.
     const now = useAppStore.getState()
-    if (now.estimatesScope !== state.estimatesScope || documentHash(now) !== documentHash(state)) {
+    if (
+      now.estimatesScope !== state.estimatesScope ||
+      documentHash(now) !== documentHash(state) ||
+      now.activeCustomerId !== state.activeCustomerId
+    ) {
       return
     }
     now.setSavedEstimates(rows)

@@ -10,6 +10,20 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
+### Added
+
+- **Customers.** A *Working for* selector in the header holds the customer
+  you are working for; *House* is the default and means everyone. Presets and
+  saved estimates you save are tagged with it, the preset picker shows house
+  plus that customer's cartons (other customers' under their own group), and
+  the saved-estimates list shows the loaded model's receipts for that customer
+  plus house, with *All* widening to everything. A customer is a name and
+  nothing else, and nothing in an estimate depends on it: the same part in the
+  same carton packs identically whoever you are working for. Creating one is
+  done from the selector. The database schema moves to version 3; existing
+  presets and receipts are house rows.
+  ([ADR-0035](doc/adr/0035-customers-are-a-label-on-presets-and-receipts.md))
+
 ### Changed
 
 - **The saved-estimates list shows the loaded model's receipts.** Load a

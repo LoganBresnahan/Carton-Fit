@@ -71,12 +71,15 @@ function countLabel(count: number, scoped: boolean, hash: string | null): string
 function EstimateItem({
   row,
   earlierVersion,
+  customerName,
   removing,
   onDelete
 }: {
   row: EstimateRow
   /** Saved against another hash in the loaded document (ADR-0034 §3). */
   earlierVersion: boolean
+  /** Whose receipt (ADR-0035 §2), or null for house — house is never labelled. */
+  customerName: string | null
   /** Fading out: Delete was pressed and the row is on its way. */
   removing: boolean
   onDelete: () => void
@@ -91,6 +94,12 @@ function EstimateItem({
       <div className="estimate-line">
         <span className="estimate-file" title={row.fileName}>
           {row.fileName}
+          {customerName !== null && (
+            <span className="estimate-customer" data-testid="estimate-customer">
+              {' '}
+              · {customerName}
+            </span>
+          )}
         </span>
         <span className="estimate-when">
           {earlierVersion && (
@@ -140,7 +149,11 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
   const hash = useAppStore(documentHash)
   const fileName = useAppStore((s) => s.file?.name ?? null)
   const linkOffer = useAppStore((s) => s.linkOffer)
+  const activeCustomerId = useAppStore((s) => s.activeCustomerId)
+  const customers = useAppStore((s) => s.customers)
   const [open, setOpen] = useState(loadOpen)
+  const customerName = (id: number | null): string | null =>
+    id === null ? null : (customers.find((c) => c.id === id)?.name ?? `customer #${id}`)
   // Rows fading out. The delete itself waits for the fade, so the next row
   // does not snap into the gap before the eye has seen something leave
   // (first sidebar dogfood, 2026-09-08: "makes the user wonder if they
@@ -165,9 +178,10 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
   // Re-queried on every change of what the list is scoped to: the scope
   // control, and the document — which is the hash, not the file name, so a
   // rename re-lists nothing and a re-export re-lists everything.
+  // …and the customer (ADR-0035 §3), which the scoped list filters on.
   useEffect(() => {
     void refreshSavedEstimates()
-  }, [scope, hash])
+  }, [scope, hash, activeCustomerId])
   // The link offer is a question about the LOAD, so it follows the hash only:
   // widening to All must not re-ask it, and the answer is per load.
   useEffect(() => {
@@ -298,6 +312,7 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
                   key={row.id}
                   row={row}
                   earlierVersion={scoped && row.contentHash !== hash}
+                  customerName={customerName(row.customerId)}
                   removing={removing.has(row.id)}
                   onDelete={() => remove(row.id)}
                 />

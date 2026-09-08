@@ -85,6 +85,7 @@ beforeEach(() => {
     estimatesScope: 'model',
     linkOffer: null
   })
+  useAppStore.getState().setActiveCustomer(null)
 })
 
 describe('the unit part travels with the receipt (2026-09-04)', () => {
@@ -264,6 +265,77 @@ describe('deleteEstimate', () => {
     expect(await deleteEstimate(1, api)).toBe(false)
     expect(useAppStore.getState().storageError).toMatch(/unavailable/)
     expect(useAppStore.getState().savedEstimates.map((r) => r.id)).toEqual([1])
+  })
+})
+
+// ADR-0035: the tag is set at save from the active customer, and the scoped
+// list filters on it; one All widens both axes.
+describe('the active customer (ADR-0035)', () => {
+  const row = (id: number, customerId: number | null): EstimateRow => ({
+    id,
+    fileName: 'a.stp',
+    contentHash: 'h',
+    settings: {},
+    result: {},
+    createdAt: id,
+    customerId
+  })
+  const loaded = (): void => {
+    useAppStore.getState().beginImport({ name: 'a.stp', sizeBytes: 1 })
+    useAppStore.getState().importSucceeded([], { elapsedMs: 1, partCount: 1, triangleCount: 1 }, 'h')
+  }
+  /** A fake that applies the house-plus-active rule the real store applies. */
+  const filtering = (rows: EstimateRow[]) => {
+    const api = fakeApi(rows)
+    const pick = (scope?: { activeId: number | null }) =>
+      scope === undefined
+        ? rows
+        : rows.filter((r) => r.customerId === null || r.customerId === scope.activeId)
+    api.recentEstimates = async (_limit, scope) => pick(scope)
+    api.estimatesForDocument = async (_hash, _limit, scope) => pick(scope)
+    return api
+  }
+
+  it('a save is tagged for the active customer, and house is null', async () => {
+    withEstimate()
+    useAppStore.getState().setActiveCustomer(4)
+    const api = fakeApi()
+    await saveEstimate(api)
+    expect(api.recorded[0]?.customerId).toBe(4)
+    useAppStore.getState().setActiveCustomer(null)
+    await saveEstimate(api)
+    expect(api.recorded[1]?.customerId).toBeNull()
+  })
+
+  it('the scoped list is the document’s receipts for the active customer plus house', async () => {
+    loaded()
+    useAppStore.getState().setActiveCustomer(1)
+    await refreshSavedEstimates(filtering([row(3, 2), row(2, 1), row(1, null)]))
+    expect(useAppStore.getState().savedEstimates.map((r) => r.id)).toEqual([2, 1])
+    useAppStore.getState().setActiveCustomer(null)
+    await refreshSavedEstimates(filtering([row(3, 2), row(2, 1), row(1, null)]))
+    expect(useAppStore.getState().savedEstimates.map((r) => r.id)).toEqual([1])
+  })
+
+  it('All widens both axes: every customer, every document', async () => {
+    loaded()
+    useAppStore.getState().setActiveCustomer(1)
+    useAppStore.getState().setEstimatesScope('all')
+    await refreshSavedEstimates(filtering([row(3, 2), row(2, 1), row(1, null)]))
+    expect(useAppStore.getState().savedEstimates.map((r) => r.id)).toEqual([3, 2, 1])
+  })
+
+  it('a reply for the customer just switched away from is dropped', async () => {
+    loaded()
+    useAppStore.getState().setActiveCustomer(1)
+    const api = fakeApi()
+    let release: (rows: EstimateRow[]) => void = () => {}
+    api.estimatesForDocument = () => new Promise((resolve) => (release = resolve))
+    const slow = refreshSavedEstimates(api)
+    useAppStore.getState().setActiveCustomer(2)
+    release([row(9, 1)])
+    await slow
+    expect(useAppStore.getState().savedEstimates).toEqual([])
   })
 })
 

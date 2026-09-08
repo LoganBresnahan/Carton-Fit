@@ -31,6 +31,8 @@ import {
 export function PresetPicker(): React.JSX.Element {
   const configurations = useAppStore((s) => s.configurations)
   const settings = useAppStore((s) => s.settings)
+  const activeCustomerId = useAppStore((s) => s.activeCustomerId)
+  const customers = useAppStore((s) => s.customers)
   const [selected, setSelected] = useState('')
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
@@ -82,6 +84,18 @@ export function PresetPicker(): React.JSX.Element {
 
   const empty = configurations.length === 0
 
+  // House plus the active customer's first, ungrouped (ADR-0035 §3); every
+  // other customer's under one group. That IS "All", one scroll away in the
+  // same control, and the group label says whose a preset is.
+  const mine = configurations.filter(
+    (c) => c.customerId === null || c.customerId === activeCustomerId
+  )
+  const others = configurations.filter(
+    (c) => c.customerId !== null && c.customerId !== activeCustomerId
+  )
+  const customerName = (id: number | null): string =>
+    id === null ? 'House' : (customers.find((c) => c.id === id)?.name ?? `customer #${id}`)
+
   return (
     <div className="preset-picker" data-testid="configurations-panel">
       <div className="preset-row">
@@ -95,11 +109,20 @@ export function PresetPicker(): React.JSX.Element {
           onChange={(e) => apply(e.target.value)}
         >
           <option value="">{empty ? 'No presets yet' : 'Apply a preset…'}</option>
-          {configurations.map((config) => (
+          {mine.map((config) => (
             <option key={config.id} value={config.name} data-testid="config-item">
               {config.name}
             </option>
           ))}
+          {others.length > 0 && (
+            <optgroup label="Other customers" data-testid="config-others">
+              {others.map((config) => (
+                <option key={config.id} value={config.name} data-testid="config-item">
+                  {config.name} — {customerName(config.customerId)}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
         <button
           type="button"
@@ -144,7 +167,15 @@ export function PresetPicker(): React.JSX.Element {
           Save
         </button>
       </div>
-      <p className="panel-hint">Reusable carton setups — no part attached.</p>
+      <p className="panel-hint">
+        Reusable carton setups — no part attached.
+        {activeCustomerId !== null && (
+          <span data-testid="config-save-for">
+            {' '}
+            Saved for {customerName(activeCustomerId)}.
+          </span>
+        )}
+      </p>
     </div>
   )
 }

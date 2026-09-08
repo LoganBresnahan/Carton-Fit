@@ -297,11 +297,26 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         button's long label ("AI"), the chip's UPDATE word, some padding —
         and names, numbers and buttons keep their width; the select has an
         explicit width so "New customer…" does not size it.
-      - [ ] **Both lists filter on it**: the preset picker shows the active
+      - [x] **Both lists filter on it**: the preset picker shows the active
         customer's cartons plus house; the saved-estimates section shows the
         document's receipts for the active customer plus house; *All* widens
         both. Saves tag with the active customer; a receipt's tag is
-        immutable, a preset's can be changed from the picker.
+        immutable, a preset's can be changed from the picker. *Shipped
+        2026-09-08, awaiting the feel verdict:* the picker lists house plus
+        the active customer's ungrouped and every other customer's under one
+        *Other customers* group, named — "All" for presets is one scroll in
+        the same control, not a second control. The saved-estimates *All*
+        widens **both axes at once** (every document, every customer); the
+        scoped list is the document's for the active customer plus house,
+        and with nothing loaded the customer still filters. A receipt shows
+        its customer beside the file name; house is never labelled. A
+        preset's tag changes by **re-saving its name under another customer**
+        — the store's upsert moves it — so no third row was added to the
+        picker; the hint says *Saved for Acme* while a customer is active.
+        The refresh drops a reply for the customer just switched away from,
+        like it does for a load. Pinned in `tests/storage-estimates.test.ts`
+        and `tests/storage-configurations.test.ts`; e2e walks house → Acme
+        → house → All against the real database.
       - [ ] **Wire, additive** (ADR-0029 amendment 9): `get_app_state.customer`,
         `list_customers`, `set_customer`; `customer: 'active' | 'all'` on both
         list tools; the two save tools report the tag. Creating a customer is
