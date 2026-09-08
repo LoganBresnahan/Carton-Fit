@@ -101,6 +101,29 @@ export const MIGRATIONS: readonly Migration[] = [
       `)
       db.exec('CREATE INDEX document_versions_document ON document_versions(document_hash)')
     }
+  },
+  {
+    version: 3,
+    name: 'customers',
+    up: (db) => {
+      // A customer is a name and an id (ADR-0035 §1). Nothing else, on
+      // purpose: an address or a contact is a CRM, and every such field is a
+      // request to be refused on its own.
+      db.exec(`
+        CREATE TABLE customers (
+          id         INTEGER PRIMARY KEY,
+          name       TEXT    NOT NULL UNIQUE,
+          created_at INTEGER NOT NULL
+        ) STRICT
+      `)
+      // A preset and a receipt each carry an optional customer (§2). NULL is
+      // HOUSE — the carton everyone gets — and is the common case, so every
+      // existing row is a house row by definition and needs no backfill. Not
+      // a foreign key: a customer is never deleted in this version, and a
+      // constraint that cannot fire is a promise the schema cannot keep.
+      db.exec('ALTER TABLE configurations ADD COLUMN customer_id INTEGER')
+      db.exec('ALTER TABLE estimates ADD COLUMN customer_id INTEGER')
+    }
   }
 ]
 

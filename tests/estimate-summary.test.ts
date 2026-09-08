@@ -12,6 +12,7 @@ const row = (patch: Partial<EstimateRow> = {}): EstimateRow => ({
   fileName: 'bracket.stp',
   contentHash: 'h',
   createdAt: 1_700_000_000_000,
+  customerId: null,
   settings: { boxDimsMm: [304.8, 304.8, 304.8], unitSystem: 'imperial' },
   result: { mode: 'max-quantity', count: 500, binding: 'weight' },
   ...patch

@@ -29,7 +29,12 @@ function fakeApi(rows: EstimateRow[] = []): StorageApi & { recorded: EstimateInp
     recorded,
     recordEstimate: async (entry) => {
       recorded.push(entry)
-      stored.unshift({ ...entry, id: stored.length + 1, createdAt: Date.now() })
+      stored.unshift({
+        ...entry,
+        id: stored.length + 1,
+        createdAt: Date.now(),
+        customerId: entry.customerId ?? null
+      })
       return stored.length
     },
     recentEstimates: async () => stored,
@@ -44,6 +49,9 @@ function fakeApi(rows: EstimateRow[] = []): StorageApi & { recorded: EstimateInp
     estimatesForDocument: async (hash) => stored.filter((r) => r.contentHash === hash),
     linkOffer: async () => null,
     linkDocumentVersion: async () => {},
+    setConfigurationCustomer: async () => false,
+    listCustomers: async () => [],
+    createCustomer: async (name) => ({ id: 1, name, createdAt: 1, customerId: null }),
     health: async () => ({ available: true, schemaVersion: 1, quarantined: null, error: null }),
     listConfigurations: async () => [],
     getConfiguration: async () => null,
@@ -92,7 +100,8 @@ describe('the unit part travels with the receipt (2026-09-04)', () => {
     contentHash: 'h',
     settings,
     result: { mode: 'max-quantity', count: 3 },
-    createdAt: 1
+    createdAt: 1,
+    customerId: null
   })
   /** An estimate on screen for a file that has a part named `plate`. */
   const ready = (): void => {
@@ -228,7 +237,8 @@ describe('deleteEstimate', () => {
     contentHash: 'h',
     settings: {},
     result: {},
-    createdAt: id
+    createdAt: id,
+    customerId: null
   })
 
   it('removes the row and re-lists', async () => {
@@ -260,8 +270,8 @@ describe('deleteEstimate', () => {
 describe('refreshSavedEstimates', () => {
   it('loads the list newest-first as the store gives it', async () => {
     const rows: EstimateRow[] = [
-      { id: 2, fileName: 'b.stp', contentHash: 'h', settings: {}, result: {}, createdAt: 2 },
-      { id: 1, fileName: 'a.stp', contentHash: 'h', settings: {}, result: {}, createdAt: 1 }
+      { id: 2, fileName: 'b.stp', contentHash: 'h', settings: {}, result: {}, createdAt: 2, customerId: null },
+      { id: 1, fileName: 'a.stp', contentHash: 'h', settings: {}, result: {}, createdAt: 1, customerId: null }
     ]
     await refreshSavedEstimates(fakeApi(rows))
     expect(useAppStore.getState().savedEstimates.map((r) => r.fileName)).toEqual(['b.stp', 'a.stp'])
@@ -276,7 +286,8 @@ describe('refreshSavedEstimates', () => {
       contentHash,
       settings: {},
       result: {},
-      createdAt: id
+      createdAt: id,
+      customerId: null
     })
     // Two parts, one of which shares its NAME with a third row under a
     // different hash — the case name-matching would merge and hash identity
@@ -403,7 +414,7 @@ describe('the link offer', () => {
 
   it('Link writes the alias, clears the offer and re-lists under the widened document', async () => {
     const api = fakeApi([
-      { id: 1, fileName: 'as1.stp', contentHash: 'rev-a', settings: {}, result: {}, createdAt: 1 }
+      { id: 1, fileName: 'as1.stp', contentHash: 'rev-a', settings: {}, result: {}, createdAt: 1, customerId: null }
     ])
     const links: [string, string][] = []
     api.linkDocumentVersion = async (c, d) => {
@@ -453,7 +464,8 @@ describe('restoreEstimateSettings', () => {
     contentHash: 'h',
     settings,
     result: { verdict: 'from the past' },
-    createdAt: 1
+    createdAt: 1,
+    customerId: null
   })
 
   it('applies the saved settings to the live inputs', () => {

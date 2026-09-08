@@ -263,9 +263,20 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       reads it, and every field beyond the name is a CRM request to be refused
       on its own. UI word is *Customer* (not "entity"); revisit if the first
       real grouping is a carrier or a plant.
-      - [ ] **Migration v3**: `customers` table; nullable `customer_id` on
+      - [x] **Migration v3**: `customers` table; nullable `customer_id` on
         `configurations` and `estimates`. Null is *house* — the common case,
-        never made to feel missing. Existing rows need no backfill.
+        never made to feel missing. Existing rows need no backfill. *Shipped
+        2026-09-08:* `CustomersStore` (create / list / byId, no delete — a
+        receipt that wants to move is the revisit trigger); the column is
+        **not** a foreign key, because a constraint that can never fire is a
+        promise the schema cannot keep. One clause, written once in
+        `customerScope.ts` and read by every list query: `(@all = 1 OR
+        customer_id IS NULL OR customer_id = @customer)` — house plus the
+        active customer, or everything; house active means house only.
+        `ConfigurationsStore.save` takes the tag and re-saving a name moves
+        it; `setCustomer` re-tags; receipts get the tag at record and no
+        call changes it. Pinned: v1 → v3 on a populated db leaves every row
+        house; three filter tests across recent / by-hash / by-document.
       - [ ] **"Working for" header selector** holding the active customer —
         app state, persisted in its own `localStorage` key (ADR-0026 §6's
         rule), survives a load, **not an undo step**. Pin that the pack

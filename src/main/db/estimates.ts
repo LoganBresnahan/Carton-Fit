@@ -1,5 +1,6 @@
 import type { Database, Statement } from 'better-sqlite3'
-import type { EstimateInput, EstimateRow } from '../../shared/storage'
+import type { CustomerScope, EstimateInput, EstimateRow } from '../../shared/storage'
+import { customerParams } from './customerScope'
 
 // Estimate history (ADR-0007). Append-only by design: VISION says every
 // estimate is recorded, and re-running the same part against the same carton is
@@ -13,6 +14,7 @@ interface StoredRow {
   settings: string
   result: string
   created_at: number
+  customer_id: number | null
 }
 
 export class EstimatesStore {
@@ -27,8 +29,8 @@ export class EstimatesStore {
   constructor(db: Database, now: () => number = Date.now) {
     this.#now = now
     this.#insert = db.prepare(`
-      INSERT INTO estimates (file_name, content_hash, settings, result, created_at)
-      VALUES (@fileName, @contentHash, @settings, @result, @createdAt)
+      INSERT INTO estimates (file_name, content_hash, settings, result, created_at, customer_id)
+      VALUES (@fileName, @contentHash, @settings, @result, @createdAt, @customerId)
     `)
     // NEWEST FIRST MEANS INSERTION ORDER, and `id` is the insertion order.
     // This used to be `created_at DESC, id DESC` — the clock first, the id as
@@ -38,8 +40,19 @@ export class EstimatesStore {
     // `tsc` clocksource stamped one save 110 s ahead of the saves either side
     // of it, and the newest receipt listed third). `created_at` stays what it
     // is — the time shown on the row — but it no longer decides the order.
-    this.#recent = db.prepare('SELECT * FROM estimates ORDER BY id DESC LIMIT ?')
-    this.#byHash = db.prepare('SELECT * FROM estimates WHERE content_hash = ? ORDER BY id DESC LIMIT ?')
+    // Every list carries the customer clause (ADR-0035 §3): house plus the
+    // active customer, or everything. See customerScope.ts.
+    this.#recent = db.prepare(`
+      SELECT * FROM estimates
+      WHERE (@all = 1 OR customer_id IS NULL OR customer_id = @customer)
+      ORDER BY id DESC LIMIT @limit
+    `)
+    this.#byHash = db.prepare(`
+      SELECT * FROM estimates
+      WHERE content_hash = @hash
+        AND (@all = 1 OR customer_id IS NULL OR customer_id = @customer)
+      ORDER BY id DESC LIMIT @limit
+    `)
     // The document's whole set (ADR-0034 §3): the hash's root, plus every hash
     // linked to that root. A hash with no alias row is its own root, so this
     // reduces to `forContent` for an unlinked part.
@@ -50,11 +63,12 @@ export class EstimatesStore {
         ) AS hash
       )
       SELECT * FROM estimates
-      WHERE content_hash = (SELECT hash FROM root)
+      WHERE (content_hash = (SELECT hash FROM root)
          OR content_hash IN (
            SELECT content_hash FROM document_versions
            WHERE document_hash = (SELECT hash FROM root)
-         )
+         ))
+        AND (@all = 1 OR customer_id IS NULL OR customer_id = @customer)
       ORDER BY id DESC LIMIT @limit
     `)
     this.#byId = db.prepare('SELECT * FROM estimates WHERE id = ?')
@@ -68,14 +82,16 @@ export class EstimatesStore {
       contentHash: entry.contentHash,
       settings: JSON.stringify(entry.settings),
       result: JSON.stringify(entry.result),
-      createdAt: this.#now()
+      createdAt: this.#now(),
+      // The tag is set once, here, and never changes (ADR-0035 §2).
+      customerId: entry.customerId ?? null
     })
     return Number(info.lastInsertRowid)
   }
 
-  /** Most recent estimates, newest first. */
-  recent(limit = 50): EstimateRow[] {
-    return (this.#recent.all(limit) as StoredRow[]).map(hydrate)
+  /** Most recent estimates, newest first — house plus the active customer's, or all. */
+  recent(limit = 50, customer?: CustomerScope): EstimateRow[] {
+    return (this.#recent.all({ limit, ...customerParams(customer) }) as StoredRow[]).map(hydrate)
   }
 
   /** One row by id, or null. Added for the MCP restore tool (ADR-0029 v3),
@@ -88,8 +104,9 @@ export class EstimatesStore {
   }
 
   /** History for one exact hash, newest first — "have I estimated this before?". */
-  forContent(contentHash: string, limit = 50): EstimateRow[] {
-    return (this.#byHash.all(contentHash, limit) as StoredRow[]).map(hydrate)
+  forContent(contentHash: string, limit = 50, customer?: CustomerScope): EstimateRow[] {
+    const params = { hash: contentHash, limit, ...customerParams(customer) }
+    return (this.#byHash.all(params) as StoredRow[]).map(hydrate)
   }
 
   /**
@@ -97,9 +114,10 @@ export class EstimatesStore {
    * newest first (ADR-0034 §3). What the scoped list shows. An empty hash
    * matches nothing: rows saved with `''` are never anyone's document.
    */
-  forDocument(contentHash: string, limit = 50): EstimateRow[] {
+  forDocument(contentHash: string, limit = 50, customer?: CustomerScope): EstimateRow[] {
     if (contentHash === '') return []
-    return (this.#byDocument.all({ hash: contentHash, limit }) as StoredRow[]).map(hydrate)
+    const params = { hash: contentHash, limit, ...customerParams(customer) }
+    return (this.#byDocument.all(params) as StoredRow[]).map(hydrate)
   }
 
   /**
@@ -120,6 +138,7 @@ function hydrate(row: StoredRow): EstimateRow {
     contentHash: row.content_hash,
     settings: JSON.parse(row.settings),
     result: JSON.parse(row.result),
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    customerId: row.customer_id
   }
 }

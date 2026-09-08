@@ -3,6 +3,8 @@ import {
   STORAGE_CHANNELS,
   type ConfigurationRow,
   type ConfigurationSummary,
+  type CustomerRow,
+  type CustomerScope,
   type EstimateInput,
   type EstimateRow,
   type LinkOffer,
@@ -47,14 +49,33 @@ import {
 const storage: StorageApi = {
   health: () => ipcRenderer.invoke(STORAGE_CHANNELS.health) as Promise<StorageHealth>,
 
-  listConfigurations: () =>
-    ipcRenderer.invoke(STORAGE_CHANNELS.configurationsList) as Promise<ConfigurationSummary[]>,
+  listConfigurations: (customer?: CustomerScope) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.configurationsList, customer) as Promise<
+      ConfigurationSummary[]
+    >,
 
   getConfiguration: (name: string) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.configurationsGet, name) as Promise<ConfigurationRow | null>,
 
-  saveConfiguration: (name: string, settings: unknown) =>
-    ipcRenderer.invoke(STORAGE_CHANNELS.configurationsSave, name, settings) as Promise<void>,
+  saveConfiguration: (name: string, settings: unknown, customerId?: number | null) =>
+    ipcRenderer.invoke(
+      STORAGE_CHANNELS.configurationsSave,
+      name,
+      settings,
+      customerId ?? null
+    ) as Promise<void>,
+
+  setConfigurationCustomer: (name: string, customerId: number | null) =>
+    ipcRenderer.invoke(
+      STORAGE_CHANNELS.configurationsSetCustomer,
+      name,
+      customerId
+    ) as Promise<boolean>,
+
+  listCustomers: () => ipcRenderer.invoke(STORAGE_CHANNELS.customersList) as Promise<CustomerRow[]>,
+
+  createCustomer: (name: string) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.customersCreate, name) as Promise<CustomerRow>,
 
   removeConfiguration: (name: string) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.configurationsRemove, name) as Promise<boolean>,
@@ -62,21 +83,29 @@ const storage: StorageApi = {
   recordEstimate: (entry: EstimateInput) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.estimatesRecord, entry) as Promise<number>,
 
-  recentEstimates: (limit?: number) =>
-    ipcRenderer.invoke(STORAGE_CHANNELS.estimatesRecent, limit) as Promise<EstimateRow[]>,
+  recentEstimates: (limit?: number, customer?: CustomerScope) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.estimatesRecent, limit, customer) as Promise<
+      EstimateRow[]
+    >,
 
   removeEstimate: (id: number) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.estimatesRemove, id) as Promise<boolean>,
 
-  estimatesForContent: (contentHash: string, limit?: number) =>
-    ipcRenderer.invoke(STORAGE_CHANNELS.estimatesForContent, contentHash, limit) as Promise<
-      EstimateRow[]
-    >,
+  estimatesForContent: (contentHash: string, limit?: number, customer?: CustomerScope) =>
+    ipcRenderer.invoke(
+      STORAGE_CHANNELS.estimatesForContent,
+      contentHash,
+      limit,
+      customer
+    ) as Promise<EstimateRow[]>,
 
-  estimatesForDocument: (contentHash: string, limit?: number) =>
-    ipcRenderer.invoke(STORAGE_CHANNELS.estimatesForDocument, contentHash, limit) as Promise<
-      EstimateRow[]
-    >,
+  estimatesForDocument: (contentHash: string, limit?: number, customer?: CustomerScope) =>
+    ipcRenderer.invoke(
+      STORAGE_CHANNELS.estimatesForDocument,
+      contentHash,
+      limit,
+      customer
+    ) as Promise<EstimateRow[]>,
 
   linkOffer: (contentHash: string, fileName: string) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.documentsLinkOffer, contentHash, fileName) as Promise<

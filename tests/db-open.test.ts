@@ -33,7 +33,7 @@ describe('openDatabase', () => {
   it('migrates to the current schema version and leaves it there on reopen', () => {
     const path = tempDbPath()
     const first = openDatabase(path)
-    first.db.prepare("INSERT INTO configurations VALUES (NULL,'p','{}',1,1)").run()
+    first.db.prepare("INSERT INTO configurations (name, settings, created_at, updated_at) VALUES ('p','{}',1,1)").run()
     first.db.close()
 
     const second = openDatabase(path)
@@ -47,10 +47,11 @@ describe('openDatabase', () => {
     }
   })
 
-  it('migrates a populated v1 database up to v2 without touching its rows (ADR-0034 §3)', () => {
+  it('migrates a populated v1 database all the way up without touching its rows (ADR-0034 §3, ADR-0035 §2)', () => {
     // A database exactly as build 1.2.0 left it: migration 1 only, receipts in
     // place. Migration 2 adds the alias table beside them; every receipt keeps
-    // the hash it was saved against.
+    // the hash it was saved against. Migration 3 adds the customer column, and
+    // every existing row is a HOUSE row (null) by definition — no backfill.
     const path = tempDbPath()
     const v1 = new BetterSqlite3(path)
     MIGRATIONS[0].up(v1)
@@ -62,13 +63,17 @@ describe('openDatabase', () => {
 
     const { db, version, quarantined } = openDatabase(path)
     try {
-      expect(version).toBe(2)
+      expect(version).toBe(targetVersion())
       expect(quarantined).toBeNull()
       expect(db.prepare('SELECT COUNT(*) AS n FROM estimates').get()).toEqual({ n: 2 })
       expect(db.prepare('SELECT COUNT(*) AS n FROM document_versions').get()).toEqual({ n: 0 })
       expect(db.prepare("SELECT DISTINCT content_hash AS h FROM estimates").all()).toEqual([
         { h: 'hash-a' }
       ])
+      expect(db.prepare('SELECT DISTINCT customer_id AS c FROM estimates').all()).toEqual([
+        { c: null }
+      ])
+      expect(db.prepare('SELECT COUNT(*) AS n FROM customers').get()).toEqual({ n: 0 })
     } finally {
       db.close()
     }
@@ -193,7 +198,7 @@ describe('recovery boundaries', () => {
     // loss, so it must not be routed through recovery.
     const path = tempDbPath()
     const first = openDatabase(path)
-    first.db.prepare("INSERT INTO configurations VALUES (NULL,'keep-me','{}',1,1)").run()
+    first.db.prepare("INSERT INTO configurations (name, settings, created_at, updated_at) VALUES ('keep-me','{}',1,1)").run()
     first.db.pragma(`user_version = ${targetVersion() + 5}`)
     first.db.close()
 

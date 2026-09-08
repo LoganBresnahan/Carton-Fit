@@ -204,7 +204,8 @@ describe('bulk restores are one step', () => {
       contentHash: 'h',
       settings: { boxDimsMm: [500, 400, 300], maxWeightG: 9999 },
       result: {},
-      createdAt: 1
+      createdAt: 1,
+      customerId: null
     }
     restoreEstimateSettings(row)
     expect(settings().maxWeightG).toBe(9999)
@@ -262,7 +263,8 @@ describe('undo over the unit part', () => {
       contentHash: 'h',
       settings: { boxDimsMm: [500, 400, 300], maxWeightG: 9999, unitPartName: 'bracket' },
       result: {},
-      createdAt: 1
+      createdAt: 1,
+      customerId: null
     }
     restoreEstimateSettings(row)
     expect(unitPart()).toBe('bracket')

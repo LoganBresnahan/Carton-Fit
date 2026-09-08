@@ -25,8 +25,8 @@ import type { DriveAction, DriveBridge, DriveResult } from '../src/shared/mcpDri
 const CONTEXT: OcctWasmContext = { appPath: join(__dirname, '..'), isPackaged: false }
 
 const PRESETS: ConfigurationSummary[] = [
-  { id: 1, name: 'Standard 12in', updatedAt: Date.UTC(2026, 7, 3, 14, 30) },
-  { id: 2, name: 'Half-height', updatedAt: Date.UTC(2026, 7, 4, 9, 0) }
+  { id: 1, name: 'Standard 12in', updatedAt: Date.UTC(2026, 7, 3, 14, 30), customerId: null },
+  { id: 2, name: 'Half-height', updatedAt: Date.UTC(2026, 7, 4, 9, 0), customerId: null }
 ]
 
 const ROWS: EstimateRow[] = [
@@ -35,6 +35,7 @@ const ROWS: EstimateRow[] = [
     fileName: 'bracket.step',
     contentHash: 'abc',
     createdAt: Date.UTC(2026, 7, 4, 9, 0),
+    customerId: null,
     settings: { ...DEFAULT_SETTINGS },
     // `binding` is 'geometry' | 'weight'; 'space' is the DISPLAY word and no
     // engine ever wrote it into a row. This fixture said 'space' and so kept a
@@ -48,6 +49,7 @@ const ROWS: EstimateRow[] = [
     fileName: 'housing.step',
     contentHash: 'def',
     createdAt: Date.UTC(2026, 7, 1, 8, 0),
+    customerId: null,
     settings: { ...DEFAULT_SETTINGS },
     result: { mode: 'fit-check', fits: false, binding: 'weight' }
   }
@@ -367,7 +369,12 @@ describe('writes go through the running app', () => {
     // The tool sends a NAME and nothing else: the settings being saved are the
     // app's current ones, read renderer-side. A tool that carried a settings
     // blob would be a second source of truth for what "current" means.
-    storage.presets.push({ id: 3, name: 'New one', updatedAt: Date.UTC(2026, 7, 5) })
+    storage.presets.push({
+      id: 3,
+      name: 'New one',
+      updatedAt: Date.UTC(2026, 7, 5),
+      customerId: null
+    })
     const report = await call<{ presets: Array<{ name: string }> }>('save_preset', {
       name: 'New one'
     })
@@ -445,7 +452,15 @@ describe('the report builders', () => {
     // The user's data. Hiding a row we cannot summarize would be worse than
     // saying so — the same rule `estimateSummary` already follows for the panel.
     const report = savedEstimatesReport([
-      { id: 1, fileName: 'x.step', contentHash: '', createdAt: 0, settings: null, result: 'junk' }
+      {
+        id: 1,
+        fileName: 'x.step',
+        contentHash: '',
+        createdAt: 0,
+        settings: null,
+        result: 'junk',
+        customerId: null
+      }
     ])
     expect(report.estimates[0]).toMatchObject({ id: 1, summary: 'Saved estimate' })
   })

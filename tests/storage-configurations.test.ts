@@ -20,11 +20,26 @@ function fakeApi(rows: ConfigurationRow[] = []): StorageApi {
   return {
     health: async () => ({ available: true, schemaVersion: 1, quarantined: null, error: null }),
     listConfigurations: async (): Promise<ConfigurationSummary[]> =>
-      [...store.values()].map((r) => ({ id: r.id, name: r.name, updatedAt: r.updatedAt })),
+      [...store.values()].map((r) => ({
+        id: r.id,
+        name: r.name,
+        updatedAt: r.updatedAt,
+        customerId: r.customerId
+      })),
     getConfiguration: async (name) => store.get(name) ?? null,
-    saveConfiguration: async (name, settings) => {
-      store.set(name, { id: nextId++, name, settings, createdAt: 1, updatedAt: 1 })
+    saveConfiguration: async (name, settings, customerId) => {
+      store.set(name, {
+        id: nextId++,
+        name,
+        settings,
+        createdAt: 1,
+        updatedAt: 1,
+        customerId: customerId ?? null
+      })
     },
+    setConfigurationCustomer: async () => false,
+    listCustomers: async () => [],
+    createCustomer: async (name) => ({ id: 1, name, createdAt: 1, customerId: null }),
     removeConfiguration: async (name) => store.delete(name),
     recordEstimate: async () => 1,
     recentEstimates: async () => [],
@@ -80,6 +95,7 @@ describe('saved configurations', () => {
         name: 'Legacy',
         settings: { maxWeightG: 777 },
         createdAt: 1,
+        customerId: null,
         updatedAt: 1
       }
     ])

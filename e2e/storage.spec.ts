@@ -45,8 +45,8 @@ test.describe('storage across main/preload/renderer', () => {
         health.available,
         `storage reported unavailable: ${health.error ?? '(no error given)'}`
       ).toBe(true)
-      // Bumped by ADR-0034 §3's `document_versions` table.
-      expect(health.schemaVersion).toBe(2)
+      // 2: ADR-0034 §3's `document_versions`; 3: ADR-0035's customers.
+      expect(health.schemaVersion).toBe(3)
       // A fresh profile has nothing to recover from.
       expect(health.quarantined).toBeNull()
     } finally {

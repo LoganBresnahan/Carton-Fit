@@ -6,8 +6,10 @@ import { openDatabase } from './db/open'
 import { ConfigurationsStore } from './db/configurations'
 import { EstimatesStore } from './db/estimates'
 import { DocumentsStore } from './db/documents'
+import { CustomersStore } from './db/customers'
 import {
   STORAGE_CHANNELS,
+  type CustomerScope,
   type EstimateInput,
   type StorageHealth
 } from '../shared/storage'
@@ -20,6 +22,7 @@ interface Storage {
   configurations: ConfigurationsStore
   estimates: EstimatesStore
   documents: DocumentsStore
+  customers: CustomersStore
   quarantined: string | null
   schemaVersion: number
 }
@@ -52,6 +55,7 @@ function get(): Storage | null {
       configurations: new ConfigurationsStore(opened.db),
       estimates: new EstimatesStore(opened.db),
       documents: new DocumentsStore(opened.db),
+      customers: new CustomersStore(opened.db),
       quarantined: opened.quarantined,
       schemaVersion: opened.version
     }
@@ -88,15 +92,32 @@ export function registerStorageIpc(): void {
     }
   })
 
-  ipcMain.handle(STORAGE_CHANNELS.configurationsList, () => require_().configurations.list())
+  ipcMain.handle(STORAGE_CHANNELS.configurationsList, (_event, customer?: CustomerScope) =>
+    require_().configurations.list(customer)
+  )
 
   ipcMain.handle(STORAGE_CHANNELS.configurationsGet, (_event, name: string) =>
     require_().configurations.get(name)
   )
 
-  ipcMain.handle(STORAGE_CHANNELS.configurationsSave, (_event, name: string, settings: unknown) => {
-    require_().configurations.save(name, settings)
-  })
+  ipcMain.handle(
+    STORAGE_CHANNELS.configurationsSave,
+    (_event, name: string, settings: unknown, customerId?: number | null) => {
+      require_().configurations.save(name, settings, customerId ?? null)
+    }
+  )
+
+  ipcMain.handle(
+    STORAGE_CHANNELS.configurationsSetCustomer,
+    (_event, name: string, customerId: number | null) =>
+      require_().configurations.setCustomer(name, customerId)
+  )
+
+  ipcMain.handle(STORAGE_CHANNELS.customersList, () => require_().customers.list())
+
+  ipcMain.handle(STORAGE_CHANNELS.customersCreate, (_event, name: string) =>
+    require_().customers.create(name)
+  )
 
   ipcMain.handle(STORAGE_CHANNELS.configurationsRemove, (_event, name: string) =>
     require_().configurations.remove(name)
@@ -106,8 +127,10 @@ export function registerStorageIpc(): void {
     require_().estimates.record(entry)
   )
 
-  ipcMain.handle(STORAGE_CHANNELS.estimatesRecent, (_event, limit?: number) =>
-    require_().estimates.recent(limit)
+  ipcMain.handle(
+    STORAGE_CHANNELS.estimatesRecent,
+    (_event, limit?: number, customer?: CustomerScope) =>
+      require_().estimates.recent(limit, customer)
   )
 
   ipcMain.handle(STORAGE_CHANNELS.estimatesRemove, (_event, id: number) =>
@@ -116,14 +139,14 @@ export function registerStorageIpc(): void {
 
   ipcMain.handle(
     STORAGE_CHANNELS.estimatesForContent,
-    (_event, contentHash: string, limit?: number) =>
-      require_().estimates.forContent(contentHash, limit)
+    (_event, contentHash: string, limit?: number, customer?: CustomerScope) =>
+      require_().estimates.forContent(contentHash, limit, customer)
   )
 
   ipcMain.handle(
     STORAGE_CHANNELS.estimatesForDocument,
-    (_event, contentHash: string, limit?: number) =>
-      require_().estimates.forDocument(contentHash, limit)
+    (_event, contentHash: string, limit?: number, customer?: CustomerScope) =>
+      require_().estimates.forDocument(contentHash, limit, customer)
   )
 
   ipcMain.handle(

@@ -7,6 +7,7 @@ import { openDatabase } from '../src/main/db/open'
 import { ConfigurationsStore } from '../src/main/db/configurations'
 import { EstimatesStore } from '../src/main/db/estimates'
 import { DocumentsStore } from '../src/main/db/documents'
+import { CustomersStore } from '../src/main/db/customers'
 
 function freshDb(): Database {
   return openDatabase(join(mkdtempSync(join(tmpdir(), 'pe-db-')), 'estimator.db')).db
@@ -398,5 +399,105 @@ describe('DocumentsStore', () => {
         db.close()
       }
     })
+  })
+})
+
+// Customers (ADR-0035): a name and an id; a label on presets and receipts;
+// every list is house-plus-active or everything.
+describe('CustomersStore', () => {
+  it('creates, lists alphabetically, and refuses a blank or duplicate name', () => {
+    const db = freshDb()
+    try {
+      const customers = new CustomersStore(db, () => 7)
+      const beta = customers.create('  Beta  ')
+      const acme = customers.create('acme')
+      expect(beta).toEqual({ id: beta.id, name: 'Beta', createdAt: 7 })
+      expect(customers.list().map((c) => c.name)).toEqual(['acme', 'Beta'])
+      expect(customers.byId(acme.id)?.name).toBe('acme')
+      expect(customers.byId(999)).toBeNull()
+      expect(() => customers.create('   ')).toThrow(/needs a name/)
+      expect(() => customers.create('Beta')).toThrow(/UNIQUE/)
+    } finally {
+      db.close()
+    }
+  })
+})
+
+describe('the customer filter (ADR-0035 §3)', () => {
+  const entry = (contentHash: string, customerId: number | null) => ({
+    fileName: 'a.stp',
+    contentHash,
+    settings: SETTINGS,
+    result: {},
+    customerId
+  })
+
+  it('presets: house plus the active customer, or everything', () => {
+    const db = freshDb()
+    try {
+      const customers = new CustomersStore(db)
+      const acme = customers.create('Acme').id
+      const beta = customers.create('Beta').id
+      const presets = new ConfigurationsStore(db)
+      presets.save('House box', SETTINGS)
+      presets.save('Acme box', SETTINGS, acme)
+      presets.save('Beta box', SETTINGS, beta)
+
+      const names = (rows: { name: string }[]) => rows.map((r) => r.name)
+      expect(names(presets.list())).toEqual(['Acme box', 'Beta box', 'House box'])
+      expect(names(presets.list({ activeId: acme }))).toEqual(['Acme box', 'House box'])
+      // House active: house only — house IS the active customer then.
+      expect(names(presets.list({ activeId: null }))).toEqual(['House box'])
+      expect(presets.get('Acme box')?.customerId).toBe(acme)
+      expect(presets.get('House box')?.customerId).toBeNull()
+    } finally {
+      db.close()
+    }
+  })
+
+  it("a preset's customer can change; re-saving a name moves it", () => {
+    const db = freshDb()
+    try {
+      const acme = new CustomersStore(db).create('Acme').id
+      const presets = new ConfigurationsStore(db)
+      presets.save('Box', SETTINGS)
+      expect(presets.setCustomer('Box', acme)).toBe(true)
+      expect(presets.get('Box')?.customerId).toBe(acme)
+      presets.save('Box', SETTINGS, null)
+      expect(presets.get('Box')?.customerId).toBeNull()
+      expect(presets.setCustomer('no such', acme)).toBe(false)
+    } finally {
+      db.close()
+    }
+  })
+
+  it('receipts: every list — recent, by hash, by document — takes the same filter', () => {
+    const db = freshDb()
+    try {
+      const acme = new CustomersStore(db).create('Acme').id
+      const beta = new CustomersStore(db).create('Beta').id
+      const estimates = new EstimatesStore(db, () => 1)
+      const house = estimates.record(entry('h', null))
+      const forAcme = estimates.record(entry('h', acme))
+      const forBeta = estimates.record(entry('h', beta))
+      new DocumentsStore(db).link('h2', 'h')
+      const later = estimates.record(entry('h2', acme))
+
+      const ids = (rows: { id: number }[]) => rows.map((r) => r.id)
+      expect(ids(estimates.recent())).toEqual([later, forBeta, forAcme, house])
+      expect(ids(estimates.recent(50, { activeId: acme }))).toEqual([later, forAcme, house])
+      expect(ids(estimates.recent(50, { activeId: null }))).toEqual([house])
+      expect(ids(estimates.forContent('h', 50, { activeId: beta }))).toEqual([forBeta, house])
+      expect(ids(estimates.forDocument('h', 50, { activeId: acme }))).toEqual([
+        later,
+        forAcme,
+        house
+      ])
+      // The tag was set at save and is on the row; there is no call to change it.
+      expect(estimates.byId(forAcme)?.customerId).toBe(acme)
+      expect(estimates.byId(house)?.customerId).toBeNull()
+    } finally {
+      db.close()
+    }
   })
 })

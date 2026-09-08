@@ -23,14 +23,36 @@ export const STORAGE_CHANNELS = {
   estimatesRemove: 'storage:estimates:remove',
   estimatesForDocument: 'storage:estimates:for-document',
   documentsLinkOffer: 'storage:documents:link-offer',
-  documentsLink: 'storage:documents:link'
+  documentsLink: 'storage:documents:link',
+  configurationsSetCustomer: 'storage:configurations:set-customer',
+  customersList: 'storage:customers:list',
+  customersCreate: 'storage:customers:create'
 } as const
+
+/**
+ * Which customer's rows a list shows (ADR-0035 §3): the active customer's
+ * PLUS house (rows with no customer), or — when the scope is omitted —
+ * everything. `activeId` null means house is the active customer, so the
+ * list is house only.
+ */
+export interface CustomerScope {
+  readonly activeId: number | null
+}
+
+/** A customer: a name and an id, nothing else (ADR-0035 §1). */
+export interface CustomerRow {
+  readonly id: number
+  readonly name: string
+  readonly createdAt: number
+}
 
 /** A preset as the picker lists it — no settings blob, because a list does not need one. */
 export interface ConfigurationSummary {
   readonly id: number
   readonly name: string
   readonly updatedAt: number
+  /** Whose preset; null is house (ADR-0035 §2). */
+  readonly customerId: number | null
 }
 
 export interface ConfigurationRow {
@@ -40,6 +62,7 @@ export interface ConfigurationRow {
   readonly settings: unknown
   readonly createdAt: number
   readonly updatedAt: number
+  readonly customerId: number | null
 }
 
 export interface EstimateInput {
@@ -48,11 +71,15 @@ export interface EstimateInput {
   readonly contentHash: string
   readonly settings: unknown
   readonly result: unknown
+  /** The active customer at save time; null (or omitted) is house (ADR-0035 §2). */
+  readonly customerId?: number | null
 }
 
 export interface EstimateRow extends EstimateInput {
   readonly id: number
   readonly createdAt: number
+  /** Set once at save, never changed. */
+  readonly customerId: number | null
 }
 
 /**
@@ -92,17 +119,30 @@ export interface StorageHealth {
 /** The API the preload exposes on `window.api.storage`. */
 export interface StorageApi {
   health(): Promise<StorageHealth>
-  listConfigurations(): Promise<ConfigurationSummary[]>
+  listConfigurations(customer?: CustomerScope): Promise<ConfigurationSummary[]>
   getConfiguration(name: string): Promise<ConfigurationRow | null>
-  saveConfiguration(name: string, settings: unknown): Promise<void>
+  saveConfiguration(name: string, settings: unknown, customerId?: number | null): Promise<void>
   removeConfiguration(name: string): Promise<boolean>
+  /** Re-tag a preset (ADR-0035 §2). Receipts have no such call: their tag is immutable. */
+  setConfigurationCustomer(name: string, customerId: number | null): Promise<boolean>
+  listCustomers(): Promise<CustomerRow[]>
+  /** The person's act (ADR-0035 §4): never reached by an assistant. */
+  createCustomer(name: string): Promise<CustomerRow>
   recordEstimate(entry: EstimateInput): Promise<number>
-  recentEstimates(limit?: number): Promise<EstimateRow[]>
+  recentEstimates(limit?: number, customer?: CustomerScope): Promise<EstimateRow[]>
   /** Discard one receipt (ADR-0034 §4). Not undoable; not on the MCP wire. */
   removeEstimate(id: number): Promise<boolean>
-  estimatesForContent(contentHash: string, limit?: number): Promise<EstimateRow[]>
+  estimatesForContent(
+    contentHash: string,
+    limit?: number,
+    customer?: CustomerScope
+  ): Promise<EstimateRow[]>
   /** The hash's whole document — every linked version (ADR-0034 §3). */
-  estimatesForDocument(contentHash: string, limit?: number): Promise<EstimateRow[]>
+  estimatesForDocument(
+    contentHash: string,
+    limit?: number,
+    customer?: CustomerScope
+  ): Promise<EstimateRow[]>
   linkOffer(contentHash: string, fileName: string): Promise<LinkOffer | null>
   linkDocumentVersion(contentHash: string, documentHash: string): Promise<void>
 }

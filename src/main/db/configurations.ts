@@ -1,5 +1,6 @@
 import type { Database, Statement } from 'better-sqlite3'
-import type { ConfigurationRow, ConfigurationSummary } from '../../shared/storage'
+import type { ConfigurationRow, ConfigurationSummary, CustomerScope } from '../../shared/storage'
+import { customerParams } from './customerScope'
 
 // Named presets (ADR-0007). Direct better-sqlite3 API, no wrapper layer — the
 // ADR is explicit that there are no legacy call sites to preserve, so an
@@ -11,6 +12,7 @@ interface StoredRow {
   settings: string
   created_at: number
   updated_at: number
+  customer_id: number | null
 }
 
 export class ConfigurationsStore {
@@ -18,6 +20,7 @@ export class ConfigurationsStore {
   readonly #byName: Statement
   readonly #list: Statement
   readonly #remove: Statement
+  readonly #setCustomer: Statement
   readonly #now: () => number
 
   /**
@@ -31,24 +34,44 @@ export class ConfigurationsStore {
     // same thing whether or not X exists, and doing it in one statement avoids
     // a check-then-write race. created_at is deliberately NOT touched on
     // update — a preset keeps its original creation time.
+    // The customer travels with the save (ADR-0035 §2): re-saving a name
+    // under another customer moves the preset, since a preset is a library
+    // entry, not a record of a decision.
     this.#upsert = db.prepare(`
-      INSERT INTO configurations (name, settings, created_at, updated_at)
-      VALUES (@name, @settings, @now, @now)
+      INSERT INTO configurations (name, settings, created_at, updated_at, customer_id)
+      VALUES (@name, @settings, @now, @now, @customerId)
       ON CONFLICT(name) DO UPDATE SET
-        settings   = excluded.settings,
-        updated_at = excluded.updated_at
+        settings    = excluded.settings,
+        updated_at  = excluded.updated_at,
+        customer_id = excluded.customer_id
     `)
     this.#byName = db.prepare('SELECT * FROM configurations WHERE name = ?')
-    // Alphabetical: a preset picker is scanned by eye, not by recency.
-    this.#list = db.prepare('SELECT id, name, updated_at FROM configurations ORDER BY name ASC')
+    // Alphabetical: a preset picker is scanned by eye, not by recency. The
+    // customer filter is house-plus-active (ADR-0035 §3) or everything.
+    this.#list = db.prepare(`
+      SELECT id, name, updated_at, customer_id FROM configurations
+      WHERE (@all = 1 OR customer_id IS NULL OR customer_id = @customer)
+      ORDER BY name ASC
+    `)
     this.#remove = db.prepare('DELETE FROM configurations WHERE name = ?')
+    this.#setCustomer = db.prepare('UPDATE configurations SET customer_id = ? WHERE name = ?')
   }
 
-  /** Create or overwrite the preset called `name`. */
-  save(name: string, settings: unknown): void {
+  /** Create or overwrite the preset called `name`, tagged for `customerId` (null = house). */
+  save(name: string, settings: unknown, customerId: number | null = null): void {
     const trimmed = name.trim()
     if (trimmed === '') throw new Error('a configuration needs a name')
-    this.#upsert.run({ name: trimmed, settings: JSON.stringify(settings), now: this.#now() })
+    this.#upsert.run({
+      name: trimmed,
+      settings: JSON.stringify(settings),
+      now: this.#now(),
+      customerId
+    })
+  }
+
+  /** Re-tag a preset (ADR-0035 §2: a preset's customer may change; a receipt's never does). */
+  setCustomer(name: string, customerId: number | null): boolean {
+    return this.#setCustomer.run(customerId, name).changes > 0
   }
 
   /** The named preset, or null. */
@@ -57,11 +80,14 @@ export class ConfigurationsStore {
     return row ? hydrate(row) : null
   }
 
-  list(): ConfigurationSummary[] {
-    return (this.#list.all() as Pick<StoredRow, 'id' | 'name' | 'updated_at'>[]).map((row) => ({
+  /** Presets, alphabetical — house plus the active customer's, or all of them. */
+  list(customer?: CustomerScope): ConfigurationSummary[] {
+    type Summary = Pick<StoredRow, 'id' | 'name' | 'updated_at' | 'customer_id'>
+    return (this.#list.all(customerParams(customer)) as Summary[]).map((row) => ({
       id: row.id,
       name: row.name,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
+      customerId: row.customer_id
     }))
   }
 
@@ -80,6 +106,7 @@ function hydrate(row: StoredRow): ConfigurationRow {
     // render a half-loaded preset.
     settings: JSON.parse(row.settings),
     createdAt: row.created_at,
-    updatedAt: row.updated_at
+    updatedAt: row.updated_at,
+    customerId: row.customer_id
   }
 }
