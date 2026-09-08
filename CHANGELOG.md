@@ -14,7 +14,8 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 - **The saved-estimates list shows the loaded model's receipts.** Load a
   part and the list is that part's saved estimates, found by the file's
-  content, not its name; an **All** control widens it to every saved estimate.
+  content, not its name; a **This model / All** switch widens it to every
+  saved estimate.
   Nothing is hidden from All and nothing is deleted by a load. With no model
   loaded the list is the full one and says so.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
@@ -40,19 +41,21 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
 - **AI assistants moved to the header.** The connect surface, which sat at
   the bottom of the scrolling column beneath every preset and receipt, is now
-  a button beside the theme picker that opens it in a dialog. Nothing about
+  a button beside the theme picker that opens it in a dialog; Escape, Close,
+  or a click outside dismisses it. Nothing about
   connecting changes; it is just where you find it. The app no longer checks
   for installed assistants at launch, only when the dialog opens.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
 - **Saved estimates fold away.** The section is collapsed by default with its
   count in the heading, *3 for this model*, and opens with a click; the app
-  remembers whether you left it open. The presets and AI assistants below it
+  remembers whether you left it open. Every saved estimate is listed, not the
+  first twelve. The presets and AI assistants below it
   are no longer pushed off-screen by a long list.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
 - **Saved estimates can be deleted.** Each row has a Delete beside *Restore
-  inputs*, like presets have had. Not undoable, and not available to an AI
-  assistant: the person at the keyboard can discard a receipt, an assistant
-  cannot discard one for them.
+  inputs*, like presets have had; the row fades out so you see it go. Not
+  undoable, and not available to an AI assistant: the person at the keyboard
+  can discard a receipt, an assistant cannot discard one for them.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
 
 ### Fixed

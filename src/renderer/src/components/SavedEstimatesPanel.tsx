@@ -26,8 +26,14 @@ import type { EstimateRow } from '../../../shared/storage'
 // scope is a view, never a filter that loses things — no row leaves *All*,
 // and nothing is deleted by a load.
 
-/** More than this and the panel becomes a scrolling wall; the rest stay queryable. */
-const SHOWN = 12
+// No cap on rows. There was one (12, "the rest stay queryable") from when the
+// list sat open in the column; inside a fold the column scrolls and a cap
+// only hid receipts the person went looking for (first sidebar dogfood,
+// 2026-09-08). The query's own limit still applies.
+
+/** How long a deleted row takes to fade before it leaves the list. Long
+ *  enough to be seen going, short enough not to feel like a confirm step. */
+const REMOVE_MS = 220
 
 // The section is a native `<details>` (ADR-0034 §5) — the pattern
 // ConnectClientRow's "Set it up by hand" already uses — with the document's
@@ -64,14 +70,24 @@ function countLabel(count: number, scoped: boolean, hash: string | null): string
 
 function EstimateItem({
   row,
-  earlierVersion
+  earlierVersion,
+  removing,
+  onDelete
 }: {
   row: EstimateRow
   /** Saved against another hash in the loaded document (ADR-0034 §3). */
   earlierVersion: boolean
+  /** Fading out: Delete was pressed and the row is on its way. */
+  removing: boolean
+  onDelete: () => void
 }): React.JSX.Element {
   return (
-    <li data-testid="estimate-item" data-earlier-version={earlierVersion || undefined}>
+    <li
+      data-testid="estimate-item"
+      data-earlier-version={earlierVersion || undefined}
+      className={removing ? 'removing' : undefined}
+      aria-busy={removing || undefined}
+    >
       <div className="estimate-line">
         <span className="estimate-file" title={row.fileName}>
           {row.fileName}
@@ -106,7 +122,8 @@ function EstimateItem({
             type="button"
             data-testid={`estimate-delete-${row.id}`}
             title="Discard this saved estimate — not undoable"
-            onClick={() => void deleteEstimate(row.id)}
+            disabled={removing}
+            onClick={onDelete}
           >
             Delete
           </button>
@@ -124,6 +141,23 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
   const fileName = useAppStore((s) => s.file?.name ?? null)
   const linkOffer = useAppStore((s) => s.linkOffer)
   const [open, setOpen] = useState(loadOpen)
+  // Rows fading out. The delete itself waits for the fade, so the next row
+  // does not snap into the gap before the eye has seen something leave
+  // (first sidebar dogfood, 2026-09-08: "makes the user wonder if they
+  // actually deleted something").
+  const [removing, setRemoving] = useState<ReadonlySet<number>>(() => new Set())
+  const remove = (id: number): void => {
+    setRemoving((all) => new Set(all).add(id))
+    window.setTimeout(() => {
+      void deleteEstimate(id).finally(() =>
+        setRemoving((all) => {
+          const next = new Set(all)
+          next.delete(id)
+          return next
+        })
+      )
+    }, REMOVE_MS)
+  }
 
   // Storage may be unavailable (it opens lazily in main and is allowed to
   // fail); refreshSavedEstimates records that in storageError rather than
@@ -209,14 +243,37 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
                 'All models'
               )}
             </span>
+            {/* Both states visible, the active one lit — the same control
+                Mode and Quality use. A single button that named the OTHER
+                state read as naming the current one (first sidebar dogfood,
+                2026-09-08): "This model" showed while the list was All. */}
             {hash !== null && (
-              <button
-                type="button"
-                data-testid="estimates-scope-toggle"
-                onClick={() => setScope(scoped ? 'all' : 'model')}
+              <div
+                className="segmented small estimate-scope-switch"
+                role="radiogroup"
+                aria-label="Which saved estimates to list"
               >
-                {scoped ? 'All' : 'This model'}
-              </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={scoped}
+                  className={`segment${scoped ? ' active' : ''}`}
+                  data-testid="estimates-scope-model"
+                  onClick={() => setScope('model')}
+                >
+                  This model
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!scoped}
+                  className={`segment${scoped ? '' : ' active'}`}
+                  data-testid="estimates-scope-all"
+                  onClick={() => setScope('all')}
+                >
+                  All
+                </button>
+              </div>
             )}
           </div>
 
@@ -236,20 +293,16 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
             </p>
           ) : (
             <ul className="estimate-list" data-testid="estimate-list">
-              {savedEstimates.slice(0, SHOWN).map((row) => (
+              {savedEstimates.map((row) => (
                 <EstimateItem
                   key={row.id}
                   row={row}
                   earlierVersion={scoped && row.contentHash !== hash}
+                  removing={removing.has(row.id)}
+                  onDelete={() => remove(row.id)}
                 />
               ))}
             </ul>
-          )}
-
-          {savedEstimates.length > SHOWN && (
-            <p className="muted estimate-more" data-testid="estimates-more">
-              Showing the {SHOWN} most recent of {savedEstimates.length}.
-            </p>
           )}
         </div>
       </details>

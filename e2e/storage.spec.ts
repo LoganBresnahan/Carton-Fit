@@ -313,11 +313,12 @@ test.describe('saved configurations UI', () => {
     ])
     const items = page.locator('[data-testid="estimate-item"]')
     const scope = page.locator('[data-testid="estimates-scope"]')
-    const toggle = page.locator('[data-testid="estimates-scope-toggle"]')
+    const model = page.locator('[data-testid="estimates-scope-model"]')
+    const all = page.locator('[data-testid="estimates-scope-all"]')
     try {
-      // Nothing loaded: nothing to scope to, and the line says so.
+      // Nothing loaded: nothing to scope to, the line says so, no switch.
       await expect(scope).toHaveAttribute('data-scope', 'all')
-      await expect(toggle).toHaveCount(0)
+      await expect(model).toHaveCount(0)
 
       // Save on part A.
       await importSample(page, 'cube-10x10.stp')
@@ -339,17 +340,20 @@ test.describe('saved configurations UI', () => {
       await page.click('[data-testid="save-estimate"]')
       await expect(items).toHaveCount(1)
       await expect(items.first()).toContainText('as1-oc-214.stp')
-      await expect(toggle).toHaveText('All')
+      // The switch shows the CURRENT state lit, and both states at once —
+      // a button that named the other state was read as the current one.
+      await expect(model).toHaveAttribute('aria-checked', 'true')
+      await expect(all).toHaveAttribute('aria-checked', 'false')
       await openSavedEstimates(page)
-      await toggle.click()
+      await all.click()
       await expect(scope).toHaveAttribute('data-scope', 'all')
+      await expect(all).toHaveAttribute('aria-checked', 'true')
       await expect(items).toHaveCount(2)
       await expect(items.nth(0)).toContainText('as1-oc-214.stp')
       await expect(items.nth(1)).toContainText('cube-10x10.stp')
 
       // And back: the scope is a view, not a filter that lost anything.
-      await expect(toggle).toHaveText('This model')
-      await toggle.click()
+      await model.click()
       await expect(items).toHaveCount(1)
       await expect(items.first()).toContainText('as1-oc-214.stp')
     } finally {
@@ -424,6 +428,29 @@ test.describe('saved configurations UI', () => {
     }
   })
 
+  test('every saved estimate is listed, not the first twelve', async () => {
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    try {
+      await page.evaluate(async () => {
+        for (let i = 0; i < 15; i++) {
+          await window.api.storage.recordEstimate({
+            fileName: 'many.stp',
+            contentHash: 'many',
+            settings: {},
+            result: { mode: 'fit-check', fits: true, binding: 'geometry' }
+          })
+        }
+      })
+      await page.reload()
+      await expect(page.locator('[data-testid="estimate-item"]')).toHaveCount(15)
+      await expect(page.locator('[data-testid="estimates-count"]')).toHaveText('15')
+    } finally {
+      await app.close()
+    }
+  })
+
   test('the saved-estimates section folds, counts, and remembers (ADR-0034 §5)', async () => {
     const profile = [`--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`]
     const first = await launchApp(profile)
@@ -440,7 +467,7 @@ test.describe('saved configurations UI', () => {
       await expect(count).toHaveText('1 for this model')
       // The count sees the scope: All widens it, and says so.
       await openSavedEstimates(first.page)
-      await first.page.click('[data-testid="estimates-scope-toggle"]')
+      await first.page.click('[data-testid="estimates-scope-all"]')
       await expect(count).toHaveText('1 across all models')
     } finally {
       await first.app.close()
@@ -474,6 +501,9 @@ test.describe('saved configurations UI', () => {
       const [newest, oldest] = await page.evaluate(() => window.api.storage.recentEstimates())
       await openSavedEstimates(page)
       await page.click(`[data-testid="estimate-delete-${newest.id}"]`)
+      // The row is seen leaving before it is gone: it fades first, and the
+      // delete follows the fade.
+      await expect(items.first()).toHaveClass(/removing/)
       await expect(items).toHaveCount(1)
 
       // The right row went, and it went from the database, not just the list.

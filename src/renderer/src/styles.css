@@ -942,8 +942,25 @@ input[type='number']::-webkit-outer-spin-button {
   gap: 0.3rem;
   flex-shrink: 0;
 }
-.estimate-more {
+.estimate-scope-switch {
+  flex-shrink: 0;
+}
+.estimate-scope-switch .segment {
+  padding: 0.15rem 0.5rem;
   font-size: 0.7rem;
+  white-space: nowrap;
+}
+/* A row on its way out (Delete pressed): it fades and collapses before it
+   leaves the DOM, so the next row is seen moving up rather than appearing. */
+.estimate-list li {
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+.estimate-list li.removing {
+  opacity: 0;
+  transform: translateX(0.5rem);
+  pointer-events: none;
 }
 /* The scope line (ADR-0034 §3): whose receipts the list shows, and the one
    control that widens or narrows it. Same button as the rows' Restore, so the

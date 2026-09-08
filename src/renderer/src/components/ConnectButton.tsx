@@ -41,6 +41,12 @@ export default function ConnectButton(): React.JSX.Element {
         data-testid="connect-dialog"
         aria-label="AI assistants"
         onClose={() => setOpen(false)}
+        // A click on the backdrop lands on the dialog element itself — its
+        // children swallow clicks inside. Native dialogs do not close on it;
+        // people expect them to (first sidebar dogfood, 2026-09-08).
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setOpen(false)
+        }}
       >
         {open && (
           <>

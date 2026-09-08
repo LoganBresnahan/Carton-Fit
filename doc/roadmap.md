@@ -193,6 +193,37 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [x] 33. Sidebar dogfood, first pass on item 26 — the user's own eyes on
+      `1.2.0+33f29c1`, 2026-09-08, the same day the item shipped. Four
+      findings, all fixed the same day; none a wrong number, three of them
+      the cost of placing slices 4–6 by screenshot instead of by hand.
+      - [x] **The scope control named the state it would switch TO, and was
+        read as the state it was in** (worst — it made the feature look
+        backwards). "This model" showed while the list was All; "All" showed
+        while the list was the model's; the user reported the scope inverted,
+        with the data right underneath. A single button that names the other
+        state is a pattern this app does not use anywhere else — Mode and
+        Quality show both states with the active one lit — and now the scope
+        does too (`estimates-scope-model` / `estimates-scope-all`,
+        `aria-checked`). Pinned in the scoped-list e2e.
+      - [x] **Only the first twelve receipts showed.** A cap from when the
+        list sat open in the column ("the rest stay queryable"); inside a
+        fold, the column scrolls and the cap only hid rows the person went
+        looking for. Removed; the query's own limit is the only one. Pinned:
+        fifteen rows list as fifteen.
+      - [x] **Delete gave no sign anything left** — the next row snapped into
+        the gap. The row now fades and slides for 220 ms before the delete
+        runs, so the eye sees one go and the rest move up. Pinned: the row
+        carries `removing` before the count drops.
+      - [x] **A click outside the AI-assistants dialog did not close it.**
+        Native `<dialog>` closes on Escape only; a backdrop click lands on the
+        dialog element itself, so one `event.target === currentTarget` check
+        closes it. Pinned in the header e2e.
+      Not a finding, recorded because it will come up: the screenshot showed
+      eleven `as1-oc-214.stp` rows reading `3 fit · of plate · 11×6×10 in ·
+      both limits` — item 32's open follow-up (a label on a receipt), still
+      waiting on its trigger.
+
 - [ ] 27. Customers — **ADR-0035, Proposed 2026-09-04**, sequenced behind
       item 26 because it is a filter on the two lists that item builds. The
       ask: two identical parts ship to two companies with different carton

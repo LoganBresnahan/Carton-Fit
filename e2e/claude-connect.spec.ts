@@ -89,6 +89,11 @@ test('the surface opens from the header, and does not exist before that (ADR-003
     await openConnect(page)
     await page.click('[data-testid="connect-close"]')
     await expect(page.locator('[data-testid="connect-dialog"]')).not.toBeVisible()
+
+    // So is a click on the backdrop (first sidebar dogfood, 2026-09-08).
+    await openConnect(page)
+    await page.mouse.click(5, 300)
+    await expect(page.locator('[data-testid="connect-dialog"]')).not.toBeVisible()
   } finally {
     await app.close()
   }
