@@ -112,6 +112,12 @@ product decisions:
   decided by the person, never merged automatically. Presets stay global: a
   preset is a carton, not a part. Saved estimates can be deleted from the
   panel and only from the panel; an assistant cannot discard one.
+  **Customers are the other axis** (ADR-0035): a *Working for* selector in
+  the header names who the app is working for, *House* meaning everyone.
+  Presets and saved estimates are tagged with it when saved, both lists show
+  house plus that customer's rows with *All* one click away, and a customer is
+  a name and nothing else — never an input, never a CRM field. Nothing an
+  estimate computes depends on it.
 - **Undo/redo over the inputs** (Ctrl+Z / Ctrl+Shift+Z): session-scoped and
   in-memory; under auto-run, undoing an input is undoing the estimate
   (ADR-0016).

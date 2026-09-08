@@ -254,7 +254,8 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         four is the defect amendment 11 was written against. Decide with the
         user; nothing changed yet.
 
-- [ ] 27. Customers — **ADR-0035, Proposed 2026-09-04**, sequenced behind
+- [x] 27. Customers — **ADR-0035, Proposed 2026-09-04; built 2026-09-08, the
+      feel verdict is the user's**, sequenced behind
       item 26 because it is a filter on the two lists that item builds. The
       ask: two identical parts ship to two companies with different carton
       requirements, and the app can already hold both receipts but cannot say
@@ -327,8 +328,11 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         no-create rule has its negative test beside the no-delete one. Pinned
         in `tests/mcp-data-tools.test.ts` (seven cases) and the e2e journey
         against the real database.
-      - [ ] **Close the loop**: VISION gains the customer axis beside the
-        document one; ADR-0035 flips to Accepted on feel, like 0034.
+      - [x] **Close the loop**: VISION gains the customer axis beside the
+        document one; ADR-0035 flips to Accepted on feel, like 0034. *Done
+        2026-09-08* except the flip, which is the user's; the brief gains
+        nothing, as the ADR said — no station needs a customer, and the
+        wire's negative test covers the no-create rule.
       **Not in scope, by decision:** any field on a customer beyond its name;
       per-customer clearances or caps (those are that customer's presets);
       free-form tags; moving a receipt between customers.

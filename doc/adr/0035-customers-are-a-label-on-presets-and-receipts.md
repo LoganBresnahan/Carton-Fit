@@ -1,7 +1,10 @@
 # ADR-0035: Customers are a label on presets and receipts, never an input
 
 **Status:** Proposed, 2026-09-04. Builds on ADR-0034 and is sequenced behind
-it (roadmap item 27).
+it (roadmap item 27). **Built 2026-09-08** (five slices, build notes on the
+roadmap item); like ADR-0034, it is accepted on feel — the header selector
+and the grouped picker were placed by screenshot — and flips to Accepted when
+the user records the verdict here.
 
 ## Context
 
