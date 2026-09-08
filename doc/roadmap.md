@@ -223,6 +223,36 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       eleven `as1-oc-214.stp` rows reading `3 fit · of plate · 11×6×10 in ·
       both limits` — item 32's open follow-up (a label on a receipt), still
       waiting on its trigger.
+      - [ ] **The mixed-instances warning reads as the app doubting itself**
+        (raised 2026-09-08 by the user, for review; `mixedInstancesWarning`
+        in `verdict.ts`, amendment 10/11's sentence). On `as1-oc-214.stp` in
+        fit-check at 7% fill the panel says *"Instances of “nut”, “bolt” do
+        not share one bounding box … this answer depends on how the file
+        happened to orient them"* — four lines of amber under a verdict that
+        cannot move. The user's words: *it makes the app logic look bad
+        unless the user knows what it's talking about.* Two things are wrong
+        with it, and only one is wording. (1) **It is flat**: the same
+        sentence at the same volume for a 7% fit-check, where no box shape
+        flips the verdict, and for a 780-count max-quantity, where one
+        instance's box is multiplied out and the eight-times-wrong weight
+        of the 6th dogfood came from exactly this. What it should say is
+        *which number is exposed*: in max-quantity, the count; in fit-check,
+        the verdict, and only when fill is high enough for a box to matter.
+        (2) **It explains the cause before the consequence**: "do not share
+        one bounding box", "placement baked in" are modelling remarks a
+        person quoting a carton does not have words for; the consequence
+        ("the count could change if the file were re-exported with the
+        fasteners turned") is the thing they need, and the mechanism belongs
+        in a tooltip or the export, not the first line. Options to review:
+        keep the wire's `mixedInstances` exactly as is (ADR-0029 amendment
+        10/11 — a client needs the flat rule), and change only the panel's
+        sentence; gate the fit-check wording on fill (a threshold is a
+        decision — ADR-0022's territory); or say nothing in fit-check below
+        the threshold and keep the qualification on the export, which
+        amendment 11 says must carry it regardless. The last is the one to
+        argue about, since a qualification that reaches three surfaces of
+        four is the defect amendment 11 was written against. Decide with the
+        user; nothing changed yet.
 
 - [ ] 27. Customers — **ADR-0035, Proposed 2026-09-04**, sequenced behind
       item 26 because it is a filter on the two lists that item builds. The
