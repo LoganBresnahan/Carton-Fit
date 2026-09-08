@@ -34,13 +34,14 @@ export class DocumentsStore {
     `)
     // The most recently saved receipt under this file name, resolved to its
     // document. Newest wins when several documents share the name: the one
-    // someone worked on last is the likeliest "earlier version".
+    // someone worked on last is the likeliest "earlier version". Newest by
+    // id, for the reason `EstimatesStore` gives.
     this.#candidate = db.prepare(`
       SELECT COALESCE(v.document_hash, e.content_hash) AS document_hash
       FROM estimates e
       LEFT JOIN document_versions v ON v.content_hash = e.content_hash
       WHERE e.file_name = @fileName AND e.content_hash <> '' AND e.content_hash <> @hash
-      ORDER BY e.created_at DESC, e.id DESC
+      ORDER BY e.id DESC
       LIMIT 1
     `)
     this.#count = db.prepare(`

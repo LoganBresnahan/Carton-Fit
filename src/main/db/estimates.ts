@@ -21,6 +21,7 @@ export class EstimatesStore {
   readonly #byHash: Statement
   readonly #byDocument: Statement
   readonly #byId: Statement
+  readonly #remove: Statement
   readonly #now: () => number
 
   constructor(db: Database, now: () => number = Date.now) {
@@ -29,15 +30,16 @@ export class EstimatesStore {
       INSERT INTO estimates (file_name, content_hash, settings, result, created_at)
       VALUES (@fileName, @contentHash, @settings, @result, @createdAt)
     `)
-    // `id DESC` is not decoration: created_at is epoch MILLISECONDS, and two
-    // estimates recorded in the same millisecond are entirely possible when the
-    // renderer records a batch. Without the tiebreak their order would be
-    // whatever SQLite happened to choose, and "most recent" would flicker
-    // between reads.
-    this.#recent = db.prepare('SELECT * FROM estimates ORDER BY created_at DESC, id DESC LIMIT ?')
-    this.#byHash = db.prepare(
-      'SELECT * FROM estimates WHERE content_hash = ? ORDER BY created_at DESC, id DESC LIMIT ?'
-    )
+    // NEWEST FIRST MEANS INSERTION ORDER, and `id` is the insertion order.
+    // This used to be `created_at DESC, id DESC` — the clock first, the id as
+    // a tiebreak for two rows in one millisecond. The tiebreak was the honest
+    // key all along: `created_at` is a reading of the wall clock at write time
+    // and the wall clock is not monotonic (2026-09-08: a WSL2 machine on the
+    // `tsc` clocksource stamped one save 110 s ahead of the saves either side
+    // of it, and the newest receipt listed third). `created_at` stays what it
+    // is — the time shown on the row — but it no longer decides the order.
+    this.#recent = db.prepare('SELECT * FROM estimates ORDER BY id DESC LIMIT ?')
+    this.#byHash = db.prepare('SELECT * FROM estimates WHERE content_hash = ? ORDER BY id DESC LIMIT ?')
     // The document's whole set (ADR-0034 §3): the hash's root, plus every hash
     // linked to that root. A hash with no alias row is its own root, so this
     // reduces to `forContent` for an unlinked part.
@@ -53,9 +55,10 @@ export class EstimatesStore {
            SELECT content_hash FROM document_versions
            WHERE document_hash = (SELECT hash FROM root)
          )
-      ORDER BY created_at DESC, id DESC LIMIT @limit
+      ORDER BY id DESC LIMIT @limit
     `)
     this.#byId = db.prepare('SELECT * FROM estimates WHERE id = ?')
+    this.#remove = db.prepare('DELETE FROM estimates WHERE id = ?')
   }
 
   /** Record an estimate. Returns its new id. */
@@ -97,6 +100,16 @@ export class EstimatesStore {
   forDocument(contentHash: string, limit = 50): EstimateRow[] {
     if (contentHash === '') return []
     return (this.#byDocument.all({ hash: contentHash, limit }) as StoredRow[]).map(hydrate)
+  }
+
+  /**
+   * Discard one receipt (ADR-0034 §4). The person's act, from the panel only:
+   * the MCP surface stays append-only for estimates, because everything else
+   * it does is undoable and this is not. Returns whether a row went, so a
+   * caller can tell "gone" from "never existed".
+   */
+  remove(id: number): boolean {
+    return this.#remove.run(id).changes > 0
   }
 }
 

@@ -200,6 +200,45 @@ describe('EstimatesStore', () => {
   })
 })
 
+describe('EstimatesStore ordering does not trust the clock', () => {
+  it('a save stamped in the future still lists in the order it was saved', () => {
+    // 2026-09-08: a WSL2 machine on the tsc clocksource read 110 s ahead for
+    // one call. The row's shown time was wrong; its place in the list must not
+    // be.
+    const db = freshDb()
+    try {
+      const stamps = [1000, 111_000, 2000]
+      const store = new EstimatesStore(db, () => stamps.shift() ?? 0)
+      const entry = { fileName: 'a.stp', contentHash: 'h', settings: SETTINGS, result: {} }
+      const first = store.record(entry)
+      const skewed = store.record(entry)
+      const third = store.record(entry)
+      expect(store.recent().map((r) => r.id)).toEqual([third, skewed, first])
+      expect(store.forContent('h').map((r) => r.id)).toEqual([third, skewed, first])
+      expect(store.forDocument('h').map((r) => r.id)).toEqual([third, skewed, first])
+    } finally {
+      db.close()
+    }
+  })
+})
+
+describe('EstimatesStore.remove (ADR-0034 §4)', () => {
+  it('removes exactly the row asked for and reports whether one went', () => {
+    const db = freshDb()
+    try {
+      const store = new EstimatesStore(db, () => 1)
+      const entry = { fileName: 'a.stp', contentHash: 'h', settings: SETTINGS, result: {} }
+      const keep = store.record(entry)
+      const gone = store.record(entry)
+      expect(store.remove(gone)).toBe(true)
+      expect(store.remove(gone)).toBe(false)
+      expect(store.recent().map((r) => r.id)).toEqual([keep])
+    } finally {
+      db.close()
+    }
+  })
+})
+
 // Document versions (ADR-0034 §3): a document is a set of hashes, the user
 // links them, the name is only the hint, and no receipt is ever rewritten.
 describe('DocumentsStore', () => {
