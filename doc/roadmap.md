@@ -1557,7 +1557,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       tell* rather than *no*. It is a claim about what the tool does NOT do, so
       no field can back it; code review is the only place it can live.
 
-- [ ] 31. Dogfood follow-ups, 9th run — the 2026-09-05 Claude (Cowork) pass
+- [x] 31. Dogfood follow-ups, 9th run — the 2026-09-05 Claude (Cowork) pass
       against `1.2.0+6b4e5be`. **Every number matched again**, both paths
       character-identical, and the 8th run's fixes held: the mixed-instance
       caveat is on the estimate, the fill names both ends, and `weight.mode`
@@ -1631,7 +1631,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       16 saved estimates** of dogfood debris — the cost the reader calls
       "understandable ≠ pleasant" is growing about five rows a session.
 
-- [ ] 29. Dogfood follow-ups, 8th run — the 2026-09-05 Claude (Cowork) pass
+- [x] 29. Dogfood follow-ups, 8th run — the 2026-09-05 Claude (Cowork) pass
       against `1.2.0+b9a494f`, the deepest read the surface has had: all 15
       tools exercised, every count derived by hand first, four weight figures
       (13.2294, 27.5494, 44.0463, 8.2938 lb) reproduced to four decimals or
