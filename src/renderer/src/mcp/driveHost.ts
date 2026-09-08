@@ -1,4 +1,10 @@
-import { useAppStore, resolvedView, documentHash } from '../store'
+import {
+  useAppStore,
+  resolvedView,
+  documentHash,
+  LAUNCH_SETTINGS,
+  LAUNCH_SETTINGS_SOURCE
+} from '../store'
 import { importFile } from '../import/service'
 import { captureViewportPng, dataUrlToBase64 } from '../viewport/capture'
 import { partKinds } from '../packing/kinds'
@@ -88,6 +94,8 @@ function snapshotState(units?: Partial<OutputUnits>): DriveOutcome['state'] {
   return buildAppState(
     {
       customer: activeCustomer(),
+      settingsAtLaunch: LAUNCH_SETTINGS,
+      launchSource: LAUNCH_SETTINGS_SOURCE,
       fileName: state.file?.name ?? null,
       parts: state.parts,
       settings: state.settings,

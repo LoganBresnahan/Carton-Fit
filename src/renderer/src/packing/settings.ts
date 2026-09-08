@@ -83,3 +83,61 @@ export function innerCartonMm(s: PackingSettings): Vec3 {
   const w = 2 * s.wallMm
   return [s.boxDimsMm[0] - w, s.boxDimsMm[1] - w, s.boxDimsMm[2] - w]
 }
+
+// --- provenance (ADR-0034 amendment 1, 2026-09-08) --------------------------
+//
+// Which input GROUPS this session changed, against the settings the app
+// launched with. Eight dogfood readers asked "which of these did I set?" of
+// get_app_state; ADR-0034 answered the file-scoped half structurally and kept
+// the carton global on purpose, and readers 7 and 8 asked again about the
+// carton. A diff against the launch snapshot is app state, costs nothing,
+// and is honest where a "persisted: true" constant would not be.
+
+/** The groups `get_app_state.inputs` is read in. */
+export type InputGroup =
+  | 'mode'
+  | 'tier'
+  | 'carton'
+  | 'clearances'
+  | 'maxWeight'
+  | 'weight'
+  | 'displayUnits'
+
+const GROUP_ORDER: readonly InputGroup[] = [
+  'mode',
+  'tier',
+  'carton',
+  'clearances',
+  'maxWeight',
+  'weight',
+  'displayUnits'
+]
+
+const GROUP_OF: Record<keyof PackingSettings, InputGroup> = {
+  mode: 'mode',
+  tier: 'tier',
+  unitSystem: 'displayUnits',
+  maxWeightUnit: 'displayUnits',
+  partWeightUnit: 'displayUnits',
+  boxDimsMm: 'carton',
+  enterOuter: 'carton',
+  wallMm: 'carton',
+  clearancePartMm: 'clearances',
+  clearanceWallMm: 'clearances',
+  maxWeightG: 'maxWeight',
+  weightMode: 'weight',
+  partWeightG: 'weight',
+  densityGPerCm3: 'weight'
+}
+
+/** Groups whose value differs between `from` and `to`, in the order the state reply lists them. */
+export function changedGroups(from: PackingSettings, to: PackingSettings): InputGroup[] {
+  const changed = new Set<InputGroup>()
+  for (const key of Object.keys(GROUP_OF) as (keyof PackingSettings)[]) {
+    const a = from[key]
+    const b = to[key]
+    const same = Array.isArray(a) && Array.isArray(b) ? a.every((v, i) => v === b[i]) : a === b
+    if (!same) changed.add(GROUP_OF[key])
+  }
+  return GROUP_ORDER.filter((group) => changed.has(group))
+}

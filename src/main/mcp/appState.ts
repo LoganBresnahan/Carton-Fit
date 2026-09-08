@@ -1,5 +1,5 @@
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
-import type { PackingSettings } from '../../renderer/src/packing/settings'
+import { changedGroups, type InputGroup, type PackingSettings } from '../../renderer/src/packing/settings'
 import type { PartWeightOverrides } from '../../renderer/src/packing/kinds'
 import { partKinds } from '../../renderer/src/packing/kinds'
 import type { PackStatus } from '../../renderer/src/packing/types'
@@ -52,6 +52,12 @@ export interface AppStateReport {
     overrides: Array<{ kind: string; weight: WeightValue }>
     unitPart: string | null
     displayUnits: { length: 'mm' | 'in'; maxWeight: WeightUnit; partWeight: WeightUnit }
+    /** Which groups this session changed, and what the rest are (ADR-0034
+     *  amendment 1). The answer to "which of these did I set?". */
+    provenance: {
+      changedThisSession: InputGroup[]
+      unchangedAre: 'earlier-session' | 'defaults'
+    }
   }
   packStatus: PackStatus
   view: 'model' | 'packed'
@@ -63,6 +69,9 @@ export interface AppStateReport {
 
 export interface AppStateSource {
   customer: { id: number; name: string } | null
+  /** The settings at launch and where they came from — see the store. */
+  settingsAtLaunch: PackingSettings
+  launchSource: 'earlier-session' | 'defaults'
   fileName: string | null
   parts: readonly ImportedPart[]
   settings: PackingSettings
@@ -114,6 +123,10 @@ export function buildAppState(
         length: settings.unitSystem === 'imperial' ? 'in' : 'mm',
         maxWeight: settings.maxWeightUnit,
         partWeight: settings.partWeightUnit
+      },
+      provenance: {
+        changedThisSession: changedGroups(source.settingsAtLaunch, settings),
+        unchangedAre: source.launchSource
       }
     },
     packStatus: source.packStatus,

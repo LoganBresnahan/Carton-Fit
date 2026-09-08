@@ -1335,6 +1335,16 @@ permutation only, so sorted extents describe all of them where "the one we
 measured" described one; the description says which reading a client has.
 Neither changes a value a client matches on.
 
+### Phase-2 contract amendment 15 (2026-09-08, eleventh dogfood) — the inputs say which were set this session
+
+ADR-0034 amendment 1 carries the reasoning. On the wire:
+`get_app_state.inputs.provenance = { changedThisSession: InputGroup[],
+unchangedAre: 'earlier-session' | 'defaults' }`, the groups being the ones the
+`inputs` object is already read in. Every drive tool's state reply carries
+it, so a `set_inputs` shows its own group in the list. `get_app_state`'s
+description stops saying "nothing here distinguishes" and points at the
+field. Additive, minor.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

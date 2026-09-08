@@ -217,6 +217,38 @@ thing in front of them.
   boundary when this is accepted, not before: VISION describes what the app
   does.
 
+## Amendment 1 (2026-09-08) — the rejected flag, reopened for the global half
+
+This ADR rejected a `setThisSession` flag on `get_app_state` because the
+*model* was wrong: file-scoped state lived in a global workspace, and a flag
+would have been right while the workspace stayed wrong. The model shipped on
+2026-09-08 and the file-scoped half stopped tripping anyone — no reader since
+has been caught by an inherited override or unit part, and `load_model`'s
+`cleared` says what went.
+
+The global half is §2, on purpose: the carton, clearances, cap and weight mode
+survive a load because "new part, same box" is the workflow. Two readers on
+the same day, both of whom loaded the model first as the brief now says, both
+reported the carton and cap as inherited with nothing to distinguish them, and
+one showed the arithmetic: the inherited 100 lb cap keeps the count at 3 and
+flips the binding sentence. That is the eighth reader on this sentence and the
+first two after the structural fix — the revisit trigger this ADR should have
+written and did not.
+
+**Decision:** `get_app_state.inputs.provenance` — `changedThisSession`, the
+input groups whose value differs from the settings the app launched with, and
+`unchangedAre: 'earlier-session' | 'defaults'` for the rest. A diff against a
+launch snapshot the store already holds: app state, not document state, and
+no field on the settings themselves. Not a `persisted: true` on `set_inputs`'s
+reply, which a reader also asked for: that would be a constant, and a constant
+cannot qualify the sentence beside it (ADR-0029 amendment 12). The reply to
+`set_inputs` returns the state, so the group just set appears in
+`changedThisSession` — which is the disclosure that ask wanted, backed by a
+field that can be false.
+
+Nothing in §1–§6 changes. The document still owns the file-scoped state; the
+carton is still global; the flag names which is which.
+
 ## Alternatives considered
 
 - **Per-file presets** — the user's first framing. Rejected in Context: a

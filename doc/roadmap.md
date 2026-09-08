@@ -201,8 +201,14 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       the live app and the stateless tool returned byte-identical bodies. Both
       readers derived before calling and said so. Seven findings survive,
       verified here against the code; none is a wrong number.
-      - [ ] **The global carton's provenance, third time** (both readers, worst
-        by recurrence). Both loaded the model first, as station 0 now says,
+      - [x] **The global carton's provenance, third time** (both readers, worst
+        by recurrence). *Decided and shipped 2026-09-08* — ADR-0034 amendment 1
+        reopens the rejected flag for the global half: `inputs.provenance`
+        diffs the settings against the launch snapshot the store now keeps
+        (`LAUNCH_SETTINGS`), names the changed groups, and says whether the
+        rest are an earlier session's or the defaults. `set_inputs`'s reply
+        shows its own group there, which is the "say it persisted" ask
+        answered by a field that can be false. Station 0 reads it. Both loaded the model first, as station 0 now says,
         and both still reported that `get_app_state` handed them a complete
         carton, cap and density with nothing distinguishing set from
         inherited; one showed the arithmetic where the inherited 100 lb cap
@@ -2008,7 +2014,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         clean, so the only inherited state left is the global carton, which the
         brief tells the reader to set. Closes when item 26's last slice ships.
         **Closed 2026-09-08:** item 26 shipped whole; station 0 now reads "load
-        the model first — the document starts clean".
+        the model first — the document starts clean". *Same evening:* two
+        readers after that fix still asked about the global carton, and
+        ADR-0034 amendment 1 gave them `inputs.provenance` — item 34.
       Refuted, and kept because both will be proposed again. (a) "no arrangement
       beats this under these limits" is **not** on every count reply — it is
       gated on `upperBound === count` (`verdict.ts:59`), the case where the

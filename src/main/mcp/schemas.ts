@@ -442,7 +442,22 @@ export const appStateObject = z.object({
       ),
     overrides: z.array(z.object({ kind: z.string(), weight: weightValue })),
     unitPart: z.union([z.string(), z.null()]),
-    displayUnits: z.object({ length: lengthUnit, maxWeight: weightUnit, partWeight: weightUnit })
+    displayUnits: z.object({ length: lengthUnit, maxWeight: weightUnit, partWeight: weightUnit }),
+    provenance: z
+      .object({
+        changedThisSession: z
+          .array(z.enum(['mode', 'tier', 'carton', 'clearances', 'maxWeight', 'weight', 'displayUnits']))
+          .describe('The input groups changed since the app launched — by you, or by the person at the window.'),
+        unchangedAre: z
+          .enum(['earlier-session', 'defaults'])
+          .describe('What every group NOT in changedThisSession is: left by an earlier session, or the app’s defaults.')
+      })
+      .describe(
+        'Which of these inputs were set this session. The inputs persist between sessions, so ' +
+          'a group that is not in changedThisSession was inherited — set what your answer ' +
+          'depends on rather than trusting it. Overrides and the unit part are not listed: ' +
+          'they are cleared on every load (see load_model’s `cleared`).'
+      )
   }),
   packStatus: z.enum(['idle', 'packing', 'done', 'failed']),
   view: z.enum(['model', 'packed']),

@@ -128,6 +128,13 @@ test('a drive journey: every reply carries the estimate for ITS OWN inputs', asy
     expect(state.state.file).toMatchObject({ loaded: true, name: CUBE_STL.file })
     expect(state.state.inputs.mode).toBe('max-quantity')
     expect(state.state.version).toBe(expectedServerVersion())
+    // …and says which groups THIS conversation set (ADR-0034 amendment 1):
+    // the cap and the weight were set above; the rest is whatever a fresh
+    // profile launched with, which is the defaults.
+    expect(state.state.inputs.provenance.changedThisSession).toEqual(
+      expect.arrayContaining(['mode', 'maxWeight', 'weight'])
+    )
+    expect(state.state.inputs.provenance.unchangedAre).toBe('defaults')
   } finally {
     await client.close()
     await stopSpawnedApp(shim.profile)

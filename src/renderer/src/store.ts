@@ -61,6 +61,17 @@ function saveSettings(settings: PackingSettings): void {
   }
 }
 
+/**
+ * The settings the app launched with, and where they came from (ADR-0034
+ * amendment 1). `get_app_state.inputs.provenance` is a diff against this:
+ * what this session changed, and whether the rest is an earlier session's or
+ * the defaults. Read once; `loadSettings` returns the DEFAULT_SETTINGS object
+ * itself when nothing was stored, which is what tells the two apart.
+ */
+export const LAUNCH_SETTINGS: PackingSettings = loadSettings()
+export const LAUNCH_SETTINGS_SOURCE: 'earlier-session' | 'defaults' =
+  LAUNCH_SETTINGS === DEFAULT_SETTINGS ? 'defaults' : 'earlier-session'
+
 /** Layout preferences, in their OWN key outside `settings` (ADR-0026 §6).
  *  Presets and saved estimates serialize `settings` whole, so a width in
  *  there would be restored with a carton. A separate key needs no exclusion
@@ -377,7 +388,7 @@ export const useAppStore = create<AppState>((set) => ({
       ...NO_PACK
     }),
 
-  settings: loadSettings(),
+  settings: LAUNCH_SETTINGS,
   updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
 
   unitPartName: null,

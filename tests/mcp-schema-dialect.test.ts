@@ -39,6 +39,8 @@ const CONTEXT: OcctWasmContext = { appPath: join(__dirname, '..'), isPackaged: f
 function inertDrive(): DriveBridge {
   const state = buildAppState({
     customer: null,
+    settingsAtLaunch: DEFAULT_SETTINGS,
+    launchSource: 'defaults',
     fileName: null,
     parts: [],
     settings: DEFAULT_SETTINGS,

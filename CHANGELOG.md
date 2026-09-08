@@ -28,6 +28,11 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **An assistant can tell which inputs this session set.** The state reply
+  lists the input groups changed since the app launched and says whether the
+  rest are from an earlier session or the defaults. Eight dogfood readers had
+  asked. ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md) amendment 1,
+  [ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md) amendment 15)
 - **A count with no part chosen says what it counted.** The result reads
   *1 fit — the whole file as one unit* on the panel, in both exports and to an
   assistant, instead of a bare number.

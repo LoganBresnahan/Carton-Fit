@@ -106,9 +106,10 @@ the per-kind weight overrides belong to the loaded file, and `load_model`
 clears them and reports what it cleared (`cleared`), so nothing from an earlier
 session can reach your station-4 numbers through them. What the app does keep
 between sessions is the global carton — dimensions, clearances, the cap, the
-weight mode — so set what your answer depends on rather than trusting what
-`get_app_state` shows you. State what the load cleared and what you set;
-inherited carton inputs are a finding about the workflow, not about the app.
+weight mode — and `inputs.provenance` tells you which groups this session
+changed and whether the rest came from an earlier session or the defaults.
+Set what your answer depends on rather than trusting what you find, and say
+what provenance reported before and after you did.
 
 ### Station 1 — inspect a model
 
