@@ -317,10 +317,16 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         like it does for a load. Pinned in `tests/storage-estimates.test.ts`
         and `tests/storage-configurations.test.ts`; e2e walks house → Acme
         → house → All against the real database.
-      - [ ] **Wire, additive** (ADR-0029 amendment 9): `get_app_state.customer`,
+      - [x] **Wire, additive** (ADR-0029 amendment 9): `get_app_state.customer`,
         `list_customers`, `set_customer`; `customer: 'active' | 'all'` on both
         list tools; the two save tools report the tag. Creating a customer is
-        the person's act, not a tool.
+        the person's act, not a tool. *Shipped 2026-09-08:* seventeen tools
+        now; both list replies echo the filter and name the customer on each
+        row; the two axes on `list_saved_estimates` are independent on the
+        wire (the amendment's shipped note says why the panel differs); the
+        no-create rule has its negative test beside the no-delete one. Pinned
+        in `tests/mcp-data-tools.test.ts` (seven cases) and the e2e journey
+        against the real database.
       - [ ] **Close the loop**: VISION gains the customer axis beside the
         document one; ADR-0035 flips to Accepted on feel, like 0034.
       **Not in scope, by decision:** any field on a customer beyond its name;

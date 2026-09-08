@@ -7,16 +7,20 @@ import type { OcctWasmContext } from '../occt/wasmPath'
 import type {
   ClearedByLoad,
   DriveBridge,
+  CustomerRef,
   DriveOutcome,
   EstimateAvailability
 } from '../../shared/mcpDrive'
 import {
   presetsReport,
   savedEstimatesReport,
+  type CustomerFilter,
+  type CustomerNames,
   type EstimatesScope,
   type SavedEstimatesReport,
   type ToolStorage
 } from './data'
+import type { CustomerScope } from '../../shared/storage'
 import { estimateParts, EstimateInputError, type EstimateInput } from './estimate'
 import type { SetInputsRequest } from './inputs'
 import { inspectParts } from './inspect'
@@ -39,6 +43,9 @@ import {
   exportEstimateOutput,
   listPresetsInput,
   listSavedEstimatesInput,
+  listCustomersInput,
+  customersOutput,
+  setCustomerInput,
   presetsOutput,
   restoreEstimateInput,
   saveEstimateInput,
@@ -439,17 +446,44 @@ async function scopedEstimates(
   drive: DriveBridge,
   storage: ToolStorage,
   requested: EstimatesScope | undefined,
-  limit?: number
+  limit?: number,
+  customer: CustomerFilter = 'active'
 ): Promise<SavedEstimatesReport> {
-  const doc = await drive.call({ type: 'get_document' })
-  if (doc.kind !== 'document') throw new Error('unexpected drive reply')
+  const doc = await context(drive)
   const scope: EstimatesScope =
     (requested ?? 'model') === 'model' && doc.contentHash !== null ? 'model' : 'all'
+  // Two independent axes on the wire (ADR-0035 §4), unlike the panel's one
+  // All: a client can ask for every document's receipts for this customer,
+  // or this document's for every customer.
+  const filter = customerFilter(customer, doc.customer)
   const rows =
     scope === 'model' && doc.contentHash !== null
-      ? storage.estimatesForDocument(doc.contentHash, limit)
-      : storage.recentEstimates(limit)
-  return savedEstimatesReport(rows, scope)
+      ? storage.estimatesForDocument(doc.contentHash, limit, filter)
+      : storage.recentEstimates(limit, filter)
+  return savedEstimatesReport(rows, scope, customer, customerNames(storage))
+}
+
+/** What the window knows that a database query needs: the loaded document
+ *  and the active customer. One private drive action, never a wire tool. */
+async function context(drive: DriveBridge): Promise<{
+  contentHash: string | null
+  customer: CustomerRef | null
+}> {
+  const doc = await drive.call({ type: 'get_document' })
+  if (doc.kind !== 'document') throw new Error('unexpected drive reply')
+  return { contentHash: doc.contentHash, customer: doc.customer }
+}
+
+/** The store's filter for a wire request: house plus the active customer, or none. */
+function customerFilter(
+  requested: CustomerFilter,
+  active: CustomerRef | null
+): CustomerScope | undefined {
+  return requested === 'all' ? undefined : { activeId: active?.id ?? null }
+}
+
+function customerNames(storage: ToolStorage): CustomerNames {
+  return new Map(storage.listCustomers().map((c) => [c.id, c.name]))
 }
 
 function registerDataTools(
@@ -469,9 +503,66 @@ function registerDataTools(
       inputSchema: wire(listPresetsInput),
       outputSchema: wire(presetsOutput)
     },
+    async ({ customer }) => {
+      try {
+        const doc = await context(drive)
+        const filter = customer ?? 'active'
+        return toolOk(
+          presetsReport(
+            storage.listConfigurations(customerFilter(filter, doc.customer)),
+            filter,
+            customerNames(storage)
+          )
+        )
+      } catch (err) {
+        return toolError(err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'list_customers',
+    {
+      title: 'List customers',
+      description:
+        'The customers this app knows (ADR-0035) and which one it is working for. A customer ' +
+        'is a name and an id: a label on presets and saved estimates, never an input — the ' +
+        'same part in the same carton packs identically whoever the app is working for. ' +
+        'Switch with set_customer. Creating one is the person’s act at the app; there is no ' +
+        'tool for it.',
+      inputSchema: wire(listCustomersInput),
+      outputSchema: wire(customersOutput)
+    },
     async () => {
       try {
-        return toolOk(presetsReport(storage.listConfigurations()))
+        const doc = await context(drive)
+        return toolOk({
+          customers: storage.listCustomers().map((c) => ({ id: c.id, name: c.name })),
+          active: doc.customer
+        })
+      } catch (err) {
+        return toolError(err)
+      }
+    }
+  )
+
+  server.registerTool(
+    'set_customer',
+    {
+      title: 'Switch who the app is working for',
+      description:
+        'Make the running app work for a customer (an id from list_customers) or for house ' +
+        '(null). From then on its lists show that customer’s presets and receipts plus ' +
+        'house, and anything saved is tagged for them. Changes what the app shows and ' +
+        'tags, never what it computes; not an undo step. Answers with where the app stands.',
+      inputSchema: wire(setCustomerInput),
+      outputSchema: wire(driveOutcomeOutput)
+    },
+    async ({ id, outputUnits }) => {
+      try {
+        const result = await drive.call({ type: 'set_customer', id, units: outputUnits })
+        if (result.kind !== 'outcome') throw new Error('unexpected drive reply')
+        return toolOk(stamped(result.outcome, version))
       } catch (err) {
         return toolError(err)
       }
@@ -497,8 +588,16 @@ function registerDataTools(
         const result = await drive.call({ type: 'save_preset', name })
         if (result.kind !== 'written') throw new Error('unexpected drive reply')
         // Re-read rather than echo: the list that comes back is the one the
-        // database now holds, which is the only version worth reporting.
-        return toolOk(presetsReport(storage.listConfigurations()))
+        // database now holds, which is the only version worth reporting — the
+        // active customer's plus house, which is where the save landed.
+        const doc = await context(drive)
+        return toolOk(
+          presetsReport(
+            storage.listConfigurations(customerFilter('active', doc.customer)),
+            'active',
+            customerNames(storage)
+          )
+        )
       } catch (err) {
         return toolError(err)
       }
@@ -548,9 +647,9 @@ function registerDataTools(
       inputSchema: wire(listSavedEstimatesInput),
       outputSchema: wire(savedEstimatesOutput)
     },
-    async ({ scope, limit }) => {
+    async ({ scope, limit, customer }) => {
       try {
-        return toolOk(await scopedEstimates(drive, storage, scope, limit))
+        return toolOk(await scopedEstimates(drive, storage, scope, limit, customer ?? 'active'))
       } catch (err) {
         return toolError(err)
       }

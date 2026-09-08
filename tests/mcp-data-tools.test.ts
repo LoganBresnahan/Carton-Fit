@@ -57,9 +57,14 @@ const ROWS: EstimateRow[] = [
 
 /** The window, reduced to what the tier actually needs from it: a record of
  *  what was asked, and a plausible reply. */
-function fakeDrive(): DriveBridge & { calls: DriveAction[]; document: string | null } {
+function fakeDrive(): DriveBridge & {
+  calls: DriveAction[]
+  document: string | null
+  customer: { id: number; name: string } | null
+} {
   const calls: DriveAction[] = []
   const state = buildAppState({
+    customer: null,
     fileName: 'bracket.step',
     parts: [],
     settings: DEFAULT_SETTINGS,
@@ -72,6 +77,8 @@ function fakeDrive(): DriveBridge & { calls: DriveAction[]; document: string | n
     calls,
     /** The loaded document's hash, as the renderer would answer (ADR-0034 §3). */
     document: null,
+    /** Who the window is working for (ADR-0035 §3). */
+    customer: null,
     call(action: DriveAction): Promise<DriveResult> {
       calls.push(action)
       switch (action.type) {
@@ -79,7 +86,17 @@ function fakeDrive(): DriveBridge & { calls: DriveAction[]; document: string | n
           return Promise.resolve({
             kind: 'document',
             contentHash: this.document,
-            fileName: this.document === null ? null : 'bracket.step'
+            fileName: this.document === null ? null : 'bracket.step',
+            customer: this.customer
+          })
+        case 'set_customer':
+          this.customer = action.id === null ? null : { id: action.id, name: `c${action.id}` }
+          return Promise.resolve({
+            kind: 'outcome',
+            outcome: {
+              state: { ...state, customer: this.customer },
+              estimate: { available: false, reason: 'not under test here' }
+            }
           })
         case 'save_preset':
         case 'save_estimate':
@@ -101,15 +118,33 @@ function fakeDrive(): DriveBridge & { calls: DriveAction[]; document: string | n
   }
 }
 
+/** The house-plus-active rule the real stores apply (ADR-0035 §3). */
+function forCustomer<T extends { customerId: number | null }>(
+  rows: T[],
+  scope: { activeId: number | null } | undefined
+): T[] {
+  if (scope === undefined) return rows
+  return rows.filter((r) => r.customerId === null || r.customerId === scope.activeId)
+}
+
+const CUSTOMERS = [
+  { id: 1, name: 'Acme', createdAt: 1 },
+  { id: 2, name: 'Beta', createdAt: 2 }
+]
+
 function fakeStorage(): ToolStorage & { presets: ConfigurationSummary[] } {
   const presets = [...PRESETS]
   return {
     presets,
-    listConfigurations: () => presets,
-    recentEstimates: (limit) => ROWS.slice(0, limit ?? 50),
-    estimatesForDocument: (hash, limit) =>
-      ROWS.filter((row) => row.contentHash === hash).slice(0, limit ?? 50),
-    estimateById: (id) => ROWS.find((row) => row.id === id) ?? null
+    listConfigurations: (customer) => forCustomer(presets, customer),
+    recentEstimates: (limit, customer) => forCustomer(ROWS, customer).slice(0, limit ?? 50),
+    estimatesForDocument: (hash, limit, customer) =>
+      forCustomer(
+        ROWS.filter((row) => row.contentHash === hash),
+        customer
+      ).slice(0, limit ?? 50),
+    estimateById: (id) => ROWS.find((row) => row.id === id) ?? null,
+    listCustomers: () => CUSTOMERS
   }
 }
 
@@ -158,7 +193,7 @@ async function callExpectingError(name: string, args: Record<string, unknown> = 
 }
 
 describe('the published surface', () => {
-  it('adds seven data tools to the drive tier', async () => {
+  it('adds nine data tools to the drive tier', async () => {
     const { tools } = await client.listTools()
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       'apply_preset',
@@ -168,12 +203,14 @@ describe('the published surface', () => {
       'get_app_state',
       'get_estimate',
       'inspect_model',
+      'list_customers',
       'list_presets',
       'list_saved_estimates',
       'load_model',
       'restore_estimate',
       'save_estimate',
       'save_preset',
+      'set_customer',
       'set_inputs',
       'set_part_weight'
     ])
@@ -292,15 +329,101 @@ describe('the drive tools say what they persist', () => {
 
 describe('reads answer from the database, not the window', () => {
   it('lists presets with absolute timestamps', async () => {
-    const report = await call<{ presets: Array<{ name: string; savedAt: string }> }>('list_presets')
+    const report = await call<{
+      customer: string
+      presets: Array<{ name: string; savedAt: string; customer: string | null }>
+    }>('list_presets')
+    expect(report.customer).toBe('active')
     expect(report.presets).toEqual([
-      { name: 'Standard 12in', savedAt: '2026-08-03T14:30:00.000Z' },
-      { name: 'Half-height', savedAt: '2026-08-04T09:00:00.000Z' }
+      { name: 'Standard 12in', savedAt: '2026-08-03T14:30:00.000Z', customer: null },
+      { name: 'Half-height', savedAt: '2026-08-04T09:00:00.000Z', customer: null }
     ])
-    // Not one round trip to the renderer: a list the window relayed could
-    // disagree with the list the database holds, and there is no reason for a
-    // read main can answer to leave main.
-    expect(drive.calls).toEqual([])
+    // Not a round trip to the renderer for the ROWS: a list the window relayed
+    // could disagree with the list the database holds. The one question asked
+    // is who the window is working for (ADR-0035 §4).
+    expect(drive.calls).toEqual([{ type: 'get_document' }])
+  })
+
+  // ADR-0035 §4: the customer axis, on both lists, with the tag named per row.
+  describe('the customer axis', () => {
+    beforeEach(() => {
+      storage.presets.push({ id: 9, name: 'Acme box', updatedAt: Date.UTC(2026, 7, 6), customerId: 1 })
+      storage.presets.push({ id: 10, name: 'Beta box', updatedAt: Date.UTC(2026, 7, 6), customerId: 2 })
+    })
+
+    it('list_presets: house plus the active customer by default, named per row', async () => {
+      drive.customer = { id: 1, name: 'Acme' }
+      const report = await call<{
+        customer: string
+        presets: Array<{ name: string; customer: string | null }>
+      }>('list_presets')
+      expect(report.customer).toBe('active')
+      expect(report.presets.map((p) => [p.name, p.customer])).toEqual([
+        ['Standard 12in', null],
+        ['Half-height', null],
+        ['Acme box', 'Acme']
+      ])
+    })
+
+    it('list_presets: "all" is every customer’s, and says so', async () => {
+      drive.customer = { id: 1, name: 'Acme' }
+      const report = await call<{ customer: string; presets: Array<{ name: string }> }>(
+        'list_presets',
+        { customer: 'all' }
+      )
+      expect(report.customer).toBe('all')
+      expect(report.presets.map((p) => p.name)).toContain('Beta box')
+    })
+
+    it('house active means house only', async () => {
+      const report = await call<{ presets: Array<{ name: string }> }>('list_presets')
+      expect(report.presets.map((p) => p.name)).toEqual(['Standard 12in', 'Half-height'])
+    })
+
+    it('list_saved_estimates composes the two axes independently', async () => {
+      drive.document = 'abc'
+      drive.customer = { id: 2, name: 'Beta' }
+      const report = await call<{
+        scope: string
+        customer: string
+        estimates: Array<{ id: number; customer: string | null }>
+      }>('list_saved_estimates', { scope: 'all', customer: 'active' })
+      expect(report).toMatchObject({ scope: 'all', customer: 'active' })
+      // Every document, but only house + Beta rows: the fixtures are all house.
+      expect(report.estimates.map((r) => [r.id, r.customer])).toEqual([
+        [7, null],
+        [4, null]
+      ])
+    })
+
+    it('list_customers names them and who is active', async () => {
+      drive.customer = { id: 2, name: 'Beta' }
+      const report = await call<{ customers: unknown[]; active: unknown }>('list_customers')
+      expect(report).toEqual({
+        customers: [
+          { id: 1, name: 'Acme' },
+          { id: 2, name: 'Beta' }
+        ],
+        active: { id: 2, name: 'Beta' }
+      })
+    })
+
+    it('set_customer goes through the window and answers with the state', async () => {
+      const report = await call<{ state: { customer: unknown; version: string } }>(
+        'set_customer',
+        { id: 1 }
+      )
+      expect(drive.calls).toEqual([{ type: 'set_customer', id: 1, units: undefined }])
+      expect(report.state.customer).toEqual({ id: 1, name: 'c1' })
+      expect(report.state.version).toBe('9.9.9+abc1234')
+    })
+
+    it('publishes no way to create a customer', async () => {
+      const { tools } = await client.listTools()
+      expect(tools.map((t) => t.name).filter((n) => /create|add|new/.test(n))).toEqual([])
+      const list = tools.find((t) => t.name === 'list_customers')
+      expect(list?.description).toMatch(/person’s act/)
+    })
   })
 
   it('lists saved estimates with the app’s own one-line receipt', async () => {
@@ -347,7 +470,7 @@ describe('reads answer from the database, not the window', () => {
     it('a document with no receipts is an empty scoped list, not everything', async () => {
       drive.document = 'never-saved'
       const report = await call<Report>('list_saved_estimates')
-      expect(report).toEqual({ scope: 'model', estimates: [] })
+      expect(report).toEqual({ scope: 'model', customer: 'active', estimates: [] })
     })
 
     it('the list a save lands in is the document’s', async () => {
@@ -378,7 +501,8 @@ describe('writes go through the running app', () => {
     const report = await call<{ presets: Array<{ name: string }> }>('save_preset', {
       name: 'New one'
     })
-    expect(drive.calls).toEqual([{ type: 'save_preset', name: 'New one' }])
+    // The write, then the one question that scopes the reply (ADR-0035 §4).
+    expect(drive.calls).toEqual([{ type: 'save_preset', name: 'New one' }, { type: 'get_document' }])
     expect(report.presets.map((preset) => preset.name)).toContain('New one')
   })
 
@@ -471,8 +595,12 @@ describe('the report builders', () => {
   })
 
   it('an empty database is an empty list, not an error', () => {
-    expect(presetsReport([])).toEqual({ presets: [] })
-    expect(savedEstimatesReport([])).toEqual({ scope: 'all', estimates: [] })
-    expect(savedEstimatesReport([], 'model')).toEqual({ scope: 'model', estimates: [] })
+    expect(presetsReport([])).toEqual({ customer: 'all', presets: [] })
+    expect(savedEstimatesReport([])).toEqual({ scope: 'all', customer: 'all', estimates: [] })
+    expect(savedEstimatesReport([], 'model', 'active')).toEqual({
+      scope: 'model',
+      customer: 'active',
+      estimates: []
+    })
   })
 })

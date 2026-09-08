@@ -56,9 +56,13 @@ export interface AppStateReport {
   packStatus: PackStatus
   view: 'model' | 'packed'
   units: OutputUnits
+  /** Who the app is working for (ADR-0035 §4); null is house. A label on
+   *  what is shown and saved, never an input: nothing above depends on it. */
+  customer: { id: number; name: string } | null
 }
 
 export interface AppStateSource {
+  customer: { id: number; name: string } | null
   fileName: string | null
   parts: readonly ImportedPart[]
   settings: PackingSettings
@@ -114,6 +118,7 @@ export function buildAppState(
     },
     packStatus: source.packStatus,
     view: source.view,
-    units
+    units,
+    customer: source.customer
   }
 }

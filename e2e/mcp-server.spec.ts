@@ -108,8 +108,8 @@ test('the app launched with --mcp-server serves the full surface from main', asy
     })
     // The whole surface: v1, plus the drive and data tiers the running app
     // makes possible. The headless entry above publishes two; this publishes
-    // fifteen, and the difference is exactly "there is a window and a database
-    // here".
+    // seventeen, and the difference is exactly "there is a window and a
+    // database here".
     const { tools } = await client.listTools()
     expect(tools.map((tool) => tool.name).sort()).toEqual([
       'apply_preset',
@@ -119,12 +119,14 @@ test('the app launched with --mcp-server serves the full surface from main', asy
       'get_app_state',
       'get_estimate',
       'inspect_model',
+      'list_customers',
       'list_presets',
       'list_saved_estimates',
       'load_model',
       'restore_estimate',
       'save_estimate',
       'save_preset',
+      'set_customer',
       'set_inputs',
       'set_part_weight'
     ])

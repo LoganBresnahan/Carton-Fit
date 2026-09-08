@@ -382,6 +382,12 @@ const partialDimensions = dimensionsValue.describe(
   'Carton dimensions in the carton’s own axes. The unit is required.'
 )
 
+/** A customer on the wire (ADR-0035 §4): id and name, nothing else. */
+export const customerRef = z.union([
+  z.object({ id: z.number().int(), name: z.string() }),
+  z.null()
+])
+
 export const appStateObject = z.object({
   version: z.string().describe('The Carton Fit build answering — one version number for app and tools (ADR-0020).'),
   file: z.union([
@@ -429,7 +435,11 @@ export const appStateObject = z.object({
   }),
   packStatus: z.enum(['idle', 'packing', 'done', 'failed']),
   view: z.enum(['model', 'packed']),
-  units: outputUnits
+  units: outputUnits,
+  customer: customerRef.describe(
+    'Who the app is working for (ADR-0035), or null for house. A label on what the app ' +
+      'shows and saves — nothing in an estimate depends on it. Change it with set_customer.'
+  )
 })
 
 /** An estimate that exists, or the reason it does not — never a bare absence. */
@@ -539,10 +549,40 @@ const savedAt = z
   .string()
   .describe('When this was saved, ISO 8601 UTC — or "unknown" for a row whose timestamp is unreadable.')
 
-export const listPresetsInput = {}
+/** Which customer's rows a list answers with (ADR-0035 §4). */
+export const customerFilter = z.enum(['active', 'all'])
+
+const customerFilterInput = customerFilter
+  .optional()
+  .describe(
+    '"active": the presets or receipts for the customer the app is working for, PLUS house ' +
+      '(rows with no customer) — what the app’s own lists show. "all": every customer’s. ' +
+      'Defaults to "active"; the reply’s `customer` says which you got.'
+  )
+
+const customerName = z
+  .union([z.string(), z.null()])
+  .describe('Whose row this is, or null for house.')
+
+export const listPresetsInput = { customer: customerFilterInput }
 
 export const presetsOutput = {
-  presets: z.array(z.object({ name: z.string(), savedAt }))
+  customer: customerFilter.describe('Which rows these are: "active" or "all".'),
+  presets: z.array(z.object({ name: z.string(), savedAt, customer: customerName }))
+}
+
+export const listCustomersInput = {}
+
+export const customersOutput = {
+  customers: z.array(z.object({ id: z.number().int(), name: z.string() })),
+  active: customerRef.describe('Who the app is working for right now, or null for house.')
+}
+
+export const setCustomerInput = {
+  id: z
+    .union([z.number().int(), z.null()])
+    .describe('A customer id as list_customers reports it, or null for house.'),
+  outputUnits: outputUnitsInput
 }
 
 export const savePresetInput = {
@@ -562,6 +602,7 @@ export const applyPresetInput = {
 export const estimatesScope = z.enum(['model', 'all'])
 
 export const listSavedEstimatesInput = {
+  customer: customerFilterInput,
   scope: estimatesScope
     .optional()
     .describe(
@@ -577,11 +618,13 @@ export const savedEstimatesOutput = {
   scope: estimatesScope.describe(
     'Which rows this is: "model" is the loaded document’s receipts, "all" is every part’s.'
   ),
+  customer: customerFilter.describe('Which customers’ rows: "active" (plus house) or "all".'),
   estimates: z.array(
     z.object({
       id: z.number().describe('Pass this to restore_estimate.'),
       file: z.string(),
       savedAt,
+      customer: customerName,
       summary: z
         .string()
         .describe('The one-line receipt the app’s own list shows for this row — same sentence.')

@@ -1,5 +1,8 @@
 import { estimateSummary } from '../../renderer/src/packing/summary'
-import type { ConfigurationSummary, EstimateRow } from '../../shared/storage'
+import type { ConfigurationSummary, EstimateRow,
+  CustomerRow,
+  CustomerScope
+} from '../../shared/storage'
 
 // The v3 DATA tier's reports (ADR-0029, slice `v3-data-tools`): presets and
 // saved estimates, worded for a client that cannot see the panels they come
@@ -30,11 +33,24 @@ import type { ConfigurationSummary, EstimateRow } from '../../shared/storage'
 export type EstimatesScope = 'model' | 'all'
 
 export interface ToolStorage {
-  listConfigurations(): ConfigurationSummary[]
-  recentEstimates(limit?: number): EstimateRow[]
+  listConfigurations(customer?: CustomerScope): ConfigurationSummary[]
+  recentEstimates(limit?: number, customer?: CustomerScope): EstimateRow[]
   /** The loaded document's receipts, across its linked versions (ADR-0034 §3). */
-  estimatesForDocument(contentHash: string, limit?: number): EstimateRow[]
+  estimatesForDocument(contentHash: string, limit?: number, customer?: CustomerScope): EstimateRow[]
   estimateById(id: number): EstimateRow | null
+  /** Every customer (ADR-0035). Creating one is not here: it is the person's act. */
+  listCustomers(): CustomerRow[]
+}
+
+/** Which customers' rows a list tool answers with (ADR-0035 §4). */
+export type CustomerFilter = 'active' | 'all'
+
+/** id → name, for putting a name on a row's tag. */
+export type CustomerNames = ReadonlyMap<number, string>
+
+function nameOf(names: CustomerNames, id: number | null): string | null {
+  if (id === null) return null
+  return names.get(id) ?? `customer #${id}`
 }
 
 /**
@@ -54,29 +70,54 @@ export function isoTime(epochMs: number): string {
 }
 
 export interface PresetsReport {
-  presets: Array<{ name: string; savedAt: string }>
+  /** Which rows these are (ADR-0035 §4). */
+  customer: CustomerFilter
+  presets: Array<{ name: string; savedAt: string; customer: string | null }>
 }
 
-export function presetsReport(rows: readonly ConfigurationSummary[]): PresetsReport {
-  return { presets: rows.map((row) => ({ name: row.name, savedAt: isoTime(row.updatedAt) })) }
+export function presetsReport(
+  rows: readonly ConfigurationSummary[],
+  customer: CustomerFilter = 'all',
+  names: CustomerNames = new Map()
+): PresetsReport {
+  return {
+    customer,
+    presets: rows.map((row) => ({
+      name: row.name,
+      savedAt: isoTime(row.updatedAt),
+      customer: nameOf(names, row.customerId)
+    }))
+  }
 }
 
 export interface SavedEstimatesReport {
   /** Which rows these are (ADR-0029 amendment 8). */
   scope: EstimatesScope
-  estimates: Array<{ id: number; file: string; savedAt: string; summary: string }>
+  /** Which customers' (ADR-0035 §4). */
+  customer: CustomerFilter
+  estimates: Array<{
+    id: number
+    file: string
+    savedAt: string
+    customer: string | null
+    summary: string
+  }>
 }
 
 export function savedEstimatesReport(
   rows: readonly EstimateRow[],
-  scope: EstimatesScope = 'all'
+  scope: EstimatesScope = 'all',
+  customer: CustomerFilter = 'all',
+  names: CustomerNames = new Map()
 ): SavedEstimatesReport {
   return {
     scope,
+    customer,
     estimates: rows.map((row) => ({
       id: row.id,
       file: row.fileName,
       savedAt: isoTime(row.createdAt),
+      customer: nameOf(names, row.customerId),
       summary: estimateSummary(row)
     }))
   }

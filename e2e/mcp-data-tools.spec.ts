@@ -171,6 +171,23 @@ test.describe('the data tier against a real database', () => {
       expect(everything.estimates).toHaveLength(1)
       const counted = await callStructured<Outcome>(client, 'get_app_state', {})
       expect(counted.state.file).toMatchObject({ loaded: true, savedEstimates: 1 })
+
+      // The customer axis (ADR-0035 §4): a fresh profile has none and is
+      // working for house; switching to house is fine, to an unknown id is
+      // refused with advice, and nothing here can create one.
+      const customers = await callStructured<{ customers: unknown[]; active: unknown }>(
+        client,
+        'list_customers',
+        {}
+      )
+      expect(customers).toEqual({ customers: [], active: null })
+      expect(counted.state.customer).toBeNull()
+      const toHouse = await callStructured<Outcome>(client, 'set_customer', { id: null })
+      expect(toHouse.state.customer).toBeNull()
+      const noSuchCustomer = await client.callTool({ name: 'set_customer', arguments: { id: 99 } })
+      expect(noSuchCustomer.isError).toBe(true)
+      expect(JSON.stringify(noSuchCustomer.content)).toMatch(/created at the app/)
+      expect(saved.estimates[0]).toMatchObject({ customer: null })
       // The same one-line receipt the app's own list renders (ADR-0016), so
       // what Claude reads out and what the person sees are one sentence.
       expect(row.summary).toContain(bigCount.toLocaleString('en-US'))

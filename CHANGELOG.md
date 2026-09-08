@@ -21,7 +21,9 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   nothing else, and nothing in an estimate depends on it: the same part in the
   same carton packs identically whoever you are working for. Creating one is
   done from the selector. The database schema moves to version 3; existing
-  presets and receipts are house rows.
+  presets and receipts are house rows. An AI assistant can list customers,
+  switch between them, and ask either list for one customer's rows or all;
+  it cannot create one.
   ([ADR-0035](doc/adr/0035-customers-are-a-label-on-presets-and-receipts.md))
 
 ### Changed

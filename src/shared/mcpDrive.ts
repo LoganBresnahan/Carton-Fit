@@ -27,6 +27,12 @@ export const MCP_DRIVE_CHANNELS = {
   ready: 'mcp:drive:ready'
 } as const
 
+/** A customer as the wire names it: the id `set_customer` takes, and the name. */
+export interface CustomerRef {
+  id: number
+  name: string
+}
+
 export type DriveAction =
   | { type: 'load_model'; name: string; bytes: Uint8Array; units?: Partial<OutputUnits> }
   | { type: 'set_inputs'; input: SetInputsRequest; unitPart?: string | null; units?: Partial<OutputUnits> }
@@ -37,6 +43,9 @@ export type DriveAction =
    *  tools need to scope a database query main runs itself. Not a wire tool;
    *  a client never sees a hash. */
   | { type: 'get_document' }
+  /** Switch who the app is working for (ADR-0035 §4): null is house. Changes
+   *  what the app SHOWS and tags, never what it computes. */
+  | { type: 'set_customer'; id: number | null; units?: Partial<OutputUnits> }
   | { type: 'capture_view'; view?: 'model' | 'packed' }
   // The v3 DATA tier (slice `v3-data-tools`). Only the WRITES and the two
   // restores cross the bridge: reading the lists is a database query main can
@@ -95,7 +104,13 @@ export type DriveResult =
   | { kind: 'written' }
   /** The loaded document's identity, or null for nothing to scope to (no
    *  file, an import in flight, or a file whose hashing failed). */
-  | { kind: 'document'; contentHash: string | null; fileName: string | null }
+  | {
+      kind: 'document'
+      contentHash: string | null
+      fileName: string | null
+      /** Who the app is working for (ADR-0035 §3); null is house. */
+      customer: CustomerRef | null
+    }
   | { kind: 'text'; format: ExportFormat; suggestedName: string; text: string }
 
 export interface DriveEnvelope {

@@ -74,10 +74,20 @@ function estimateFrom(outcome: SettleOutcome, units?: Partial<OutputUnits>): Est
   }
 }
 
+/** The active customer as the wire names it (ADR-0035 §4), or null for house. */
+function activeCustomer(): { id: number; name: string } | null {
+  const state = store.getState()
+  const id = state.activeCustomerId
+  if (id === null) return null
+  const found = state.customers.find((c) => c.id === id)
+  return { id, name: found?.name ?? `customer #${id}` }
+}
+
 function snapshotState(units?: Partial<OutputUnits>): DriveOutcome['state'] {
   const state = store.getState()
   return buildAppState(
     {
+      customer: activeCustomer(),
       fileName: state.file?.name ?? null,
       parts: state.parts,
       settings: state.settings,
@@ -220,7 +230,29 @@ async function handle(action: DriveAction): Promise<DriveResult> {
 
     case 'get_document': {
       const state = store.getState()
-      return { kind: 'document', contentHash: documentHash(state), fileName: state.file?.name ?? null }
+      return {
+        kind: 'document',
+        contentHash: documentHash(state),
+        fileName: state.file?.name ?? null,
+        customer: activeCustomer()
+      }
+    }
+
+    case 'set_customer': {
+      // The same setter the header select calls — off the undo stack, its
+      // own key, and unread by the engine (ADR-0035 §3). An unknown id is
+      // refused with the list, the way an unknown part kind is.
+      const { customers, setActiveCustomer } = store.getState()
+      if (action.id !== null && !customers.some((c) => c.id === action.id)) {
+        const known = customers.map((c) => `${c.id} (${c.name})`).join(', ')
+        throw new DriveRefusal(
+          customers.length === 0
+            ? 'No customers exist yet — they are created at the app, not from here. Pass null for house.'
+            : `No customer with id ${action.id}. Known: ${known}; null is house.`
+        )
+      }
+      setActiveCustomer(action.id)
+      return { kind: 'outcome', outcome: await settledOutcome(action.units) }
     }
 
     // --- the v3 data tier (slice `v3-data-tools`) -------------------------

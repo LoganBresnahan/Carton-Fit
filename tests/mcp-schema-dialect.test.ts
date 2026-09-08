@@ -38,6 +38,7 @@ const CONTEXT: OcctWasmContext = { appPath: join(__dirname, '..'), isPackaged: f
  *  is called: tools/list is the whole conversation. */
 function inertDrive(): DriveBridge {
   const state = buildAppState({
+    customer: null,
     fileName: null,
     parts: [],
     settings: DEFAULT_SETTINGS,
@@ -59,7 +60,8 @@ const inertStorage: ToolStorage = {
   listConfigurations: () => [],
   recentEstimates: () => [],
   estimatesForDocument: () => [],
-  estimateById: () => null
+  estimateById: () => null,
+  listCustomers: () => []
 }
 
 let client: Client
@@ -84,11 +86,11 @@ afterEach(async () => {
 type Published = { $schema?: unknown } & Record<string, unknown>
 
 describe('every published tool schema declares JSON Schema 2020-12', () => {
-  it('on the FULL surface — all fifteen tools, input and output alike', async () => {
+  it('on the FULL surface — all seventeen tools, input and output alike', async () => {
     const { tools } = await client.listTools()
     // The count is asserted so a tool registered without `wire()` cannot hide
     // by simply not being here.
-    expect(tools).toHaveLength(15)
+    expect(tools).toHaveLength(17)
     for (const tool of tools) {
       const input = tool.inputSchema as Published
       expect(input.$schema, `${tool.name} input`).toBe(JSON_SCHEMA_DIALECT)

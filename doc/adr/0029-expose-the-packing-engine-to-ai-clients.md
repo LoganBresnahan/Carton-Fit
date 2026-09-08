@@ -1099,6 +1099,19 @@ it changes what the running app shows), and `customer: 'active' | 'all'` on
 so minor under ADR-0020 §3. Creating a customer is not a tool, for amendment
 8's reason: not undoable, and not something to do on a reader's guess.
 
+**Amendment 9 shipped 2026-09-08**, with item 27. Settled in the build: the
+list replies echo `customer: 'active' | 'all'` and every preset and receipt
+row carries `customer: string | null` (the name; null is house), the same
+say-which-you-got rule amendments 8 and 13b follow. On `list_saved_estimates`
+the `scope` and `customer` inputs are **independent axes** — every document's
+receipts for this customer, or this document's for every customer — where the
+panel's one *All* widens both, because a client can ask two questions and a
+person wants one control. `set_customer` takes an id or null and answers with
+the state; an unknown id is refused with the known ids, and with "created at
+the app, not from here" when there are none. The window is asked who it is
+working for through the same private drive action that reports the loaded
+document.
+
 ### Phase-2 contract amendment 10 (2026-09-04, seventh dogfood) — the qualification that stayed on the tool that found it
 
 `inspect_model` says plainly that a kind's instances do not share one bounding

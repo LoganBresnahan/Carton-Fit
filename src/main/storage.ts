@@ -179,11 +179,12 @@ export function registerStorageIpc(): void {
  * itself lives in mcp/data.ts, which the Electron-free server module can see.
  */
 export const storageForTools: ToolStorage = {
-  listConfigurations: () => require_().configurations.list(),
-  recentEstimates: (limit) => require_().estimates.recent(limit),
-  estimatesForDocument: (contentHash, limit) =>
-    require_().estimates.forDocument(contentHash, limit),
-  estimateById: (id) => require_().estimates.byId(id)
+  listConfigurations: (customer) => require_().configurations.list(customer),
+  recentEstimates: (limit, customer) => require_().estimates.recent(limit, customer),
+  estimatesForDocument: (contentHash, limit, customer) =>
+    require_().estimates.forDocument(contentHash, limit, customer),
+  estimateById: (id) => require_().estimates.byId(id),
+  listCustomers: () => require_().customers.list()
 }
 
 /** Close the handle on quit so WAL checkpoints and the file is left clean. */
