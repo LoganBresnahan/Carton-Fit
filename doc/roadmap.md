@@ -193,6 +193,84 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [ ] 34. Dogfood follow-ups, 11th run — two Claude Opus 5 passes (one in
+      Cowork, one in the chat client) on `1.2.0+44a6ed9`, 2026-09-08, the
+      first runs against items 26 and 27. **Every number matched both readers'
+      independent arithmetic** — count, per-plate weight, packed weight,
+      utilization, the bound, and the change of hands at the 100 lb cap — and
+      the live app and the stateless tool returned byte-identical bodies. Both
+      readers derived before calling and said so. Seven findings survive,
+      verified here against the code; none is a wrong number.
+      - [ ] **The global carton's provenance, third time** (both readers, worst
+        by recurrence). Both loaded the model first, as station 0 now says,
+        and both still reported that `get_app_state` handed them a complete
+        carton, cap and density with nothing distinguishing set from
+        inherited; one showed the arithmetic where the inherited 100 lb cap
+        keeps the count at 3 and flips the binding sentence. ADR-0034 rejected
+        a `setThisSession` flag because the *model* was wrong; the model is
+        fixed and the file-scoped half no longer trips anyone — this is the
+        **global** half, which ADR-0034 §2 keeps on purpose. Readers 7 and 8
+        on the same sentence after the structural fix is the revisit trigger
+        that ADR never wrote down. Derived, not adopted from either reader:
+        the store already knows the settings it loaded at launch, so a
+        per-field-group `changedThisSession` is a diff against that snapshot
+        — app state, cheap, and honest in a way a "persisted" constant in
+        `set_inputs`'s reply (reader 2's other ask) is not, per the rule that
+        a constant cannot qualify the sentence beside it. **Decision needed:**
+        whether to reopen ADR-0034's rejected alternative under that reading.
+      - [ ] **One fill label covers two quantities** (reader 2, confirmed in
+        `pack.ts`). Fit-check sums the eighteen part boxes (25.8%);
+        max-quantity with no unit part composes the whole file into one unit
+        and reports count × that box (53.4%, air included). Both say
+        `basis: "bounding-boxes"` and both exports print *part bounding boxes
+        ÷ carton interior*, true only of the first. Wrong sentence: the wire
+        token cannot move (ADR-0020 §3), so a sibling field names whose boxes
+        — `parts`, the unit part, or the whole file as one unit — and the
+        label reads it. The 8th run fixed the denominator's name; this is the
+        numerator's.
+      - [ ] **The receipt line drops the weight basis** (reader 1, confirmed
+        in `estimateSummary`). *2 fit · of plate · 11×6×10 in · weight-limited*
+        was weight-limited only because the plate was 12 lb by hand; at the
+        density it reads *3 fit · … · weight-limited*, same everything else.
+        The row carries `partWeightsG`; the line does not read it. Wrong
+        sentence, and the first concrete shape for item 32's open ask: the
+        label a receipt needs is the one that explains why two rows differ.
+      - [ ] **A preset changed the count's noun without saying so** (reader 2,
+        half-right). `apply_preset` says in its description that the unit part
+        is not carried, the reply shows `unitPart: null`, and the count of 1
+        was right for the whole file as one unit — the reader's proposed
+        "warn like overrides" is already there in prose. What is missing is
+        the noun in the sentence: *1 fit* names nothing when the unit is the
+        whole file, where *3 fit · of plate* names the plate. Name the unit in
+        the headline when it is the file, and this reads as the change it is.
+      - [ ] **`sizePerInstance` is one instance of a kind the reply says is
+        not alike** (reader 1, half-right). The qualification discloses it;
+        the reader wants a range or a per-instance list. Derived instead: the
+        instances here differ by *permutation* — the export shows
+        0.118×0.591×0.787 beside 0.787×0.591×0.118 — so extents sorted
+        largest-first make permuted instances agree and cost no field; a true
+        min/max would be needed only for instances whose extents differ,
+        which no fixture has yet. Low.
+      - [ ] **`load_model`'s reply has no `file.savedEstimates`** (reader 2,
+        half-right). By contract it is on `get_app_state` only (amendment 8's
+        shipped note, the `cleared`-on-`load_model` pattern), so nothing
+        "vanished"; but the moment after a load is exactly when a reader
+        wants the document's count, and one more query on one call is cheap.
+        Minor.
+      - [ ] **Stations 6's scope and customer checks were vacuous** (reader 1,
+        a limitation, not a defect): one document, no customers, so `model`
+        and `all` had to agree. The client cannot create a customer by
+        decision, and the brief must never ask the person to press keys — so
+        the fix is the *pre-paste* checklist, which is for the human: have a
+        second file loaded once and one customer created before the session.
+        A brief change (ADR-0032: the brief is the artifact).
+      Recorded, not defects: the summary export truncates its part table at
+      twelve rows and says so (reader 2); tool schemas arriving deferred
+      behind the client's `tool_search` (both) is the client's, not ours.
+      Both readers confirmed by absence that nothing deletes from the wire and
+      that both list descriptions explain why — and did not ask the person at
+      the keyboard for anything.
+
 - [x] 33. Sidebar dogfood, first pass on item 26 — the user's own eyes on
       `1.2.0+33f29c1`, 2026-09-08, the same day the item shipped. Four
       findings, all fixed the same day; none a wrong number, three of them
