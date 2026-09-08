@@ -28,6 +28,14 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **A saved estimate says when a weight was typed by hand.** The one-line
+  receipt ends with *plate weighed by hand* (or *2 kinds weighed by hand*), so
+  two rows that differ only because of a hand-typed weight no longer read the
+  same. ([ADR-0035](doc/adr/0035-customers-are-a-label-on-presets-and-receipts.md), 11th dogfood)
+- **House rows are labelled once a customer exists.** Receipts and presets
+  say *House* or the customer's name, so a list under one customer tells
+  everyone's rows from theirs. With no customers, nothing is labelled.
+  ([ADR-0035](doc/adr/0035-customers-are-a-label-on-presets-and-receipts.md))
 - **The saved-estimates list shows the loaded model's receipts.** Load a
   part and the list is that part's saved estimates, found by the file's
   content, not its name; a **This model / All** switch widens it to every

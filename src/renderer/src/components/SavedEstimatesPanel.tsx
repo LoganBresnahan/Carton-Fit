@@ -78,7 +78,10 @@ function EstimateItem({
   row: EstimateRow
   /** Saved against another hash in the loaded document (ADR-0034 §3). */
   earlierVersion: boolean
-  /** Whose receipt (ADR-0035 §2), or null for house — house is never labelled. */
+  /** Whose receipt (ADR-0035 §2). Null while no customers exist — then there
+   *  is nothing to tell apart and no row is labelled; once one exists, house
+   *  rows say "House", so a scoped list under Acme reads house from Acme's
+   *  (first sidebar pass on item 27, 2026-09-08). */
   customerName: string | null
   /** Fading out: Delete was pressed and the row is on its way. */
   removing: boolean
@@ -95,10 +98,12 @@ function EstimateItem({
         <span className="estimate-file" title={row.fileName}>
           {row.fileName}
           {customerName !== null && (
-            <span className="estimate-customer" data-testid="estimate-customer">
-              {' '}
-              · {customerName}
-            </span>
+            <>
+              {' · '}
+              <span className="estimate-customer" data-testid="estimate-customer">
+                {customerName}
+              </span>
+            </>
           )}
         </span>
         <span className="estimate-when">
@@ -152,8 +157,11 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
   const activeCustomerId = useAppStore((s) => s.activeCustomerId)
   const customers = useAppStore((s) => s.customers)
   const [open, setOpen] = useState(loadOpen)
-  const customerName = (id: number | null): string | null =>
-    id === null ? null : (customers.find((c) => c.id === id)?.name ?? `customer #${id}`)
+  const customerName = (id: number | null): string | null => {
+    if (customers.length === 0) return null
+    if (id === null) return 'House'
+    return customers.find((c) => c.id === id)?.name ?? `customer #${id}`
+  }
   // Rows fading out. The delete itself waits for the fade, so the next row
   // does not snap into the gap before the eye has seen something leave
   // (first sidebar dogfood, 2026-09-08: "makes the user wonder if they

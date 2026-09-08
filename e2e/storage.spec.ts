@@ -487,17 +487,22 @@ test.describe('saved configurations UI', () => {
       await page.fill('[data-testid="config-name"]', 'Acme box')
       await page.click('[data-testid="config-save"]')
       await page.click('[data-testid="save-estimate"]')
-      // Acme sees both receipts (its own plus house) and both presets, ungrouped.
+      // Acme sees both receipts (its own plus house) and both presets,
+      // ungrouped — and now that a customer exists, every row says whose it
+      // is, house included, so the two can be told apart.
       await expect(items).toHaveCount(2)
-      await expect(page.locator('[data-testid="estimate-customer"]')).toHaveCount(1)
-      await expect(page.locator('[data-testid="estimate-customer"]')).toContainText('Acme')
+      await expect(page.locator('[data-testid="estimate-customer"]')).toHaveText(['Acme', 'House'])
       await expect(picker.locator('[data-testid="config-others"]')).toHaveCount(0)
+      await expect(picker.locator('[data-testid="config-item"]')).toHaveText([
+        'Acme box — Acme',
+        'House box — House'
+      ])
 
       // Back to house: Acme's receipt leaves the scoped list, and Acme's
       // preset moves under "Other customers" — still one pick away.
       await customer.selectOption('')
       await expect(items).toHaveCount(1)
-      await expect(page.locator('[data-testid="estimate-customer"]')).toHaveCount(0)
+      await expect(page.locator('[data-testid="estimate-customer"]')).toHaveText(['House'])
       const others = picker.locator('[data-testid="config-others"] option')
       await expect(others).toHaveCount(1)
       await expect(others.first()).toHaveText('Acme box — Acme')

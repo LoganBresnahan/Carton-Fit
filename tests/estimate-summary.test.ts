@@ -36,6 +36,29 @@ describe('estimateSummary', () => {
     expect(estimateSummary(row())).toBe('500 fit · 12×12×12 in · weight-limited')
   })
 
+  it('says a weight was typed by hand, naming the kind (11th dogfood)', () => {
+    const base = {
+      result: { mode: 'max-quantity', count: 2, binding: 'weight', geometryBound: 3 },
+      settings: { boxDimsMm: [279.4, 152.4, 254], unitSystem: 'imperial', unitPartName: 'plate' }
+    }
+    expect(estimateSummary(row({ ...base, settings: { ...base.settings, partWeightsG: { plate: 5443 } } }))).toBe(
+      '2 fit · of plate · 11×6×10 in · weight-limited · plate weighed by hand'
+    )
+    expect(
+      estimateSummary(
+        row({ ...base, settings: { ...base.settings, partWeightsG: { plate: 5443, nut: 10 } } })
+      )
+    ).toBe('2 fit · of plate · 11×6×10 in · weight-limited · 2 kinds weighed by hand')
+    // The density's row, same everything else, now reads differently.
+    expect(estimateSummary(row({ ...base, settings: { ...base.settings, partWeightsG: {} } }))).toBe(
+      '2 fit · of plate · 11×6×10 in · weight-limited'
+    )
+    // A malformed override map is ignored, not thrown on.
+    expect(estimateSummary(row({ ...base, settings: { ...base.settings, partWeightsG: 'x' } }))).toBe(
+      '2 fit · of plate · 11×6×10 in · weight-limited'
+    )
+  })
+
   it('names a geometry-bound row, which read as nothing at all', () => {
     // 7th dogfood, and the half no reader could see. The line compared
     // `binding === 'space'` while `BindingConstraint` is 'geometry' | 'weight'

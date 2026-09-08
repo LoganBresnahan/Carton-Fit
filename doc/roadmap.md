@@ -228,8 +228,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         — `parts`, the unit part, or the whole file as one unit — and the
         label reads it. The 8th run fixed the denominator's name; this is the
         numerator's.
-      - [ ] **The receipt line drops the weight basis** (reader 1, confirmed
-        in `estimateSummary`). *2 fit · of plate · 11×6×10 in · weight-limited*
+      - [x] **The receipt line drops the weight basis** (reader 1, confirmed
+        in `estimateSummary`). *Fixed 2026-09-08:* the line ends *· plate
+        weighed by hand* (one kind) or *· 2 kinds weighed by hand*, read from
+        the row's own `partWeightsG`; a malformed map is ignored. *2 fit · of plate · 11×6×10 in · weight-limited*
         was weight-limited only because the plate was 12 lb by hand; at the
         density it reads *3 fit · … · weight-limited*, same everything else.
         The row carries `partWeightsG`; the line does not read it. Wrong
@@ -264,6 +266,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the fix is the *pre-paste* checklist, which is for the human: have a
         second file loaded once and one customer created before the session.
         A brief change (ADR-0032: the brief is the artifact).
+      - [x] **Nothing on screen said a row was house** (the user's own first
+        pass on item 27, same day). Under Acme the scoped list showed house
+        rows and Acme's with only Acme's labelled, and the picker's *Other
+        customers* group read as presets leaking between customers. *Fixed
+        2026-09-08:* once at least one customer exists, every receipt and
+        every preset option says whose it is — *House* included — and with
+        no customers nothing is labelled, so house never reads as a missing
+        value. The picker keeps the group; with both halves named it is what
+        it was meant to be, All one scroll away.
       Recorded, not defects: the summary export truncates its part table at
       twelve rows and says so (reader 2); tool schemas arriving deferred
       behind the client's `tool_search` (both) is the client's, not ours.

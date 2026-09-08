@@ -89,8 +89,23 @@ function bindingPhrase(result: Record<string, unknown> | null): string | null {
 }
 
 /**
- * A saved estimate in one line: what the answer was, in what carton, and what
- * bound it — the three things that make a receipt worth keeping.
+ * Weights typed by hand (ADR-0018 §3), which the row carries and the line did
+ * not read (11th dogfood, 2026-09-08): "2 fit · of plate · weight-limited" was
+ * 2 only because the plate was 12 lb by hand, and read identically to the
+ * density's 3. Names the kind when there is one, counts them otherwise.
+ */
+function overridePhrase(settings: Record<string, unknown> | null): string | null {
+  const overrides = record(settings?.partWeightsG)
+  if (!overrides) return null
+  const kinds = Object.keys(overrides).filter((kind) => num(overrides[kind]) !== null)
+  if (kinds.length === 0) return null
+  return kinds.length === 1 ? `${kinds[0]} weighed by hand` : `${kinds.length} kinds weighed by hand`
+}
+
+/**
+ * A saved estimate in one line: what the answer was, in what carton, what
+ * bound it, and whether a weight was typed by hand — the things that make a
+ * receipt worth keeping and tell two receipts apart.
  */
 export function estimateSummary(row: EstimateRow): string {
   const result = record(row.result)
@@ -112,6 +127,9 @@ export function estimateSummary(row: EstimateRow): string {
 
   const limit = bindingPhrase(result)
   if (limit) parts.push(limit)
+
+  const byHand = overridePhrase(settings)
+  if (byHand) parts.push(byHand)
 
   // A row we cannot read at all still deserves a row in the list — it is the
   // user's data, and silently hiding it would be worse than saying so.

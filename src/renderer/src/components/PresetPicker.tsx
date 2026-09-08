@@ -95,6 +95,10 @@ export function PresetPicker(): React.JSX.Element {
   )
   const customerName = (id: number | null): string =>
     id === null ? 'House' : (customers.find((c) => c.id === id)?.name ?? `customer #${id}`)
+  // Whose preset, on every option once a customer exists — house included, so
+  // "House box — House" beside "Acme box — Acme" says which is everyone's.
+  const labelled = (name: string, id: number | null): string =>
+    customers.length === 0 ? name : `${name} — ${customerName(id)}`
 
   return (
     <div className="preset-picker" data-testid="configurations-panel">
@@ -111,14 +115,14 @@ export function PresetPicker(): React.JSX.Element {
           <option value="">{empty ? 'No presets yet' : 'Apply a preset…'}</option>
           {mine.map((config) => (
             <option key={config.id} value={config.name} data-testid="config-item">
-              {config.name}
+              {labelled(config.name, config.customerId)}
             </option>
           ))}
           {others.length > 0 && (
             <optgroup label="Other customers" data-testid="config-others">
               {others.map((config) => (
                 <option key={config.id} value={config.name} data-testid="config-item">
-                  {config.name} — {customerName(config.customerId)}
+                  {labelled(config.name, config.customerId)}
                 </option>
               ))}
             </optgroup>
