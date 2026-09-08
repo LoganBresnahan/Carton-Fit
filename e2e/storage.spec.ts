@@ -428,6 +428,41 @@ test.describe('saved configurations UI', () => {
     }
   })
 
+  test('"Working for" holds the active customer across a load and a restart (ADR-0035 §3)', async () => {
+    const profile = [`--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`]
+    const first = await launchApp(profile)
+    try {
+      const select = first.page.locator('[data-testid="customer-select"]')
+      await expect(select).toHaveValue('')
+
+      // Creating one is the person's act: a name, nothing else.
+      await select.selectOption('__new__')
+      await first.page.fill('[data-testid="customer-name"]', 'Acme')
+      await first.page.click('[data-testid="customer-create"]')
+      await expect(first.page.locator('[data-testid="customer-dialog"]')).not.toBeVisible()
+      await expect(select.locator('option[data-testid="customer-option"]')).toHaveCount(1)
+      await expect(select.locator('option:checked')).toHaveText('Acme')
+
+      // App state, not document state: a load does not touch it.
+      await importSample(first.page, 'cube-10x10.stl')
+      await waitForEstimate(first.page)
+      await expect(select.locator('option:checked')).toHaveText('Acme')
+    } finally {
+      await first.app.close()
+    }
+
+    const second = await launchApp(profile)
+    try {
+      const select = second.page.locator('[data-testid="customer-select"]')
+      await expect(select.locator('option:checked')).toHaveText('Acme')
+      // Back to house is one pick, and house is never "missing".
+      await select.selectOption('')
+      await expect(select).toHaveValue('')
+    } finally {
+      await second.app.close()
+    }
+  })
+
   test('every saved estimate is listed, not the first twelve', async () => {
     const { app, page } = await launchApp([
       `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`

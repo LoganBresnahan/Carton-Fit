@@ -1,7 +1,12 @@
 import { create } from 'zustand'
 import type { ImportedPart } from './workers/import-protocol'
 import type { ImportSink, ImportStats, ImportStatus, LoadedFile } from './import/types'
-import type { ConfigurationSummary, EstimateRow, LinkOffer } from '../../shared/storage'
+import type {
+  ConfigurationSummary,
+  CustomerRow,
+  EstimateRow,
+  LinkOffer
+} from '../../shared/storage'
 import type { UpdateInfo } from '../../shared/update'
 import type { PackRequest, PackResult } from './core/packing/types'
 import type { PackSink, PackStatus } from './packing/types'
@@ -104,6 +109,42 @@ function loadPanelWidth(): number {
 function savePanelWidth(panelWidth: number): void {
   try {
     localStorage.setItem(LAYOUT_KEY, JSON.stringify({ panelWidth }))
+  } catch {
+    // ignore: nothing to do if storage is unavailable
+  }
+}
+
+/**
+ * The active customer (ADR-0035 §3), in its OWN key like the layout: it is
+ * app state, not a setting — never serialized into a preset or a receipt, and
+ * it survives a file load because "same customer, next part" is the workflow
+ * it exists for. Null is house.
+ */
+const CUSTOMER_KEY = 'carton-fit:customer'
+
+/** Interpret the persisted value: an integer id, or house for anything else. */
+export function activeCustomerFromStored(raw: string | null): number | null {
+  if (raw === null) return null
+  try {
+    const parsed = JSON.parse(raw) as { activeCustomerId?: unknown }
+    const id = parsed?.activeCustomerId
+    return typeof id === 'number' && Number.isInteger(id) ? id : null
+  } catch {
+    return null
+  }
+}
+
+function loadActiveCustomer(): number | null {
+  try {
+    return activeCustomerFromStored(localStorage.getItem(CUSTOMER_KEY))
+  } catch {
+    return null
+  }
+}
+
+function saveActiveCustomer(activeCustomerId: number | null): void {
+  try {
+    localStorage.setItem(CUSTOMER_KEY, JSON.stringify({ activeCustomerId }))
   } catch {
     // ignore: nothing to do if storage is unavailable
   }
@@ -227,6 +268,19 @@ interface AppState {
    */
   linkOffer: LinkOffer | null
   setLinkOffer: (linkOffer: LinkOffer | null) => void
+
+  // --- customers (ADR-0035) ---
+  /** Every customer, as main lists them. */
+  customers: CustomerRow[]
+  /**
+   * Who the app is working for: filters both lists and tags every save.
+   * Null is house. App state, not document state and not an input: nothing
+   * the engine computes reads it (pinned), it is off the undo stack by
+   * construction, and it persists in its own key.
+   */
+  activeCustomerId: number | null
+  setCustomers: (customers: CustomerRow[]) => void
+  setActiveCustomer: (activeCustomerId: number | null) => void
   /** Last storage failure, for surfacing rather than swallowing. */
   storageError: string | null
   setConfigurations: (configurations: ConfigurationSummary[]) => void
@@ -357,6 +411,14 @@ export const useAppStore = create<AppState>((set) => ({
   setEstimatesScope: (estimatesScope) => set({ estimatesScope }),
   linkOffer: null,
   setLinkOffer: (linkOffer) => set({ linkOffer }),
+
+  customers: [],
+  activeCustomerId: loadActiveCustomer(),
+  setCustomers: (customers) => set({ customers }),
+  setActiveCustomer: (activeCustomerId) => {
+    saveActiveCustomer(activeCustomerId)
+    set({ activeCustomerId })
+  },
   storageError: null,
   setConfigurations: (configurations) => set({ configurations, storageError: null }),
   setSavedEstimates: (savedEstimates) => set({ savedEstimates, storageError: null }),

@@ -33,7 +33,12 @@ export default function ConnectButton(): React.JSX.Element {
         title="Let an AI assistant measure parts and run estimates in this app"
         onClick={() => setOpen(true)}
       >
-        AI assistants
+        {/* Two labels, one shown: the long one where the header has room, the
+            short one under 1000px (see the header's narrow rules in the CSS). */}
+        <span className="connect-open-full">AI assistants</span>
+        <span className="connect-open-short" aria-hidden="true">
+          AI
+        </span>
       </button>
       <dialog
         ref={dialog}

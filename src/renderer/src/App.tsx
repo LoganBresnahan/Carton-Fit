@@ -10,6 +10,7 @@ import ThemeSelect from './components/ThemeSelect'
 import UpdateBanner from './components/UpdateBanner'
 import UnitPicker from './components/UnitPicker'
 import ConnectButton from './components/ConnectButton'
+import CustomerSelect from './components/CustomerSelect'
 import SavedEstimatesPanel from './components/SavedEstimatesPanel'
 import ViewToggle from './components/ViewToggle'
 import Viewport from './viewport/Viewport'
@@ -34,6 +35,9 @@ export default function App() {
               where a truncated sentence is merely shorter. */}
           {/* Setup, done once: the connect surface opens from here (ADR-0034
               §5) instead of sitting at the bottom of the scrolling column. */}
+          {/* Who the app is working for (ADR-0035 §3): app-wide and not an
+              input, so it lives with the other header controls. */}
+          <CustomerSelect />
           <ConnectButton />
           <ThemeSelect />
           <StorageBanner />

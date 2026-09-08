@@ -109,6 +109,98 @@ body {
   overflow: hidden;
 }
 
+/* "Working for" (ADR-0035 §3): label and select as one quiet header item,
+   sized like the theme select, never shrunk — a customer name cut to "Ac…"
+   is a wrong customer. */
+.customer-working {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+.customer-working-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+/* The word goes before the name does: under 1000px the header holds the
+   title, this, the connect trigger, the theme and a status chip with two
+   buttons, and the chip's buttons must stay reachable (update-check.spec's
+   narrow-window rule). The select keeps its name; only the label folds. */
+/* An explicit width, not the intrinsic one: a select is as wide as its
+   longest option, and "New customer…" would size the control for the one
+   option that is not a customer. A long name ellipsizes inside it. */
+.customer-select {
+  width: 9rem;
+  padding: 0.25rem 0.3rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 0.8rem;
+}
+/* THE NARROW HEADER. ADR-0021 §7 keeps the news chip whole — its version
+   number and its two buttons must stay reachable at 720px — and ADR-0035
+   added a fifth fixed item to the row. Something yields, and it is the
+   decoration: the "Working for" word, the connect button's long label, the
+   chip's UPDATE word (its tint and the sentence already say so), and a
+   little padding. Names, numbers and buttons keep their full width.
+   These overrides come AFTER the base rules they narrow: same specificity,
+   and the later one wins. */
+.connect-open-short {
+  display: none;
+}
+@media (max-width: 1000px) {
+  .app-header {
+    padding: 0 0.75rem;
+    gap: 0.75rem;
+  }
+  .customer-working-label {
+    display: none;
+  }
+  .customer-select {
+    width: 6rem;
+  }
+  .connect-open-full {
+    display: none;
+  }
+  .connect-open-short {
+    display: inline;
+  }
+  .theme-select {
+    width: 4.8rem;
+  }
+  .status-chip-info .status-chip-label {
+    display: none;
+  }
+}
+.customer-dialog {
+  margin: auto;
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+}
+.customer-dialog::backdrop {
+  background: rgb(0 0 0 / 0.35);
+}
+.customer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.customer-form h2 {
+  font-size: 0.9rem;
+  margin: 0;
+}
+.customer-form input {
+  width: 100%;
+}
+.customer-dialog .connect-dialog-actions {
+  gap: 0.4rem;
+}
+
 /* The connect surface's trigger (ADR-0034 §5): as quiet as the theme select
    beside it, and like it never shrinks — a setup control the header must not
    truncate into a mystery. */

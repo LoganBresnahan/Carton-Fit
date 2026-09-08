@@ -277,11 +277,26 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         it; `setCustomer` re-tags; receipts get the tag at record and no
         call changes it. Pinned: v1 → v3 on a populated db leaves every row
         house; three filter tests across recent / by-hash / by-document.
-      - [ ] **"Working for" header selector** holding the active customer —
+      - [x] **"Working for" header selector** holding the active customer —
         app state, persisted in its own `localStorage` key (ADR-0026 §6's
         rule), survives a load, **not an undo step**. Pin that the pack
         pipeline never reads it: same request under two customers is
-        byte-identical.
+        byte-identical. *Shipped 2026-09-08, awaiting the feel verdict:*
+        `CustomerSelect` in the header before the connect trigger — a select
+        (every option visible, "House" first), its last option *New
+        customer…* opening a one-field dialog, because a new name is the
+        person's act. Key `carton-fit:customer`; a persisted id no longer in
+        the list falls back to house on refresh. Pinned in
+        `tests/customers.test.ts`: the pack request serialises byte-identical
+        under two customers, and switching leaves `canUndo()` false while an
+        input still arms it. e2e: create, load a file, restart — still
+        Acme; back to house is one pick. **Found on the way:** a fifth fixed
+        header item broke ADR-0021 §7's narrow-window rule (the news chip
+        never shrinks, so at 720px its Dismiss fell off the edge). The
+        decoration yields under 1000px — the "Working for" word, the connect
+        button's long label ("AI"), the chip's UPDATE word, some padding —
+        and names, numbers and buttons keep their width; the select has an
+        explicit width so "New customer…" does not size it.
       - [ ] **Both lists filter on it**: the preset picker shows the active
         customer's cartons plus house; the saved-estimates section shows the
         document's receipts for the active customer plus house; *All* widens
