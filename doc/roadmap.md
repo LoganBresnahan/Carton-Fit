@@ -160,11 +160,19 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the `configurations-panel` test id moved to the picker so
         `panel-layout.spec` still measures its left edge. `config-load-*`
         buttons became `selectOption` in the two specs that pressed them.
-      - [ ] **The wire follows** (§6, ADR-0029 amendment 8): optional `scope`
+      - [x] **The wire follows** (§6, ADR-0029 amendment 8): optional `scope`
         on `list_saved_estimates` with the panel's default rule;
         `get_app_state.model.savedEstimates`. Additive, minor. Goldens and
         `tests/mcp-data-tools.test.ts` pin both; the schema-dialect test keeps
-        the new input optional.
+        the new input optional. *Shipped 2026-09-08:* the count lives on
+        `file` (the wire's name for the model block), on `get_app_state`
+        only; both list replies echo `scope`; main learns the loaded document
+        through a private `get_document` drive action, so no hash reaches a
+        client. Pinned in `tests/mcp-data-tools.test.ts` (five scope cases,
+        including "asked for model with nothing loaded → all, and says so")
+        and in `e2e/mcp-data-tools.spec.ts`'s journey against the real
+        database and hash. The amendment's shipped note records the three
+        details the build settled.
       - [ ] **Close the loop.** Rewrite the brief's station 0 ("load the model
         first — the document starts clean") and station 6 (scoped list);
         VISION's "Presets & saved estimates" paragraph gains the document

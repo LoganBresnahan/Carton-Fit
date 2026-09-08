@@ -27,6 +27,11 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   the geometry loaded now. The database schema moves to version 2 to record the
   link; existing rows are untouched.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
+- **An assistant can ask for this part's saved estimates.** `list_saved_estimates`
+  takes `scope` — the loaded document by default, or everything — and says
+  which it answered with; `get_app_state` reports how many receipts the loaded
+  document holds. Additive; nothing an assistant already does changes.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md), amendment 8)
 - **Presets are a picker beside the carton fields.** Choose one from a
   dropdown under the Carton heading and it fills the fields; the dropdown
   clears itself the moment you change a field, so it never claims a preset

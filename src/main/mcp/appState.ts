@@ -27,7 +27,15 @@ export interface AppStateReport {
   version?: string
   file:
     | { loaded: false }
-    | { loaded: true; name: string; parts: number; kinds: number }
+    | {
+        loaded: true
+        name: string
+        parts: number
+        kinds: number
+        /** On get_app_state only (ADR-0029 amendment 8): receipts this document
+         *  holds across its linked versions (ADR-0034 §3). */
+        savedEstimates?: number
+      }
   inputs: {
     mode: PackingSettings['mode']
     tier: PackingSettings['tier']

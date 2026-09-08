@@ -33,6 +33,10 @@ export type DriveAction =
   | { type: 'set_part_weight'; partKind: string; grams: number | null; units?: Partial<OutputUnits> }
   | { type: 'get_estimate'; units?: Partial<OutputUnits> }
   | { type: 'get_app_state'; units?: Partial<OutputUnits> }
+  /** Which document is loaded, by content hash (ADR-0034 §3) — what the list
+   *  tools need to scope a database query main runs itself. Not a wire tool;
+   *  a client never sees a hash. */
+  | { type: 'get_document' }
   | { type: 'capture_view'; view?: 'model' | 'packed' }
   // The v3 DATA tier (slice `v3-data-tools`). Only the WRITES and the two
   // restores cross the bridge: reading the lists is a database query main can
@@ -89,6 +93,9 @@ export type DriveResult =
   /** A write the renderer performed; main answers with the resulting LIST,
    *  which it re-reads from the database it owns. */
   | { kind: 'written' }
+  /** The loaded document's identity, or null for nothing to scope to (no
+   *  file, an import in flight, or a file whose hashing failed). */
+  | { kind: 'document'; contentHash: string | null; fileName: string | null }
   | { kind: 'text'; format: ExportFormat; suggestedName: string; text: string }
 
 export interface DriveEnvelope {

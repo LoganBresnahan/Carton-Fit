@@ -1075,6 +1075,21 @@ The brief changes with it (ADR-0032: the brief is the artifact): station 0's
 "reset what you did not set" becomes "load the model first — the document starts
 clean," which is the workflow-level fix rather than a caveat about the report.
 
+**Shipped 2026-09-08**, three details settled in the build:
+
+- The state object's model block is called `file` on the wire, so the count is
+  `get_app_state.file.savedEstimates` — present on that call only, the way
+  `cleared` is on `load_model` only, and absent (not zero) when storage cannot
+  answer. It counts across the versions the person has linked (ADR-0034 §3).
+- The reply of `list_saved_estimates` (and of `save_estimate`, which answers
+  with the list the save landed in) carries `scope: 'model' | 'all'` — the
+  amendment-13b rule that a reply says which of two things it is. A caller who
+  asks for `'model'` with nothing loaded gets every row and `scope: 'all'`:
+  told, not misled.
+- Main still answers the rows from its own connection; it asks the window one
+  thing first — which document is loaded — through a private drive action a
+  client never sees. No hash crosses the wire.
+
 ### Phase-2 contract amendment 9 (2026-09-04, proposed with ADR-0035) — the customer axis, additive
 
 `get_app_state.customer`, `list_customers`, `set_customer` (a drive tool, since

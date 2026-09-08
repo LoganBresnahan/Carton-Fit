@@ -158,6 +158,8 @@ export function registerStorageIpc(): void {
 export const storageForTools: ToolStorage = {
   listConfigurations: () => require_().configurations.list(),
   recentEstimates: (limit) => require_().estimates.recent(limit),
+  estimatesForDocument: (contentHash, limit) =>
+    require_().estimates.forDocument(contentHash, limit),
   estimateById: (id) => require_().estimates.byId(id)
 }
 

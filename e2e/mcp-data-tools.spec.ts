@@ -142,12 +142,35 @@ test.describe('the data tier against a real database', () => {
       expect(bigCount).toBe(big.count)
 
       const saved = await callStructured<{
+        scope: string
         estimates: Array<{ id: number; file: string; summary: string }>
       }>(client, 'save_estimate', {})
       expect(saved.estimates).toHaveLength(1)
+      // The list the save landed in is the loaded document's (ADR-0034 §3).
+      expect(saved.scope).toBe('model')
       const row = saved.estimates[0]
       if (!row) throw new Error('unreachable')
       expect(row.file).toBe(CUBE_STL.file)
+
+      // The list tool follows the panel's rule, and the state reply counts
+      // the document's receipts (ADR-0029 amendment 8), all against the real
+      // database and the real hash.
+      const scoped = await callStructured<{ scope: string; estimates: unknown[] }>(
+        client,
+        'list_saved_estimates',
+        {}
+      )
+      expect(scoped).toMatchObject({ scope: 'model' })
+      expect(scoped.estimates).toHaveLength(1)
+      const everything = await callStructured<{ scope: string; estimates: unknown[] }>(
+        client,
+        'list_saved_estimates',
+        { scope: 'all' }
+      )
+      expect(everything).toMatchObject({ scope: 'all' })
+      expect(everything.estimates).toHaveLength(1)
+      const counted = await callStructured<Outcome>(client, 'get_app_state', {})
+      expect(counted.state.file).toMatchObject({ loaded: true, savedEstimates: 1 })
       // The same one-line receipt the app's own list renders (ADR-0016), so
       // what Claude reads out and what the person sees are one sentence.
       expect(row.summary).toContain(bigCount.toLocaleString('en-US'))

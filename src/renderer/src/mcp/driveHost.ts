@@ -1,4 +1,4 @@
-import { useAppStore, resolvedView } from '../store'
+import { useAppStore, resolvedView, documentHash } from '../store'
 import { importFile } from '../import/service'
 import { captureViewportPng, dataUrlToBase64 } from '../viewport/capture'
 import { partKinds } from '../packing/kinds'
@@ -88,6 +88,25 @@ function snapshotState(units?: Partial<OutputUnits>): DriveOutcome['state'] {
     },
     units
   )
+}
+
+/**
+ * Add the document's receipt count to a state snapshot (ADR-0029 amendment 8,
+ * ADR-0034 §3) — on get_app_state only, the way `cleared` is on load_model
+ * only. Asked of storage here rather than read from the store, because the
+ * store's list is under whatever scope the panel is showing. A storage
+ * failure leaves the field absent: the count is a convenience, and the state
+ * reply must not fail for want of it.
+ */
+async function withDocumentCount(state: DriveOutcome['state']): Promise<DriveOutcome['state']> {
+  const hash = documentHash(store.getState())
+  if (!state.file.loaded || hash === null) return state
+  try {
+    const rows = await window.api.storage.estimatesForDocument(hash)
+    return { ...state, file: { ...state.file, savedEstimates: rows.length } }
+  } catch {
+    return state
+  }
 }
 
 /** Settle, then answer with where the app now stands. */
@@ -191,12 +210,17 @@ async function handle(action: DriveAction): Promise<DriveResult> {
       return {
         kind: 'outcome',
         outcome: {
-          state: snapshotState(action.units),
+          state: await withDocumentCount(snapshotState(action.units)),
           estimate: busy
             ? { available: false, reason: 'An estimate is being recomputed right now — call get_estimate to wait for it.' }
             : estimateFrom(await settle.waitForSettle(), action.units)
         }
       }
+    }
+
+    case 'get_document': {
+      const state = store.getState()
+      return { kind: 'document', contentHash: documentHash(state), fileName: state.file?.name ?? null }
     }
 
     // --- the v3 data tier (slice `v3-data-tools`) -------------------------

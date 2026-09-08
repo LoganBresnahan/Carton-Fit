@@ -26,9 +26,14 @@ import type { ConfigurationSummary, EstimateRow } from '../../shared/storage'
  * tool's error — "presets are broken" and "you have no presets" must not look
  * the same (ADR-0007).
  */
+/** The list tools' scope (ADR-0034 §3): the loaded document, or everything. */
+export type EstimatesScope = 'model' | 'all'
+
 export interface ToolStorage {
   listConfigurations(): ConfigurationSummary[]
   recentEstimates(limit?: number): EstimateRow[]
+  /** The loaded document's receipts, across its linked versions (ADR-0034 §3). */
+  estimatesForDocument(contentHash: string, limit?: number): EstimateRow[]
   estimateById(id: number): EstimateRow | null
 }
 
@@ -57,11 +62,17 @@ export function presetsReport(rows: readonly ConfigurationSummary[]): PresetsRep
 }
 
 export interface SavedEstimatesReport {
+  /** Which rows these are (ADR-0029 amendment 8). */
+  scope: EstimatesScope
   estimates: Array<{ id: number; file: string; savedAt: string; summary: string }>
 }
 
-export function savedEstimatesReport(rows: readonly EstimateRow[]): SavedEstimatesReport {
+export function savedEstimatesReport(
+  rows: readonly EstimateRow[],
+  scope: EstimatesScope = 'all'
+): SavedEstimatesReport {
   return {
+    scope,
     estimates: rows.map((row) => ({
       id: row.id,
       file: row.fileName,

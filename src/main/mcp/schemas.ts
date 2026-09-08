@@ -390,7 +390,16 @@ export const appStateObject = z.object({
       loaded: z.literal(true),
       name: z.string(),
       parts: z.number(),
-      kinds: z.number()
+      kinds: z.number(),
+      savedEstimates: z
+        .number()
+        .int()
+        .optional()
+        .describe(
+          'Only on get_app_state: how many saved estimates this document holds, counting ' +
+            'every version the person has linked to it (ADR-0034). The rows themselves are ' +
+            'list_saved_estimates with scope "model".'
+        )
     })
   ]),
   inputs: z.object({
@@ -550,11 +559,24 @@ export const applyPresetInput = {
   outputUnits: outputUnitsInput
 }
 
+export const estimatesScope = z.enum(['model', 'all'])
+
 export const listSavedEstimatesInput = {
+  scope: estimatesScope
+    .optional()
+    .describe(
+      '"model": the receipts kept for the loaded document — the same list the app’s panel ' +
+        'shows, found by the file’s content (and any earlier versions the person linked), ' +
+        'never by its name. "all": every receipt for every part. Defaults to "model" when ' +
+        'a file is loaded and "all" otherwise; the reply’s `scope` says which you got.'
+    ),
   limit: z.number().int().positive().optional().describe('How many, newest first. Defaults to 50.')
 }
 
 export const savedEstimatesOutput = {
+  scope: estimatesScope.describe(
+    'Which rows this is: "model" is the loaded document’s receipts, "all" is every part’s.'
+  ),
   estimates: z.array(
     z.object({
       id: z.number().describe('Pass this to restore_estimate.'),

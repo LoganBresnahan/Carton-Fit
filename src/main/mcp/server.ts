@@ -10,7 +10,13 @@ import type {
   DriveOutcome,
   EstimateAvailability
 } from '../../shared/mcpDrive'
-import { presetsReport, savedEstimatesReport, type ToolStorage } from './data'
+import {
+  presetsReport,
+  savedEstimatesReport,
+  type EstimatesScope,
+  type SavedEstimatesReport,
+  type ToolStorage
+} from './data'
 import { estimateParts, EstimateInputError, type EstimateInput } from './estimate'
 import type { SetInputsRequest } from './inputs'
 import { inspectParts } from './inspect'
@@ -413,13 +419,39 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
  *
  * SPLIT BY WHO OWNS THE ANSWER, which is why some of these touch the bridge and
  * some do not. A LIST is a database query and main holds the database, so
- * `list_presets` and `list_saved_estimates` answer directly — a round trip
- * through the renderer would add nothing but a way for the tool's list and the
- * panel's list to disagree. A WRITE means "save what is on screen" and a
+ * `list_presets` and `list_saved_estimates` answer from main's own database
+ * connection — a round trip through the renderer for the ROWS would add
+ * nothing but a way for the tool's list and the panel's list to disagree.
+ * (`list_saved_estimates` does ask the window one thing first: which document
+ * is loaded, so it can scope the query the way the panel does — ADR-0034 §3.) A WRITE means "save what is on screen" and a
  * RESTORE means "apply this through the store's own actions" (ADR-0016 §2: one
  * restore is one undo step), so those go to the renderer, exactly like the v2
  * tier. Nothing here re-implements either half.
  */
+/**
+ * The saved-estimates list under the panel's scope rule (ADR-0034 §3, ADR-0029
+ * amendment 8): the loaded document's rows by default, everything on request,
+ * and everything when there is no document to scope to — with the reply
+ * naming which of the two it is, so a caller who asked for "model" with
+ * nothing loaded is told, not misled.
+ */
+async function scopedEstimates(
+  drive: DriveBridge,
+  storage: ToolStorage,
+  requested: EstimatesScope | undefined,
+  limit?: number
+): Promise<SavedEstimatesReport> {
+  const doc = await drive.call({ type: 'get_document' })
+  if (doc.kind !== 'document') throw new Error('unexpected drive reply')
+  const scope: EstimatesScope =
+    (requested ?? 'model') === 'model' && doc.contentHash !== null ? 'model' : 'all'
+  const rows =
+    scope === 'model' && doc.contentHash !== null
+      ? storage.estimatesForDocument(doc.contentHash, limit)
+      : storage.recentEstimates(limit)
+  return savedEstimatesReport(rows, scope)
+}
+
 function registerDataTools(
   server: McpServer,
   drive: DriveBridge,
@@ -507,16 +539,18 @@ function registerDataTools(
       title: 'List saved estimates',
       description:
         'The estimates someone chose to keep, newest first, each with the one-line receipt the ' +
-        'app’s own list shows. These are RECEIPTS, not a cache: restore_estimate re-applies a ' +
+        'app’s own list shows. Scoped to the LOADED DOCUMENT by default, like that list: ' +
+        'pass scope "all" for every part’s receipts, and read the reply’s scope to know ' +
+        'which you got. These are RECEIPTS, not a cache: restore_estimate re-applies a ' +
         'row’s inputs and the engine computes the answer again (ADR-0016). Kept rows cannot ' +
         'be deleted or replaced from here — deliberately, since everything else these tools ' +
         'do is undoable and that would not be.',
       inputSchema: wire(listSavedEstimatesInput),
       outputSchema: wire(savedEstimatesOutput)
     },
-    async ({ limit }) => {
+    async ({ scope, limit }) => {
       try {
-        return toolOk(savedEstimatesReport(storage.recentEstimates(limit)))
+        return toolOk(await scopedEstimates(drive, storage, scope, limit))
       } catch (err) {
         return toolError(err)
       }
@@ -538,7 +572,9 @@ function registerDataTools(
       try {
         const result = await drive.call({ type: 'save_estimate' })
         if (result.kind !== 'written') throw new Error('unexpected drive reply')
-        return toolOk(savedEstimatesReport(storage.recentEstimates()))
+        // The list the save landed in: the document's, since a save needs a
+        // loaded file (ADR-0034 §3).
+        return toolOk(await scopedEstimates(drive, storage, 'model'))
       } catch (err) {
         return toolError(err)
       }

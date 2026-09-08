@@ -58,6 +58,7 @@ function inertDrive(): DriveBridge {
 const inertStorage: ToolStorage = {
   listConfigurations: () => [],
   recentEstimates: () => [],
+  estimatesForDocument: () => [],
   estimateById: () => null
 }
 

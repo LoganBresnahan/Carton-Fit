@@ -55,7 +55,7 @@ const ROWS: EstimateRow[] = [
 
 /** The window, reduced to what the tier actually needs from it: a record of
  *  what was asked, and a plausible reply. */
-function fakeDrive(): DriveBridge & { calls: DriveAction[] } {
+function fakeDrive(): DriveBridge & { calls: DriveAction[]; document: string | null } {
   const calls: DriveAction[] = []
   const state = buildAppState({
     fileName: 'bracket.step',
@@ -68,9 +68,17 @@ function fakeDrive(): DriveBridge & { calls: DriveAction[] } {
   })
   return {
     calls,
+    /** The loaded document's hash, as the renderer would answer (ADR-0034 §3). */
+    document: null,
     call(action: DriveAction): Promise<DriveResult> {
       calls.push(action)
       switch (action.type) {
+        case 'get_document':
+          return Promise.resolve({
+            kind: 'document',
+            contentHash: this.document,
+            fileName: this.document === null ? null : 'bracket.step'
+          })
         case 'save_preset':
         case 'save_estimate':
           return Promise.resolve({ kind: 'written' })
@@ -97,6 +105,8 @@ function fakeStorage(): ToolStorage & { presets: ConfigurationSummary[] } {
     presets,
     listConfigurations: () => presets,
     recentEstimates: (limit) => ROWS.slice(0, limit ?? 50),
+    estimatesForDocument: (hash, limit) =>
+      ROWS.filter((row) => row.contentHash === hash).slice(0, limit ?? 50),
     estimateById: (id) => ROWS.find((row) => row.id === id) ?? null
   }
 }
@@ -293,15 +303,57 @@ describe('reads answer from the database, not the window', () => {
 
   it('lists saved estimates with the app’s own one-line receipt', async () => {
     const report = await call<{
+      scope: string
       estimates: Array<{ id: number; file: string; summary: string }>
     }>('list_saved_estimates')
     expect(report.estimates.map((row) => row.id)).toEqual([7, 4])
+    // Nothing loaded: nothing to scope to, and the reply says so.
+    expect(report.scope).toBe('all')
     // `estimateSummary` is the function the saved-estimates panel renders, so
     // what Claude reads out and what the person sees are the same sentence.
     expect(report.estimates[0]?.summary).toContain('343 fit')
     expect(report.estimates[0]?.summary).toContain('space-limited')
     expect(report.estimates[1]?.summary).toContain("Doesn't fit")
-    expect(drive.calls).toEqual([])
+    // The one thing it asks the window is which document is loaded.
+    expect(drive.calls).toEqual([{ type: 'get_document' }])
+  })
+
+  // ADR-0034 §3 / ADR-0029 amendment 8: the list follows the panel's rule.
+  describe('scopes to the loaded document', () => {
+    type Report = { scope: string; estimates: Array<{ id: number }> }
+
+    it('by default, when a file is loaded', async () => {
+      drive.document = 'abc'
+      const report = await call<Report>('list_saved_estimates')
+      expect(report.scope).toBe('model')
+      expect(report.estimates.map((row) => row.id)).toEqual([7])
+    })
+
+    it('widens to every part on request', async () => {
+      drive.document = 'abc'
+      const report = await call<Report>('list_saved_estimates', { scope: 'all' })
+      expect(report.scope).toBe('all')
+      expect(report.estimates.map((row) => row.id)).toEqual([7, 4])
+    })
+
+    it('asked for the model with nothing loaded, answers all and says so', async () => {
+      const report = await call<Report>('list_saved_estimates', { scope: 'model' })
+      expect(report.scope).toBe('all')
+      expect(report.estimates).toHaveLength(2)
+    })
+
+    it('a document with no receipts is an empty scoped list, not everything', async () => {
+      drive.document = 'never-saved'
+      const report = await call<Report>('list_saved_estimates')
+      expect(report).toEqual({ scope: 'model', estimates: [] })
+    })
+
+    it('the list a save lands in is the document’s', async () => {
+      drive.document = 'abc'
+      const report = await call<Report>('save_estimate')
+      expect(report.scope).toBe('model')
+      expect(report.estimates.map((row) => row.id)).toEqual([7])
+    })
   })
 
   it('passes a limit through', async () => {
@@ -324,8 +376,12 @@ describe('writes go through the running app', () => {
   })
 
   it('save_estimate asks the app and answers with the list that now exists', async () => {
-    const report = await call<{ estimates: unknown[] }>('save_estimate')
-    expect(drive.calls).toEqual([{ type: 'save_estimate' }])
+    const report = await call<{ scope: string; estimates: unknown[] }>('save_estimate')
+    // The write, then the one question that scopes the reply (ADR-0034 §3).
+    expect(drive.calls).toEqual([{ type: 'save_estimate' }, { type: 'get_document' }])
+    // The fake window has nothing loaded, so the reply is honest about that:
+    // every row, and `scope` says so. With a document it is the document's.
+    expect(report.scope).toBe('all')
     expect(report.estimates).toHaveLength(ROWS.length)
   })
 
@@ -401,6 +457,7 @@ describe('the report builders', () => {
 
   it('an empty database is an empty list, not an error', () => {
     expect(presetsReport([])).toEqual({ presets: [] })
-    expect(savedEstimatesReport([])).toEqual({ estimates: [] })
+    expect(savedEstimatesReport([])).toEqual({ scope: 'all', estimates: [] })
+    expect(savedEstimatesReport([], 'model')).toEqual({ scope: 'model', estimates: [] })
   })
 })
