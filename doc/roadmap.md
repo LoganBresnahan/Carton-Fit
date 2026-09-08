@@ -43,8 +43,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
 
 ## Next
 
-- [ ] 26. The loaded model owns its state — **ADR-0034, Proposed 2026-09-04;
-      accepted on feel once built and dogfooded.** Placed at the head of Next
+- [x] 26. The loaded model owns its state — **ADR-0034, Proposed 2026-09-04;
+      accepted on feel once built and dogfooded. Built 2026-09-08; the feel
+      verdict is the user's.** Placed at the head of Next
       by decision on 2026-09-04, ahead of 19 and 23, because it is what the
       sixth dogfood pass's two screenshots demand: twelve `dogfood-*` presets,
       thirteen `as1-oc-214.stp` receipts, and the AI-connect panel — the one
@@ -173,13 +174,18 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         and in `e2e/mcp-data-tools.spec.ts`'s journey against the real
         database and hash. The amendment's shipped note records the three
         details the build settled.
-      - [ ] **Close the loop.** Rewrite the brief's station 0 ("load the model
+      - [x] **Close the loop.** Rewrite the brief's station 0 ("load the model
         first — the document starts clean") and station 6 (scoped list);
         VISION's "Presets & saved estimates" paragraph gains the document
         boundary; ADR-0034 flips to Accepted with the feel verdict recorded;
         item 25's fourth follow-up closes with a pointer here. CHANGELOG entries
         land with the slices that change what a person sees — the scoped list,
-        the Delete, the three homes.
+        the Delete, the three homes. *Done 2026-09-08*, except the one act
+        that is the user's: ADR-0034 records that it is built and flips to
+        Accepted when the feel verdict is given. Station 6 now also asks the
+        reader to check both `scope` replies and `file.savedEstimates` against
+        what they saved — the next dogfood run is this item's acceptance test
+        on the wire side; the sidebar in front of the user is it on the other.
       **Not in scope, by decision:** per-file presets; a per-document carton;
       *automatic* name-matching for estimates (the name is only the hint behind
       the link offer); manual link/unlink after load; any thinning of
@@ -1426,7 +1432,11 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         or session tag, or an archive flag — costs nothing against ADR-0016,
         whose objection was to the app deciding which receipts matter, not to
         the user labelling them. Feed into item 26 slice 3 rather than building
-        separately.
+        separately. *2026-09-08:* item 26 shipped the scope, the versions and
+        the Delete; the label / session tag was **not** built — this follow-up
+        now asks for exactly that and nothing else, and waits on a dogfood run
+        finding eleven same-part rows still illegible after scoping and
+        deleting.
       Refuted, and worth answering rather than filing: **`export_estimate`'s
       "nothing lands on disk" is true and establishable from the code** — the
       tool has no filesystem call at all; it returns text plus a `suggestedName`
@@ -1770,7 +1780,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         same definition. Pinned including the invariant that the token and
         the label stay two spellings of one basis — nothing else can catch
         that drift, since both are string literals.
-      - [ ] **No field says whether an input was set this session or
+      - [x] **No field says whether an input was set this session or
         inherited** — a surface gap, product work rather than a bug fix.
         `get_app_state` returned the entire station-4 specification before this
         reader set anything, so a `set_inputs` "verification" would have
@@ -1782,6 +1792,8 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         file-scoped state belongs to the loaded document and a load starts it
         clean, so the only inherited state left is the global carton, which the
         brief tells the reader to set. Closes when item 26's last slice ships.
+        **Closed 2026-09-08:** item 26 shipped whole; station 0 now reads "load
+        the model first — the document starts clean".
       Refuted, and kept because both will be proposed again. (a) "no arrangement
       beats this under these limits" is **not** on every count reply — it is
       gated on `upperBound === count` (`verdict.ts:59`), the case where the

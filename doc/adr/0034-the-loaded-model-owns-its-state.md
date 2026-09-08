@@ -2,7 +2,9 @@
 
 **Status:** Proposed, 2026-09-04. Accepted on feel — the user will decide once
 it is built and dogfooded, which is the right bar for a change whose whole
-point is what the sidebar is like to use.
+point is what the sidebar is like to use. **Built 2026-09-08** (roadmap item
+26, eight slices, each with its build notes there); the feel verdict, and the
+flip to Accepted, are the user's and are recorded here when given.
 
 ## Context
 

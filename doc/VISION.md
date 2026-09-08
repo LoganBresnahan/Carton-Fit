@@ -104,6 +104,14 @@ product decisions:
   (Originally "every estimate is recorded" — written when estimating meant
   pressing a button. ADR-0009 removed the button, which made that literal rule
   record every debounced keystroke; ADR-0016 replaced it with explicit save.)
+  **The loaded model is the document** (ADR-0034): the unit part, the per-kind
+  weight overrides and the saved estimates belong to the file that is open,
+  identified by its content rather than its name, and the list shows that
+  file's receipts by default with *All* one click away. A re-exported part can
+  be linked to its earlier versions — offered on load when the name matches,
+  decided by the person, never merged automatically. Presets stay global: a
+  preset is a carton, not a part. Saved estimates can be deleted from the
+  panel and only from the panel; an assistant cannot discard one.
 - **Undo/redo over the inputs** (Ctrl+Z / Ctrl+Shift+Z): session-scoped and
   in-memory; under auto-run, undoing an input is undoing the estimate
   (ADR-0016).

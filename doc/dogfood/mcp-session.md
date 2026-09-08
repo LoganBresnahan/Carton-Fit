@@ -101,14 +101,14 @@ client you are, its version, and your operating system.
 If the version has no `+<sha>` and is not a tagged release, say so — it means the
 build cannot be identified, which is itself worth reporting.
 
-**Then read the rest of that state before deriving anything, and reset what you
-did not set.** The app keeps its inputs between sessions — an earlier run left
-a hand-typed plate weight and a cleared unit part behind, and a reader that had
-not looked would have derived every station-4 number against inputs it never
-chose. Clear per-kind overrides (`set_part_weight` with `weight: null`) and set
-the unit part yourself when you get to station 4. State what you found and
-what you cleared; inherited state is a finding about the workflow, not about
-the app.
+**Then load the model first — the document starts clean.** The unit part and
+the per-kind weight overrides belong to the loaded file, and `load_model`
+clears them and reports what it cleared (`cleared`), so nothing from an earlier
+session can reach your station-4 numbers through them. What the app does keep
+between sessions is the global carton — dimensions, clearances, the cap, the
+weight mode — so set what your answer depends on rather than trusting what
+`get_app_state` shows you. State what the load cleared and what you set;
+inherited carton inputs are a finding about the workflow, not about the app.
 
 ### Station 1 — inspect a model
 
@@ -218,8 +218,16 @@ Check and report:
   qualification get lost on the way out? An answer that is hedged on screen and
   flat in a quote is the failure mode here.
 - Is anything written to disk that you were not told about?
-- Try to delete a preset or a saved estimate. You should find no way to do it.
-  Report what you find, and whether the surface made the absence understandable.
+- Saved estimates belong to the loaded document. After `save_estimate`, call
+  `list_saved_estimates` with no arguments and again with `scope: "all"`, and
+  say what each reply's `scope` field claimed and whether the rows matched the
+  claim. Then call `get_app_state` and check `file.savedEstimates` against what
+  you saved. A list that shows another part's receipts under this one, or a
+  count that disagrees with the list, is the failure mode here.
+- Try to delete a preset or a saved estimate from where you are. You should
+  find no way to do it — the person at the keyboard has Delete for both, you
+  do not. Report what you find, and whether the surface made the absence
+  understandable.
 
 ### Station 7 — the claims audit
 

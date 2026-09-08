@@ -166,7 +166,8 @@ reaches for it.
 
 ## Revisit triggers
 
-- **ADR-0034 ships** → station 0's "reset what you did not set" paragraph is
+- **ADR-0034 ships** (fired 2026-09-08 — both rewrites landed with item 26's
+  last slice) → station 0's "reset what you did not set" paragraph is
   rewritten to "load the model first — the document starts clean," and station
   6 gains the scoped `list_saved_estimates`. Two runs reported inherited state
   as a finding; the fix is in the app, and the brief must stop describing the
