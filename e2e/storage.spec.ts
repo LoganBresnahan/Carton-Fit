@@ -6,6 +6,7 @@ import {
   SAMPLES,
   importSample,
   launchApp,
+  openSavedEstimates,
   readEstimate,
   setCarton,
   waitForEstimate
@@ -282,6 +283,7 @@ test.describe('saved configurations UI', () => {
       await waitForEstimate(page)
       expect((await readEstimate(page)).headline).toContain('343')
 
+      await openSavedEstimates(page)
       await page.click('[data-testid^="estimate-restore-"]')
       await waitForEstimate(page)
       await expect(page.locator('[data-testid="dim-0"]')).toHaveValue('12')
@@ -325,6 +327,7 @@ test.describe('saved configurations UI', () => {
       await expect(items).toHaveCount(1)
       await expect(items.first()).toContainText('as1-oc-214.stp')
       await expect(toggle).toHaveText('All')
+      await openSavedEstimates(page)
       await toggle.click()
       await expect(scope).toHaveAttribute('data-scope', 'all')
       await expect(items).toHaveCount(2)
@@ -400,10 +403,45 @@ test.describe('saved configurations UI', () => {
 
       // Restoring an earlier version's receipt recomputes against the
       // geometry loaded now (ADR-0016 §3) — which is what makes linking safe.
+      await openSavedEstimates(page)
       await page.click('[data-testid^="estimate-restore-"] >> nth=2')
       await waitForEstimate(page)
     } finally {
       await app.close()
+    }
+  })
+
+  test('the saved-estimates section folds, counts, and remembers (ADR-0034 §5)', async () => {
+    const profile = [`--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`]
+    const first = await launchApp(profile)
+    try {
+      const details = first.page.locator('[data-testid="saved-estimates-details"]')
+      const count = first.page.locator('[data-testid="estimates-count"]')
+      // Closed by default, and the summary says what it holds.
+      await expect(details).not.toHaveAttribute('open', '')
+      await expect(count).toHaveText('none yet')
+
+      await importSample(first.page, 'cube-10x10.stl')
+      await waitForEstimate(first.page)
+      await first.page.click('[data-testid="save-estimate"]')
+      await expect(count).toHaveText('1 for this model')
+      // The count sees the scope: All widens it, and says so.
+      await openSavedEstimates(first.page)
+      await first.page.click('[data-testid="estimates-scope-toggle"]')
+      await expect(count).toHaveText('1 across all models')
+    } finally {
+      await first.app.close()
+    }
+
+    // Opened once, open next time.
+    const second = await launchApp(profile)
+    try {
+      await expect(second.page.locator('[data-testid="saved-estimates-details"]')).toHaveAttribute(
+        'open',
+        ''
+      )
+    } finally {
+      await second.app.close()
     }
   })
 
@@ -421,6 +459,7 @@ test.describe('saved configurations UI', () => {
       await expect(items).toHaveCount(2)
 
       const [newest, oldest] = await page.evaluate(() => window.api.storage.recentEstimates())
+      await openSavedEstimates(page)
       await page.click(`[data-testid="estimate-delete-${newest.id}"]`)
       await expect(items).toHaveCount(1)
 

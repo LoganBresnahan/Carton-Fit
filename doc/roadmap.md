@@ -117,10 +117,20 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the existing no-delete-tool test now also pins the sentence in
         `list_saved_estimates`'s description beside the absence. e2e: save
         two, delete the newest, the older one is what the database holds.
-      - [ ] **Saved estimates collapse into a `<details>` section** (§5) with
+      - [x] **Saved estimates collapse into a `<details>` section** (§5) with
         the document's count in the summary line — the `ConnectClientRow`
         disclosure pattern. Feel is the acceptance test here, and the revisit
-        trigger is the count going unread.
+        trigger is the count going unread. *Shipped 2026-09-08, awaiting the
+        feel verdict:* closed by default (the count is the glance, the list is
+        the visit), the summary reads *3 for this model* / *3 across all
+        models* / *none yet*, and whether it is open is remembered under its
+        own localStorage key (`carton-fit:saved-estimates-open`, ADR-0026 §6's
+        one-key-per-concern rule). The link offer sits above the fold so a
+        question about the load is never hidden by it. `display: list-item`
+        on the summary, not flex — flex drops the disclosure triangle, and
+        the triangle is what says the heading folds. e2e helper
+        `openSavedEstimates` for the specs that click inside; counts and text
+        assertions see through a closed `<details>`, clicks do not.
       - [ ] **AI assistants move to the header** (§5). A control beside
         `ThemeSelect` opens the connect UI (popover or dialog — decide in the
         build). `e2e/connect*.spec.ts` reach the panel through the header from

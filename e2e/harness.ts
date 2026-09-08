@@ -137,6 +137,17 @@ export async function importSample(page: Page, fileName: string): Promise<void> 
   await page.waitForSelector('[data-testid="import-stats"]', { timeout: 30_000 })
 }
 
+/**
+ * Open the saved-estimates section if it is folded (ADR-0034 §5). Counts and
+ * text assertions see through a closed `<details>`; clicks do not.
+ */
+export async function openSavedEstimates(page: Page): Promise<void> {
+  const details = page.locator('[data-testid="saved-estimates-details"]')
+  if (!(await details.evaluate((el) => (el as HTMLDetailsElement).open))) {
+    await details.locator('summary').click()
+  }
+}
+
 /** Type a value into a number field, committing it the way React sees it. */
 export async function setField(page: Page, testId: string, value: number): Promise<void> {
   const field = page.locator(`[data-testid="${testId}"]`)

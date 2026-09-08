@@ -816,6 +816,34 @@ input[type='number']::-webkit-outer-spin-button {
   font-size: 0.72rem;
   color: var(--muted);
 }
+.saved-estimates > details {
+  width: 100%;
+}
+/* `list-item`, not flex: flex would drop the disclosure triangle, and the
+   triangle is what says this heading folds — the Connect rows have it. */
+.saved-estimates summary {
+  display: list-item;
+  cursor: pointer;
+  color: var(--muted);
+  margin: 0.4rem 0 0;
+}
+.saved-estimates summary h2 {
+  display: inline;
+  margin: 0 0.5rem 0 0;
+}
+.saved-estimates summary:hover h2 {
+  color: var(--accent);
+}
+.estimate-count {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.estimate-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
 .estimate-list {
   list-style: none;
   padding: 0;

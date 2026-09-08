@@ -2,7 +2,14 @@ import { expect, test } from '@playwright/test'
 import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { importSample, launchApp, setCarton, waitForEstimate, type AppHandle } from './harness'
+import {
+  importSample,
+  launchApp,
+  openSavedEstimates,
+  setCarton,
+  waitForEstimate,
+  type AppHandle
+} from './harness'
 
 /**
  * Per-kind weight overrides (ADR-0018).
@@ -157,6 +164,7 @@ test('overrides ride a saved estimate and restore by kind', async () => {
   await waitForEstimate(page)
   await expect(field).toHaveValue('')
 
+  await openSavedEstimates(page)
   await page.locator('[data-testid="estimate-item"] button').first().click()
   await waitForEstimate(page)
   await expect(field).toHaveValue('4')
