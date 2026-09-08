@@ -2,6 +2,7 @@ import { basename } from 'node:path'
 import { aabbSize, computeAabb, isClosedMesh, meshVolume } from '../../renderer/src/core/geometry'
 import { groupByKind, mixedInstanceKinds } from '../../renderer/src/packing/kinds'
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
+import type { Vec3 } from '../../renderer/src/core/packing/types'
 import {
   dimsFromMm,
   resolveOutputUnits,
@@ -83,6 +84,12 @@ export interface InspectQualifications {
 }
 
 
+/** Extents largest-first, so instances that differ only by orientation agree. */
+function descendingExtents(size: Vec3): Vec3 {
+  const e = [...size].sort((a, b) => b - a)
+  return [e[0], e[1], e[2]]
+}
+
 export function inspectParts(
   filePath: string,
   parts: readonly ImportedPart[],
@@ -104,8 +111,16 @@ export function inspectParts(
 
   for (const [kind, instances] of groups) {
     const [sample] = instances
-    const sampleSize = aabbSize(computeAabb(sample.positions))
     const alike = !mixed.has(kind)
+    // Extents as modelled when the instances agree; largest-first when they
+    // do not (11th dogfood): the instances of the reference file's nut differ
+    // by PERMUTATION — 0.118×0.591×0.787 beside 0.787×0.591×0.118 — so sorted
+    // extents describe every instance where "the one we measured" described
+    // one. A kind whose instances differ in actual extent would still get one
+    // instance's numbers; no fixture has such a kind, and a range is the fix
+    // for the day one does.
+    const measured = aabbSize(computeAabb(sample.positions))
+    const sampleSize = alike ? measured : descendingExtents(measured)
     const closed = isClosedMesh(sample.positions, sample.indices)
     if (!closed) openMeshKinds.push(kind)
 

@@ -284,7 +284,7 @@ describe('buildCsv', () => {
     const result = qtyResult({ count: 3, binding: 'weight' })
     const csv = buildCsv(input({ result }))
     const summary = buildSummary(input({ result }))
-    const caption = verdictCaption(result)
+    const caption = verdictCaption(result, null)
     expect(csv).toContain(caption)
     expect(summary).toContain(caption)
     // Quoted, because the sentence contains a comma-free clause today and may
@@ -348,6 +348,18 @@ describe('buildCsv', () => {
     // what it counts invites the reader to assume the rest is free space.
     expect(UTILIZATION_BASIS.label).toContain('carton interior')
     expect(UTILIZATION_BASIS.note).toContain('clearances are not deducted')
+  })
+
+  it('names the whole file as the unit when no part was chosen (11th dogfood)', () => {
+    const qty = qtyResult({ count: 1, upperBound: 1, binding: 'geometry' })
+    expect(verdictCaption(qty, null)).toContain('1 fit — the whole file as one unit')
+    expect(verdictCaption(qty, 'plate')).not.toContain('whole file')
+    // A caller that does not know says nothing rather than guessing.
+    expect(verdictCaption(qty)).not.toContain('whole file')
+    expect(buildSummary(input({ result: qty, unitPartName: null }))).toContain(
+      'the whole file as one unit'
+    )
+    expect(buildCsv(input({ result: qty, unitPartName: 'plate' }))).not.toContain('whole file')
   })
 
   it('names WHOSE boxes the fill counts, per mode (11th dogfood)', () => {

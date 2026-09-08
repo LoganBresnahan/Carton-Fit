@@ -1078,9 +1078,9 @@ clean," which is the workflow-level fix rather than a caveat about the report.
 **Shipped 2026-09-08**, three details settled in the build:
 
 - The state object's model block is called `file` on the wire, so the count is
-  `get_app_state.file.savedEstimates` — present on that call only, the way
-  `cleared` is on `load_model` only, and absent (not zero) when storage cannot
-  answer. It counts across the versions the person has linked (ADR-0034 §3).
+  `file.savedEstimates` — on `get_app_state` and (since the 11th dogfood, which
+  asked for it the moment after a load) on `load_model`, and absent (not zero)
+  when storage cannot answer. It counts across the versions the person has linked (ADR-0034 §3).
 - The reply of `list_saved_estimates` (and of `save_estimate`, which answers
   with the list the save landed in) carries `scope: 'model' | 'all'` — the
   amendment-13b rule that a reply says which of two things it is. A caller who
@@ -1323,6 +1323,17 @@ denominator; this names the numerator's owner. `utilization.of: 'parts' |
 'unit-part' | 'whole-file'` is added beside `basis`, which cannot move
 (ADR-0020 §3 — a client matches on it), and the panel tooltip and both
 exports render the same three readings from one function. Additive, minor.
+
+### Amendment 14b — the count's noun, and extents that agree
+
+Two more from the eleventh run. `estimate.note` and both exports now say
+*1 fit — the whole file as one unit* when no unit part was chosen: a preset
+had changed the unit under a reader and the count had no noun. And
+`inspect_model.kinds[].sizePerInstance` reports extents largest-first when
+`instancesAlike` is false — the reference file's instances differ by
+permutation only, so sorted extents describe all of them where "the one we
+measured" described one; the description says which reading a client has.
+Neither changes a value a client matches on.
 
 ## Alternatives considered
 

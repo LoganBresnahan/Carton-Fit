@@ -429,7 +429,7 @@ function qualificationsOf(
         result.mode === 'max-quantity' &&
         result.upperBound !== undefined &&
         result.upperBound === result.count,
-      note: verdictCaption(result)
+      note: verdictCaption(result, request.mode === 'max-quantity' ? context.unitPart : undefined)
     },
     weightInput: supplied
       ? {

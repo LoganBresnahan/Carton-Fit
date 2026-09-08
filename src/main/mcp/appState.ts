@@ -32,8 +32,8 @@ export interface AppStateReport {
         name: string
         parts: number
         kinds: number
-        /** On get_app_state only (ADR-0029 amendment 8): receipts this document
-         *  holds across its linked versions (ADR-0034 §3). */
+        /** On get_app_state and load_model (ADR-0029 amendment 8): receipts this
+         *  document holds across its linked versions (ADR-0034 §3). */
         savedEstimates?: number
       }
   inputs: {

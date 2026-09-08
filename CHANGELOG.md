@@ -28,6 +28,10 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **A count with no part chosen says what it counted.** The result reads
+  *1 fit — the whole file as one unit* on the panel, in both exports and to an
+  assistant, instead of a bare number.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md), amendment 14b)
 - **Fill says whose boxes it counts.** In a max-quantity run with no unit
   part chosen, the fill is the whole file's box replicated, air between the
   parts included, and read higher than the same parts in fit-check under the

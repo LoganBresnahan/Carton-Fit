@@ -102,8 +102,8 @@ function snapshotState(units?: Partial<OutputUnits>): DriveOutcome['state'] {
 
 /**
  * Add the document's receipt count to a state snapshot (ADR-0029 amendment 8,
- * ADR-0034 §3) — on get_app_state only, the way `cleared` is on load_model
- * only. Asked of storage here rather than read from the store, because the
+ * ADR-0034 §3) — on get_app_state and, since the 11th dogfood, on load_model:
+ * the two calls whose answer is "what document is this". Asked of storage here rather than read from the store, because the
  * store's list is under whatever scope the panel is showing. A storage
  * failure leaves the field absent: the count is a convenience, and the state
  * reply must not fail for want of it.
@@ -183,7 +183,14 @@ async function handle(action: DriveAction): Promise<DriveResult> {
       if (state.status === 'failed') {
         throw new DriveRefusal(state.error ?? `could not import ${action.name}`)
       }
-      return { kind: 'outcome', outcome: { ...(await settledOutcome(action.units)), cleared } }
+      // The count travels with the load (11th dogfood): the moment after a
+      // load is exactly when "how many receipts does this document hold" is
+      // asked, and it was on get_app_state alone.
+      const outcome = await settledOutcome(action.units)
+      return {
+        kind: 'outcome',
+        outcome: { ...outcome, state: await withDocumentCount(outcome.state), cleared }
+      }
     }
 
     case 'set_inputs': {

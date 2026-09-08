@@ -117,7 +117,7 @@ export default function ResultsPanel() {
       </p>
 
       <p className="results-caption" data-testid="results-caption">
-        {verdictCaption(result)}
+        {verdictCaption(result, unitPartName)}
       </p>
 
       {/* Qualifies the whole answer, not just the weight line: a wrong weight

@@ -128,8 +128,10 @@ export const inspectOutput = {
         .number()
         .describe('Triangles across ALL instances of this kind — the only total here.'),
       sizePerInstance: dimensionsValue.describe(
-        'Bounding box of ONE instance, as placed. When instancesAlike is false this is the ' +
-          'instance we measured, not a description of the others.'
+        'Bounding box of ONE instance, as modelled. When instancesAlike is false the extents ' +
+          'are sorted largest-first instead, so instances that differ only by orientation ' +
+          'agree on it; a kind whose instances differ in actual extent still gets one ' +
+          'instance’s numbers.'
       ),
       volumePerInstance: volumeValue.describe(
         'Enclosed volume of ONE instance. Multiply by count for the kind; a reader who ' +
@@ -411,7 +413,7 @@ export const appStateObject = z.object({
         .int()
         .optional()
         .describe(
-          'Only on get_app_state: how many saved estimates this document holds, counting ' +
+          'On get_app_state and load_model: how many saved estimates this document holds, counting ' +
             'every version the person has linked to it (ADR-0034). The rows themselves are ' +
             'list_saved_estimates with scope "model".'
         )

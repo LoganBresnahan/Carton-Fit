@@ -114,7 +114,7 @@ export function buildCsv(input: EstimateExport): string {
   // A sentence in a cell rather than a field name, unlike the §7 rows below: it
   // qualifies the Result cell it sits under, and splitting a hedge into columns
   // is how a hedge becomes ignorable.
-  lines.push(row(['Result note', verdictCaption(result)]))
+  lines.push(row(['Result note', verdictCaption(result, input.unitPartName)]))
   lines.push(row(['Limited by', bindingLabel(result.binding)]))
   // `Limited by` keeps its name — a field a script already reads must not be
   // renamed — and gains the two rows that stop it overstating: whether that

@@ -152,6 +152,25 @@ describe('inspect_model against the hand-computed goldens', () => {
     expect(report.kinds.some((kind) => kind.count > 1)).toBe(true)
   })
 
+  it('reports sorted extents for a kind whose instances differ only by orientation (11th dogfood)', async () => {
+    const report = await call<InspectReport>('inspect_model', {
+      path: join(SAMPLES, AS1_ASSEMBLY.file)
+    })
+    for (const kind of report.kinds) {
+      const { x, y, z } = kind.sizePerInstance
+      if (!kind.instancesAlike) {
+        // Largest first: the nut's instances are permutations of one box.
+        expect(x).toBeGreaterThanOrEqual(y)
+        expect(y).toBeGreaterThanOrEqual(z)
+      }
+    }
+    const mixed = report.kinds.filter((kind) => !kind.instancesAlike).map((kind) => kind.kind)
+    expect(mixed.sort()).toEqual([
+      'bolt',
+      'nut'
+    ])
+  })
+
   it('counts AS1’s 18 solids as 5 kinds', async () => {
     const report = await call<InspectReport>('inspect_model', {
       path: join(SAMPLES, AS1_ASSEMBLY.file)

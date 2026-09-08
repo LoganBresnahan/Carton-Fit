@@ -26,7 +26,15 @@ import { dimsText } from '../export/format'
  *    the unplaced parts, or fit more copies. That is the claim the ADR forbids
  *    presenting as certain.
  */
-export function verdictCaption(result: PackResult): string {
+/**
+ * @param unitPartName which part a max-quantity count replicated — `null`
+ *   for the whole file as one unit, which is the one case the count had no
+ *   noun for (11th dogfood: a preset changed the unit under a reader and
+ *   "1 fit" named nothing, where "3 fit · of plate" names the plate).
+ *   `undefined` means the caller does not know, and the sentence stays as it
+ *   was rather than guessing.
+ */
+export function verdictCaption(result: PackResult, unitPartName?: string | null): string {
   if (result.mode === 'fit-check') {
     const total = result.placements.length + result.unplaced.length
     if (result.fits) {
@@ -40,6 +48,10 @@ export function verdictCaption(result: PackResult): string {
     )
   }
   const limit = result.binding === 'weight' ? 'weight-limited' : 'space-limited'
+  // The noun, when the unit is the whole file: "1 fit" of what? A chosen part
+  // is named beside the count everywhere else (the picker, the receipt); the
+  // whole file as one unit was named nowhere.
+  const noun = unitPartName === null ? ' — the whole file as one unit' : ''
   // A ZERO NAMES ITS LIMIT LIKE EVERY OTHER COUNT (2026-09-04, 6th dogfood).
   //
   // "in this carton" is a claim about SPACE, and this branch used to make it
@@ -79,9 +91,9 @@ export function verdictCaption(result: PackResult): string {
     // "At least" would be true and misleading — it invites a search that cannot
     // succeed. The limits are named because optimality is relative to THEM: a
     // bigger carton or a higher cap is still a different question.
-    return `${count} fit (${limit}) — no arrangement beats this under these limits.`
+    return `${count} fit${noun} (${limit}) — no arrangement beats this under these limits.`
   }
-  return `At least ${count} fit (${limit}). Heuristic — a mixed arrangement may fit more.`
+  return `At least ${count} fit${noun} (${limit}). Heuristic — a mixed arrangement may fit more.`
 }
 
 /**

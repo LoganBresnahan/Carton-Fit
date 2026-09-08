@@ -116,7 +116,7 @@ export function buildSummary(input: EstimateExport): string {
     '',
     `Result: ${verdictHeadline(result)}${result.mode === 'max-quantity' ? ' fit' : ''}` +
       `${bound ? ` (${bound})` : ''}`,
-    verdictCaption(result),
+    verdictCaption(result, input.unitPartName),
     // The heading the panel uses ("Closest limit" on a fit where nothing bound
     // — the item-21 carry-in, closed here) and the sentence behind the label.
     // "Limited by: weight" on its own was flat exactly where the wire refused

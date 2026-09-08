@@ -134,9 +134,12 @@ test.describe('the data tier against a real database', () => {
       const tooEarly = await client.callTool({ name: 'save_estimate', arguments: {} })
       expect(tooEarly.isError).toBe(true)
 
-      await callStructured<Outcome>(client, 'load_model', {
+      const loaded = await callStructured<Outcome>(client, 'load_model', {
         path: join(SAMPLES, CUBE_STL.file)
       })
+      // The count travels with the load (11th dogfood): a fresh document
+      // holds none, and the field is present rather than absent.
+      expect(loaded.state.file).toMatchObject({ loaded: true, savedEstimates: 0 })
       const big = goldenNamed('cube max-quantity in a 12 in carton')
       const bigCount = await packInto(client, big.name)
       expect(bigCount).toBe(big.count)

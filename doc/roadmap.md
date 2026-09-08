@@ -244,24 +244,31 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         The row carries `partWeightsG`; the line does not read it. Wrong
         sentence, and the first concrete shape for item 32's open ask: the
         label a receipt needs is the one that explains why two rows differ.
-      - [ ] **A preset changed the count's noun without saying so** (reader 2,
-        half-right). `apply_preset` says in its description that the unit part
+      - [x] **A preset changed the count's noun without saying so** (reader 2,
+        half-right). *Fixed 2026-09-08:* `verdictCaption` takes the unit part
+        and, when it is the whole file, says *1 fit — the whole file as one
+        unit*; panel, both exports and the wire's note pass it, and a caller
+        that does not know it says nothing rather than guessing. `apply_preset` says in its description that the unit part
         is not carried, the reply shows `unitPart: null`, and the count of 1
         was right for the whole file as one unit — the reader's proposed
         "warn like overrides" is already there in prose. What is missing is
         the noun in the sentence: *1 fit* names nothing when the unit is the
         whole file, where *3 fit · of plate* names the plate. Name the unit in
         the headline when it is the file, and this reads as the change it is.
-      - [ ] **`sizePerInstance` is one instance of a kind the reply says is
-        not alike** (reader 1, half-right). The qualification discloses it;
+      - [x] **`sizePerInstance` is one instance of a kind the reply says is
+        not alike** (reader 1, half-right). *Fixed 2026-09-08 the derived
+        way:* extents largest-first when the instances differ, as modelled
+        when they agree; the description says so. Pinned on the reference
+        file's nut and bolt. The qualification discloses it;
         the reader wants a range or a per-instance list. Derived instead: the
         instances here differ by *permutation* — the export shows
         0.118×0.591×0.787 beside 0.787×0.591×0.118 — so extents sorted
         largest-first make permuted instances agree and cost no field; a true
         min/max would be needed only for instances whose extents differ,
         which no fixture has yet. Low.
-      - [ ] **`load_model`'s reply has no `file.savedEstimates`** (reader 2,
-        half-right). By contract it is on `get_app_state` only (amendment 8's
+      - [x] **`load_model`'s reply has no `file.savedEstimates`** (reader 2,
+        half-right). *Fixed 2026-09-08:* it does now; the field's description
+        and amendment 8's note name both calls. Pinned in the e2e journey. By contract it is on `get_app_state` only (amendment 8's
         shipped note, the `cleared`-on-`load_model` pattern), so nothing
         "vanished"; but the moment after a load is exactly when a reader
         wants the document's count, and one more query on one call is cheap.
