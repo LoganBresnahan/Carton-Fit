@@ -50,6 +50,7 @@ export function collectExport(): EstimateExport | null {
     request: packRequest,
     result: packResult,
     settings,
+    unitPartName,
     warnings,
     overrides: state.partWeightsG,
     enclosedVolumeMm3

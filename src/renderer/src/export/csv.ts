@@ -1,6 +1,6 @@
 import { lengthUnitLabel, volumeUnitLabel } from '../core/units'
 import {
-  UTILIZATION_BASIS,
+  utilizationBasis,
   bindingLabel,
   bindingReport,
   freeSpaceReport,
@@ -128,7 +128,7 @@ export function buildCsv(input: EstimateExport): string {
   // and every other row here names its unit or its basis in its FIELD name
   // ("Carton inner (in)", "Packed weight (lb)"). Fill named nothing, in the
   // one artifact where the qualification cannot be hovered for.
-  lines.push(row(['Fill basis', UTILIZATION_BASIS.label]))
+  lines.push(row(['Fill basis', utilizationBasis(result.mode, input.unitPartName).label]))
   lines.push(row([`Carton inner (${length})`, dimsText(request.carton, units)]))
   lines.push(
     row([`Clearance between parts (${length})`, lengthText(request.clearances.betweenParts, units)])

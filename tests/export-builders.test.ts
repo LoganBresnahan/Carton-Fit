@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildSummary } from '../src/renderer/src/export/summary'
-import { UTILIZATION_BASIS } from '../src/renderer/src/packing/verdict'
+import { UTILIZATION_BASIS, utilizationBasis } from '../src/renderer/src/packing/verdict'
 import { buildCsv, csvCell } from '../src/renderer/src/export/csv'
 import { measurementRows, type EstimateExport } from '../src/renderer/src/export/types'
 import { decimal } from '../src/renderer/src/export/format'
@@ -110,6 +110,7 @@ function input(patch: Partial<EstimateExport> = {}): EstimateExport {
     request: request(),
     result: fitResult(),
     settings: settings(),
+    unitPartName: null,
     warnings: [],
     overrides: {},
     ...patch
@@ -327,8 +328,8 @@ describe('buildCsv', () => {
     // One definition in verdict.ts feeds the wire's `basis`, the panel tooltip
     // and both exports, so the four surfaces cannot drift into three answers —
     // which is the state the 6th dogfood run found them in.
-    const csv = buildCsv(input({ result: qtyResult({ count: 4, binding: 'geometry' }) }))
-    expect(csv).toContain(`Fill basis,${UTILIZATION_BASIS.label}`)
+    const csv = buildCsv(input({ result: qtyResult({ count: 4, binding: 'geometry' }), unitPartName: 'plate' }))
+    expect(buildCsv(input({ result: fitResult() }))).toContain(`Fill basis,${UTILIZATION_BASIS.label}`)
     // Beside `Fill`, never folded into it: a script already reads that cell.
     expect(csv).toContain('Fill,90%')
     // The wire's enum and the human halves must keep describing ONE basis.
@@ -347,6 +348,29 @@ describe('buildCsv', () => {
     // what it counts invites the reader to assume the rest is free space.
     expect(UTILIZATION_BASIS.label).toContain('carton interior')
     expect(UTILIZATION_BASIS.note).toContain('clearances are not deducted')
+  })
+
+  it('names WHOSE boxes the fill counts, per mode (11th dogfood)', () => {
+    // Fit-check sums every part's box; max-quantity replicates a unit, and
+    // with no unit part that unit is the whole file as one block, air and
+    // all. The same parts in the same carton gave 25.8% and 53.4% under one
+    // label. Each export now says which it is.
+    const qty = qtyResult({ count: 4, binding: 'geometry' })
+    const wholeFile = buildCsv(input({ result: qty, unitPartName: null }))
+    expect(wholeFile).toContain('Fill basis,whole-file bounding box ÷ carton interior')
+    expect(wholeFile).toContain('the air between them counted')
+    const onePart = buildCsv(input({ result: qty, unitPartName: 'plate' }))
+    expect(onePart).toContain('Fill basis,plate bounding boxes ÷ carton interior')
+    const summary = buildSummary(input({ result: qty, unitPartName: null }))
+    expect(summary).toContain('whole-file bounding box')
+    // Every reading still names both ends.
+    for (const mode of ['fit-check', 'max-quantity'] as const) {
+      for (const unit of [null, 'plate']) {
+        const basis = utilizationBasis(mode, unit)
+        expect(basis.label).toContain('carton interior')
+        expect(basis.note).toContain('clearances are not deducted')
+      }
+    }
   })
 
   it('omits a bound row rather than writing an empty one', () => {

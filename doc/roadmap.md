@@ -218,8 +218,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         `set_inputs`'s reply (reader 2's other ask) is not, per the rule that
         a constant cannot qualify the sentence beside it. **Decision needed:**
         whether to reopen ADR-0034's rejected alternative under that reading.
-      - [ ] **One fill label covers two quantities** (reader 2, confirmed in
-        `pack.ts`). Fit-check sums the eighteen part boxes (25.8%);
+      - [x] **One fill label covers two quantities** (reader 2, confirmed in
+        `pack.ts`). *Fixed 2026-09-08:* `utilizationBasis(mode, unitPart)` in
+        `verdict.ts` gives the three readings — *part bounding boxes*, *plate
+        bounding boxes*, *whole-file bounding box … the air between them
+        counted* — and the panel tooltip, both exports and the wire read it;
+        the wire gains `utilization.of: parts | unit-part | whole-file`
+        (amendment 14) beside the unchanged token. `EstimateExport` carries
+        the unit part now, which it never had. Pinned in the export builders
+        and the wire qualifications test. Fit-check sums the eighteen part boxes (25.8%);
         max-quantity with no unit part composes the whole file into one unit
         and reports count × that box (53.4%, air included). Both say
         `basis: "bounding-boxes"` and both exports print *part bounding boxes

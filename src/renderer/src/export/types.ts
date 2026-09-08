@@ -21,6 +21,9 @@ export interface EstimateExport {
   request: PackRequest
   result: PackResult
   settings: PackingSettings
+  /** Which part a max-quantity count replicated, or null for the whole file
+   *  as one unit — what the fill's basis is named after (11th dogfood). */
+  unitPartName: string | null
   /**
    * Qualifiers, already worded by `packing/verdict.ts`.
    *

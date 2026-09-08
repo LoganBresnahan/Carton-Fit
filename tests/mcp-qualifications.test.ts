@@ -259,6 +259,14 @@ describe('every answer arrives qualified', () => {
     expect(report.binding.note).toMatch(/No part weight was given/)
     expect(report.binding.note).not.toMatch(/closer limit/)
     expect(report.utilization.basis).toBe('bounding-boxes')
+    // …and names whose boxes (11th dogfood): a whole-file count or a unit's.
+    expect(report.utilization.of).toBe(
+      report.request.mode === 'fit-check'
+        ? 'parts'
+        : report.request.unitPart === null
+          ? 'whole-file'
+          : 'unit-part'
+    )
   })
 
   it('says so when no weight was given, instead of letting "space-bound" imply one was', async () => {

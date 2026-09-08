@@ -19,6 +19,8 @@ import {
   packedWeightG,
   truncatedLayoutNote,
   UTILIZATION_BASIS,
+  utilizationBasis,
+  type UtilizationOf,
   mixedInstancesWarning,
   verdictCaption,
   type BindingReport
@@ -108,7 +110,7 @@ export interface EstimateReport {
    *  and with what kind of evidence — `bindingReport`, shared with the panel
    *  and both exports so the app cannot disagree with itself about it. */
   binding: BindingReport
-  utilization: { fraction: number; percent: string; basis: 'bounding-boxes' }
+  utilization: { fraction: number; percent: string; basis: 'bounding-boxes'; of: UtilizationOf }
   qualifications: EstimateQualifications
   units: OutputUnits
 }
@@ -519,7 +521,9 @@ export function buildEstimateReport(
     utilization: {
       fraction: result.utilization,
       percent: `${Math.round(result.utilization * 1000) / 10}%`,
-      basis: UTILIZATION_BASIS.token
+      basis: UTILIZATION_BASIS.token,
+      of: utilizationBasis(request.mode, request.mode === 'max-quantity' ? context.unitPart : null)
+        .of
     },
     qualifications: qualificationsOf(context, units),
     units

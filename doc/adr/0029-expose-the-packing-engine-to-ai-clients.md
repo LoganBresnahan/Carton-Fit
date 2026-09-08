@@ -1312,6 +1312,18 @@ in output units while `displayUnits` says what the window shows, with the
 particular. Tool descriptions demonstrably reach these readers: this one quoted
 three of them back.
 
+### Phase-2 contract amendment 14 (2026-09-08, eleventh dogfood) — one fill label covered two quantities
+
+Fit-check sums the boxes of every part placed; max-quantity replicates a
+unit, and with no unit part that unit is the whole file composed into one
+block, air included. The same eighteen parts in the same carton read 25.8%
+in one mode and 53.4% in the other, and every surface said "part bounding
+boxes ÷ carton interior" for both. The 8th run's amendment named the
+denominator; this names the numerator's owner. `utilization.of: 'parts' |
+'unit-part' | 'whole-file'` is added beside `basis`, which cannot move
+(ADR-0020 §3 — a client matches on it), and the panel tooltip and both
+exports render the same three readings from one function. Additive, minor.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

@@ -318,7 +318,16 @@ export const estimateOutput = {
     // Named because a reader could not act on the number without asking
     // (2026-09-03): it is placed BOUNDING BOXES over the inner carton, not
     // material volume — air inside a part's box is not usable by another part.
-    basis: z.literal('bounding-boxes')
+    basis: z.literal('bounding-boxes'),
+    of: z
+      .enum(['parts', 'unit-part', 'whole-file'])
+      .describe(
+        'Whose boxes the fill counts. "parts": every part placed, summed (fit-check). ' +
+          '"unit-part": count × one kind’s box (max-quantity with a unit part). "whole-file": ' +
+          'count × the whole file’s box as ONE unit, the air between its parts counted — so the ' +
+          'same parts in the same carton read higher here than in fit-check, and the two are ' +
+          'not comparable.'
+      )
   }),
   qualifications: z.object({
     heuristic: heuristicQualification,

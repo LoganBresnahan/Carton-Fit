@@ -28,6 +28,13 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **Fill says whose boxes it counts.** In a max-quantity run with no unit
+  part chosen, the fill is the whole file's box replicated, air between the
+  parts included, and read higher than the same parts in fit-check under the
+  same label. The panel tooltip, both exports and the assistant's reply now
+  say *part bounding boxes*, *plate bounding boxes*, or *whole-file bounding
+  box, the air between them counted*.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md), amendment 14)
 - **A saved estimate says when a weight was typed by hand.** The one-line
   receipt ends with *plate weighed by hand* (or *2 kinds weighed by hand*), so
   two rows that differ only because of a hand-typed weight no longer read the

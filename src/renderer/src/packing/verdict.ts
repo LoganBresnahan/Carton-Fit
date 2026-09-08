@@ -422,6 +422,43 @@ export const UTILIZATION_BASIS = {
   note: 'Share of the carton interior filled by part bounding boxes — clearances are not deducted'
 } as const
 
+/** Whose boxes the fill counts (11th dogfood, 2026-09-08). */
+export type UtilizationOf = 'parts' | 'unit-part' | 'whole-file'
+
+/**
+ * The fill's numerator, named for the mode that produced it.
+ *
+ * ONE LABEL COVERED TWO QUANTITIES (11th dogfood): fit-check sums the boxes of
+ * every part placed, but max-quantity replicates a UNIT — one chosen kind, or
+ * the whole file composed into one rigid block (`composeUnit`) — and reports
+ * count × that unit's box. With no unit part, the block's box holds every
+ * part AND the air between them, so the same eighteen parts in the same
+ * carton read 25.8% in one mode and 53.4% in the other, both labelled "part
+ * bounding boxes". The wire token stays (ADR-0020 §3); this names whose.
+ */
+export function utilizationBasis(
+  mode: PackResult['mode'],
+  unitPartName: string | null
+): { of: UtilizationOf; label: string; note: string } {
+  if (mode === 'max-quantity' && unitPartName === null) {
+    return {
+      of: 'whole-file',
+      label:
+        'whole-file bounding box ÷ carton interior — every part as one unit and the air between them counted',
+      note:
+        'Share of the carton interior filled by the whole file’s bounding box — all parts as one rigid unit, so the air between them is counted; clearances are not deducted'
+    }
+  }
+  if (mode === 'max-quantity') {
+    return {
+      of: 'unit-part',
+      label: `${unitPartName} bounding boxes ÷ carton interior`,
+      note: `Share of the carton interior filled by ${unitPartName} bounding boxes — clearances are not deducted`
+    }
+  }
+  return { of: 'parts', label: UTILIZATION_BASIS.label, note: UTILIZATION_BASIS.note }
+}
+
 /** Carton fill as a percentage. See `UTILIZATION_BASIS` for what it is a share
  *  of — the number alone does not say, and for two builds nothing else did
  *  either once it reached an export. */
