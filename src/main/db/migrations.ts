@@ -76,6 +76,31 @@ export const MIGRATIONS: readonly Migration[] = [
       db.exec('CREATE INDEX estimates_created_at ON estimates(created_at DESC)')
       db.exec('CREATE INDEX estimates_content_hash ON estimates(content_hash)')
     }
+  },
+  {
+    version: 2,
+    name: 'document_versions',
+    up: (db) => {
+      // A document is a SET of content hashes (ADR-0034 §3): re-export a part
+      // from CAD and its hash moves, and rev B is the normal case in a shop,
+      // not the edge case. This table maps a later hash to the document's
+      // first one. It is an ALIAS table, not a column on `estimates`: every
+      // receipt keeps the hash it was saved against, the list can label one
+      // from an earlier version, and dropping this table would leave every
+      // receipt exactly as saved. A hash with no row here is its own document.
+      //
+      // One row per content hash — a version belongs to one document — and
+      // `document_hash` is always a root (never itself an alias); the store
+      // resolves through before writing, so lookups are one hop.
+      db.exec(`
+        CREATE TABLE document_versions (
+          content_hash  TEXT    PRIMARY KEY,
+          document_hash TEXT    NOT NULL,
+          linked_at     INTEGER NOT NULL
+        ) STRICT
+      `)
+      db.exec('CREATE INDEX document_versions_document ON document_versions(document_hash)')
+    }
   }
 ]
 

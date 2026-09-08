@@ -18,6 +18,15 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   Nothing is hidden from All and nothing is deleted by a load. With no model
   loaded the list is the full one and says so.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
+- **A re-exported part can keep its history.** Load a file the app has not
+  seen before, whose name matches a part with saved estimates, and one line
+  offers to treat it as a new version: **Link** brings the earlier receipts
+  into this model's list, labelled *earlier version*; **Keep separate** leaves
+  them apart. Nothing links by itself, every receipt keeps the version it was
+  saved against, and restoring an earlier version's inputs recomputes against
+  the geometry loaded now. The database schema moves to version 2 to record the
+  link; existing rows are untouched.
+  ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
 
 - **Three fields an assistant reads now say whether they describe one part or
   all of them.** When a file contains eight copies of a nut, the app reported

@@ -5,6 +5,7 @@ import type { ToolStorage } from './mcp/data'
 import { openDatabase } from './db/open'
 import { ConfigurationsStore } from './db/configurations'
 import { EstimatesStore } from './db/estimates'
+import { DocumentsStore } from './db/documents'
 import {
   STORAGE_CHANNELS,
   type EstimateInput,
@@ -18,6 +19,7 @@ interface Storage {
   db: Database
   configurations: ConfigurationsStore
   estimates: EstimatesStore
+  documents: DocumentsStore
   quarantined: string | null
   schemaVersion: number
 }
@@ -49,6 +51,7 @@ function get(): Storage | null {
       db: opened.db,
       configurations: new ConfigurationsStore(opened.db),
       estimates: new EstimatesStore(opened.db),
+      documents: new DocumentsStore(opened.db),
       quarantined: opened.quarantined,
       schemaVersion: opened.version
     }
@@ -111,6 +114,25 @@ export function registerStorageIpc(): void {
     STORAGE_CHANNELS.estimatesForContent,
     (_event, contentHash: string, limit?: number) =>
       require_().estimates.forContent(contentHash, limit)
+  )
+
+  ipcMain.handle(
+    STORAGE_CHANNELS.estimatesForDocument,
+    (_event, contentHash: string, limit?: number) =>
+      require_().estimates.forDocument(contentHash, limit)
+  )
+
+  ipcMain.handle(
+    STORAGE_CHANNELS.documentsLinkOffer,
+    (_event, contentHash: string, fileName: string) =>
+      require_().documents.linkOffer(contentHash, fileName)
+  )
+
+  ipcMain.handle(
+    STORAGE_CHANNELS.documentsLink,
+    (_event, contentHash: string, documentHash: string) => {
+      require_().documents.link(contentHash, documentHash)
+    }
   )
 }
 

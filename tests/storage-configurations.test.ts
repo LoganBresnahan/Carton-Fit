@@ -28,7 +28,10 @@ function fakeApi(rows: ConfigurationRow[] = []): StorageApi {
     removeConfiguration: async (name) => store.delete(name),
     recordEstimate: async () => 1,
     recentEstimates: async () => [],
-    estimatesForContent: async () => []
+    estimatesForContent: async () => [],
+    estimatesForDocument: async () => [],
+    linkOffer: async () => null,
+    linkDocumentVersion: async () => {}
   }
 }
 

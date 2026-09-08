@@ -19,7 +19,10 @@ export const STORAGE_CHANNELS = {
   configurationsRemove: 'storage:configurations:remove',
   estimatesRecord: 'storage:estimates:record',
   estimatesRecent: 'storage:estimates:recent',
-  estimatesForContent: 'storage:estimates:for-content'
+  estimatesForContent: 'storage:estimates:for-content',
+  estimatesForDocument: 'storage:estimates:for-document',
+  documentsLinkOffer: 'storage:documents:link-offer',
+  documentsLink: 'storage:documents:link'
 } as const
 
 /** A preset as the picker lists it — no settings blob, because a list does not need one. */
@@ -52,6 +55,21 @@ export interface EstimateRow extends EstimateInput {
 }
 
 /**
+ * The one-line offer made on load (ADR-0034 §3): the file just loaded has a
+ * hash nobody has seen, and an earlier document holds receipts under the same
+ * name. The person answers Link or Keep separate; nothing merges by itself.
+ */
+export interface LinkOffer {
+  /** The hash just loaded — the one that would become a version. */
+  readonly contentHash: string
+  /** The earlier document's root hash. */
+  readonly documentHash: string
+  readonly fileName: string
+  /** Receipts the earlier document holds, across all its versions. */
+  readonly count: number
+}
+
+/**
  * Whether storage actually works, and why not if it doesn't.
  *
  * This is a first-class part of the contract rather than an afterthought: the
@@ -80,4 +98,8 @@ export interface StorageApi {
   recordEstimate(entry: EstimateInput): Promise<number>
   recentEstimates(limit?: number): Promise<EstimateRow[]>
   estimatesForContent(contentHash: string, limit?: number): Promise<EstimateRow[]>
+  /** The hash's whole document — every linked version (ADR-0034 §3). */
+  estimatesForDocument(contentHash: string, limit?: number): Promise<EstimateRow[]>
+  linkOffer(contentHash: string, fileName: string): Promise<LinkOffer | null>
+  linkDocumentVersion(contentHash: string, documentHash: string): Promise<void>
 }

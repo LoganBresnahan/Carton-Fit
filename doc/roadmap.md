@@ -73,7 +73,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         and carries the one toggle. Pinned in `tests/storage-estimates.test.ts`
         (six cases, including same-name-different-hash staying apart) and the
         e2e scenario named above.
-      - [ ] **Versions: a document is a set of hashes** (§3, raised
+      - [x] **Versions: a document is a set of hashes** (§3, raised
         2026-09-04 — rev B is the normal case, not the edge case). Migration to
         `user_version` 2 adding `document_versions (content_hash →
         document_hash)`; the scope query widens to the set; a receipt saved
@@ -85,7 +85,26 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the only slice with a schema change. Tests: migration up from v1 on a
         populated db; scope over a linked pair; the offer appears only on
         name-match-with-unknown-hash; *Keep separate* leaves both documents
-        distinct.
+        distinct. *Shipped 2026-09-08:* `src/main/db/documents.ts` holds the
+        rule (`linkOffer`: unknown hash — no receipt, no link either way —
+        and the most recently saved receipt under the same name resolves to
+        the offered document) and the write (`link`, resolved through to the
+        root so the table stays one hop deep; an empty hash is refused).
+        `EstimatesStore.forDocument` is the widened query and is what the
+        scoped list reads now; `forContent` stays exact for the wire. Two
+        IPC channels and one query channel added, nothing changed. *Keep
+        separate* is session-only by design: the offer returns on the next
+        load of that file until a receipt is saved under its hash, which
+        makes it known. Pinned: v1→v2 on a populated db leaves every row's
+        hash as saved; the e2e loads the assembly under the cube's file name
+        as rev B, declines, reloads, links, and sees rev A's two receipts
+        labelled beside an unlabelled new one. *Observed during the build:*
+        the list orders by `created_at`, and this WSL2 machine's clock
+        jumped backwards ~107 s twice mid-run, putting the newest receipt
+        last — the third run and every run since were clean. Pre-existing
+        (ADR-0007's ordering), environmental, and a revisit trigger if it
+        shows on a Windows dogfood machine: id order is the honest tiebreak
+        and could be the primary key.
       - [ ] **Delete a saved estimate from the panel** (§4). New prepared
         statement, `storage:estimates:remove` IPC and preload binding, a
         Delete beside *Restore inputs*. Not undoable and not on the wire —

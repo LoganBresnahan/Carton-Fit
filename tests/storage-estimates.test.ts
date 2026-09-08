@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { ImportedPart } from '../src/renderer/src/workers/import-protocol'
 import { useAppStore } from '../src/renderer/src/store'
 import {
+  acceptLinkOffer,
+  declineLinkOffer,
+  refreshLinkOffer,
   refreshSavedEstimates,
   restoreEstimateSettings,
   saveEstimate
@@ -30,6 +33,10 @@ function fakeApi(rows: EstimateRow[] = []): StorageApi & { recorded: EstimateInp
     },
     recentEstimates: async () => stored,
     estimatesForContent: async (hash) => stored.filter((r) => r.contentHash === hash),
+    // The fake has no alias table: a document is one hash until a test links.
+    estimatesForDocument: async (hash) => stored.filter((r) => r.contentHash === hash),
+    linkOffer: async () => null,
+    linkDocumentVersion: async () => {},
     health: async () => ({ available: true, schemaVersion: 1, quarantined: null, error: null }),
     listConfigurations: async () => [],
     getConfiguration: async () => null,
@@ -57,7 +64,12 @@ function withEstimate(result: PackResult = RESULT): void {
 
 beforeEach(() => {
   useAppStore.getState().resetImport()
-  useAppStore.setState({ savedEstimates: [], storageError: null, estimatesScope: 'model' })
+  useAppStore.setState({
+    savedEstimates: [],
+    storageError: null,
+    estimatesScope: 'model',
+    linkOffer: null
+  })
 })
 
 describe('the unit part travels with the receipt (2026-09-04)', () => {
@@ -267,7 +279,7 @@ describe('refreshSavedEstimates', () => {
     it('never queries an empty hash — a file whose hashing failed lists everything', async () => {
       const api = fakeApi([row(4, 'unhashed.stp', ''), ...rows])
       let askedFor: string | null = null
-      api.estimatesForContent = async (hash) => {
+      api.estimatesForDocument = async (hash) => {
         askedFor = hash
         return []
       }
@@ -280,7 +292,7 @@ describe('refreshSavedEstimates', () => {
     it('a reply to an older scope does not overwrite the newer list', async () => {
       const api = fakeApi(rows)
       let release: (rows: EstimateRow[]) => void = () => {}
-      api.estimatesForContent = () => new Promise((resolve) => (release = resolve))
+      api.estimatesForDocument = () => new Promise((resolve) => (release = resolve))
       loaded('bracket.stp', 'hash-a')
       const slow = refreshSavedEstimates(api)
       // The user widens to All while the scoped query is still in flight.
@@ -296,6 +308,97 @@ describe('refreshSavedEstimates', () => {
   it('reports a failure instead of leaving an empty list looking like no history', async () => {
     await refreshSavedEstimates(brokenApi('storage is unavailable'))
     expect(useAppStore.getState().storageError).toMatch(/unavailable/)
+  })
+})
+
+// The link offer (ADR-0034 §3): the rule is main's, the answer is the
+// person's, and the renderer only carries the question to the panel.
+describe('the link offer', () => {
+  const offer = { contentHash: 'rev-b', documentHash: 'rev-a', fileName: 'as1.stp', count: 3 }
+  const loaded = (name: string, hash: string | null): void => {
+    useAppStore.getState().beginImport({ name, sizeBytes: 1 })
+    useAppStore
+      .getState()
+      .importSucceeded([], { elapsedMs: 1, partCount: 1, triangleCount: 1 }, hash)
+  }
+
+  it('asks main with the loaded hash and name, and shows what comes back', async () => {
+    const api = fakeApi()
+    let asked: [string, string] | null = null
+    api.linkOffer = async (hash, name) => {
+      asked = [hash, name]
+      return offer
+    }
+    loaded('as1.stp', 'rev-b')
+    await refreshLinkOffer(api)
+    expect(asked).toEqual(['rev-b', 'as1.stp'])
+    expect(useAppStore.getState().linkOffer).toEqual(offer)
+  })
+
+  it('with nothing to scope to there is no question, and a stale offer is cleared', async () => {
+    useAppStore.setState({ linkOffer: offer })
+    const api = fakeApi()
+    api.linkOffer = async () => {
+      throw new Error('must not be asked')
+    }
+    await refreshLinkOffer(api)
+    expect(useAppStore.getState().linkOffer).toBeNull()
+  })
+
+  it('an answer about a file that is no longer loaded is dropped', async () => {
+    const api = fakeApi()
+    let release: (o: typeof offer) => void = () => {}
+    api.linkOffer = () => new Promise((resolve) => (release = resolve))
+    loaded('as1.stp', 'rev-b')
+    const slow = refreshLinkOffer(api)
+    loaded('plate.stp', 'plate-1')
+    release(offer)
+    await slow
+    expect(useAppStore.getState().linkOffer).toBeNull()
+  })
+
+  it('Link writes the alias, clears the offer and re-lists under the widened document', async () => {
+    const api = fakeApi([
+      { id: 1, fileName: 'as1.stp', contentHash: 'rev-a', settings: {}, result: {}, createdAt: 1 }
+    ])
+    const links: [string, string][] = []
+    api.linkDocumentVersion = async (c, d) => {
+      links.push([c, d])
+    }
+    // Once linked, the fake's document query answers for the set.
+    api.estimatesForDocument = async (hash) =>
+      links.some(([c, d]) => c === hash && d === 'rev-a') ? api.recentEstimates() : []
+    loaded('as1.stp', 'rev-b')
+    useAppStore.setState({ linkOffer: offer })
+    await refreshSavedEstimates(api)
+    expect(useAppStore.getState().savedEstimates).toEqual([])
+
+    await acceptLinkOffer(api)
+    expect(links).toEqual([['rev-b', 'rev-a']])
+    expect(useAppStore.getState().linkOffer).toBeNull()
+    expect(useAppStore.getState().savedEstimates.map((r) => r.id)).toEqual([1])
+  })
+
+  it('Keep separate writes nothing', async () => {
+    const api = fakeApi()
+    api.linkDocumentVersion = async () => {
+      throw new Error('must not be written')
+    }
+    useAppStore.setState({ linkOffer: offer })
+    declineLinkOffer()
+    expect(useAppStore.getState().linkOffer).toBeNull()
+    expect(useAppStore.getState().storageError).toBeNull()
+  })
+
+  it('a failed link is reported and the offer stays for a retry', async () => {
+    const api = fakeApi()
+    api.linkDocumentVersion = async () => {
+      throw new Error('storage is unavailable')
+    }
+    useAppStore.setState({ linkOffer: offer })
+    await acceptLinkOffer(api)
+    expect(useAppStore.getState().storageError).toMatch(/unavailable/)
+    expect(useAppStore.getState().linkOffer).toEqual(offer)
   })
 })
 

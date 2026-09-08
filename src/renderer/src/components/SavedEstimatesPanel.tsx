@@ -1,6 +1,12 @@
 import { useEffect } from 'react'
 import { documentHash, useAppStore } from '../store'
-import { refreshSavedEstimates, restoreEstimateSettings } from '../storage/estimates'
+import {
+  acceptLinkOffer,
+  declineLinkOffer,
+  refreshLinkOffer,
+  refreshSavedEstimates,
+  restoreEstimateSettings
+} from '../storage/estimates'
 import { estimateSummary, formatSavedAt } from '../packing/summary'
 import type { EstimateRow } from '../../../shared/storage'
 
@@ -22,14 +28,32 @@ import type { EstimateRow } from '../../../shared/storage'
 /** More than this and the panel becomes a scrolling wall; the rest stay queryable. */
 const SHOWN = 12
 
-function EstimateItem({ row }: { row: EstimateRow }): React.JSX.Element {
+function EstimateItem({
+  row,
+  earlierVersion
+}: {
+  row: EstimateRow
+  /** Saved against another hash in the loaded document (ADR-0034 §3). */
+  earlierVersion: boolean
+}): React.JSX.Element {
   return (
-    <li data-testid="estimate-item">
+    <li data-testid="estimate-item" data-earlier-version={earlierVersion || undefined}>
       <div className="estimate-line">
         <span className="estimate-file" title={row.fileName}>
           {row.fileName}
         </span>
-        <span className="estimate-when">{formatSavedAt(row.createdAt)}</span>
+        <span className="estimate-when">
+          {earlierVersion && (
+            <span
+              className="estimate-version"
+              data-testid="estimate-earlier-version"
+              title="Saved against an earlier version of this model — restoring recomputes against the geometry loaded now"
+            >
+              earlier version ·{' '}
+            </span>
+          )}
+          {formatSavedAt(row.createdAt)}
+        </span>
       </div>
       <div className="estimate-line">
         <span className="estimate-summary" data-testid="estimate-summary">
@@ -54,6 +78,7 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
   const setScope = useAppStore((s) => s.setEstimatesScope)
   const hash = useAppStore(documentHash)
   const fileName = useAppStore((s) => s.file?.name ?? null)
+  const linkOffer = useAppStore((s) => s.linkOffer)
 
   // Storage may be unavailable (it opens lazily in main and is allowed to
   // fail); refreshSavedEstimates records that in storageError rather than
@@ -64,6 +89,11 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
   useEffect(() => {
     void refreshSavedEstimates()
   }, [scope, hash])
+  // The link offer is a question about the LOAD, so it follows the hash only:
+  // widening to All must not re-ask it, and the answer is per load.
+  useEffect(() => {
+    void refreshLinkOffer()
+  }, [hash])
 
   // 'model' with nothing to scope to reads as 'all' (store's rule); the copy
   // has to say which of the two the reader is looking at.
@@ -103,6 +133,31 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
         )}
       </div>
 
+      {linkOffer !== null && (
+        <div className="estimate-link-offer" data-testid="estimate-link-offer" role="status">
+          <span>
+            {linkOffer.count === 1
+              ? '1 saved estimate exists'
+              : `${linkOffer.count} saved estimates exist`}{' '}
+            for an earlier <span className="estimate-file">{linkOffer.fileName}</span> — treat
+            this as a new version?
+          </span>
+          <span className="estimate-link-actions">
+            <button
+              type="button"
+              data-testid="estimate-link-accept"
+              title="Its saved estimates join this model's list; restoring one recomputes against the geometry loaded now"
+              onClick={() => void acceptLinkOffer()}
+            >
+              Link
+            </button>
+            <button type="button" data-testid="estimate-link-decline" onClick={declineLinkOffer}>
+              Keep separate
+            </button>
+          </span>
+        </div>
+      )}
+
       {savedEstimates.length === 0 ? (
         <p className="muted" data-testid="estimates-empty">
           {scoped ? (
@@ -120,7 +175,11 @@ export default function SavedEstimatesPanel(): React.JSX.Element {
       ) : (
         <ul className="estimate-list" data-testid="estimate-list">
           {savedEstimates.slice(0, SHOWN).map((row) => (
-            <EstimateItem key={row.id} row={row} />
+            <EstimateItem
+              key={row.id}
+              row={row}
+              earlierVersion={scoped && row.contentHash !== hash}
+            />
           ))}
         </ul>
       )}

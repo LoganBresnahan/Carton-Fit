@@ -78,11 +78,13 @@ export async function saveEstimate(injected?: StorageApi): Promise<boolean> {
  * (ADR-0034 §3). Safe to call on mount, after writes, and whenever the scope
  * or the loaded document changes.
  *
- * `'model'` with a document loaded asks `estimatesForContent` — the path
- * ADR-0007 plumbed end to end and nothing called for four decisions. Every
- * other case is the full newest-first list: `'all'` by choice, and `'model'`
- * with nothing to scope to (no file, or a file whose hash failed — that file's
- * rows carry `''`, and an empty hash matches nothing, so it is never queried).
+ * `'model'` with a document loaded asks `estimatesForDocument` — the
+ * document is a SET of hashes once versions are linked, so this is the
+ * `estimatesForContent` path ADR-0007 plumbed, widened by one alias table.
+ * Every other case is the full newest-first list: `'all'` by choice, and
+ * `'model'` with nothing to scope to (no file, or a file whose hash failed —
+ * that file's rows carry `''`, and an empty hash matches nothing, so it is
+ * never queried).
  */
 export async function refreshSavedEstimates(injected?: StorageApi): Promise<void> {
   const state = useAppStore.getState()
@@ -91,7 +93,7 @@ export async function refreshSavedEstimates(injected?: StorageApi): Promise<void
     const rows =
       hash === null
         ? await api(injected).recentEstimates()
-        : await api(injected).estimatesForContent(hash)
+        : await api(injected).estimatesForDocument(hash)
     // A load or a scope change can land while a query is in flight; the reply
     // to the older question must not overwrite the newer list.
     const now = useAppStore.getState()
@@ -102,6 +104,50 @@ export async function refreshSavedEstimates(injected?: StorageApi): Promise<void
   } catch (error) {
     fail(error)
   }
+}
+
+/**
+ * Ask whether the loaded file should be offered as a new version of an
+ * earlier document (ADR-0034 §3), and put the answer in the store. Called
+ * after every load; with nothing loaded the offer is simply cleared. The rule
+ * lives in main's `DocumentsStore.linkOffer`: unknown hash, same file name,
+ * receipts under another document. Nothing links here — the person answers.
+ */
+export async function refreshLinkOffer(injected?: StorageApi): Promise<void> {
+  const state = useAppStore.getState()
+  const hash = documentHash(state)
+  const fileName = state.file?.name ?? null
+  if (hash === null || fileName === null) {
+    state.setLinkOffer(null)
+    return
+  }
+  try {
+    const offer = await api(injected).linkOffer(hash, fileName)
+    // Another load may have landed meanwhile; an offer about the old file
+    // must not be shown against the new one.
+    if (documentHash(useAppStore.getState()) !== hash) return
+    useAppStore.getState().setLinkOffer(offer)
+  } catch (error) {
+    fail(error)
+  }
+}
+
+/** The person said Link: record the version and re-list under the widened scope. */
+export async function acceptLinkOffer(injected?: StorageApi): Promise<void> {
+  const { linkOffer, setLinkOffer } = useAppStore.getState()
+  if (linkOffer === null) return
+  try {
+    await api(injected).linkDocumentVersion(linkOffer.contentHash, linkOffer.documentHash)
+    setLinkOffer(null)
+    await refreshSavedEstimates(injected)
+  } catch (error) {
+    fail(error)
+  }
+}
+
+/** The person said Keep separate: nothing is written, the offer goes away. */
+export function declineLinkOffer(): void {
+  useAppStore.getState().setLinkOffer(null)
 }
 
 /**

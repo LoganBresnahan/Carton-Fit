@@ -5,6 +5,7 @@ import {
   type ConfigurationSummary,
   type EstimateInput,
   type EstimateRow,
+  type LinkOffer,
   type StorageApi,
   type StorageHealth
 } from '../shared/storage'
@@ -67,7 +68,20 @@ const storage: StorageApi = {
   estimatesForContent: (contentHash: string, limit?: number) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.estimatesForContent, contentHash, limit) as Promise<
       EstimateRow[]
-    >
+    >,
+
+  estimatesForDocument: (contentHash: string, limit?: number) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.estimatesForDocument, contentHash, limit) as Promise<
+      EstimateRow[]
+    >,
+
+  linkOffer: (contentHash: string, fileName: string) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.documentsLinkOffer, contentHash, fileName) as Promise<
+      LinkOffer | null
+    >,
+
+  linkDocumentVersion: (contentHash: string, documentHash: string) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.documentsLink, contentHash, documentHash) as Promise<void>
 }
 
 const exportFile: ExportApi = {

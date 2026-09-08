@@ -47,6 +47,33 @@ describe('openDatabase', () => {
     }
   })
 
+  it('migrates a populated v1 database up to v2 without touching its rows (ADR-0034 §3)', () => {
+    // A database exactly as build 1.2.0 left it: migration 1 only, receipts in
+    // place. Migration 2 adds the alias table beside them; every receipt keeps
+    // the hash it was saved against.
+    const path = tempDbPath()
+    const v1 = new BetterSqlite3(path)
+    MIGRATIONS[0].up(v1)
+    v1.pragma('user_version = 1')
+    v1.prepare(
+      "INSERT INTO estimates VALUES (NULL,'as1.stp','hash-a','{}','{}',1),(NULL,'as1.stp','hash-a','{}','{}',2)"
+    ).run()
+    v1.close()
+
+    const { db, version, quarantined } = openDatabase(path)
+    try {
+      expect(version).toBe(2)
+      expect(quarantined).toBeNull()
+      expect(db.prepare('SELECT COUNT(*) AS n FROM estimates').get()).toEqual({ n: 2 })
+      expect(db.prepare('SELECT COUNT(*) AS n FROM document_versions').get()).toEqual({ n: 0 })
+      expect(db.prepare("SELECT DISTINCT content_hash AS h FROM estimates").all()).toEqual([
+        { h: 'hash-a' }
+      ])
+    } finally {
+      db.close()
+    }
+  })
+
   it('quarantines an unreadable file and starts fresh rather than refusing to launch', () => {
     const path = tempDbPath()
     writeFileSync(path, Buffer.from('this is not a sqlite database, not even slightly'))

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { ImportedPart } from './workers/import-protocol'
 import type { ImportSink, ImportStats, ImportStatus, LoadedFile } from './import/types'
-import type { ConfigurationSummary, EstimateRow } from '../../shared/storage'
+import type { ConfigurationSummary, EstimateRow, LinkOffer } from '../../shared/storage'
 import type { UpdateInfo } from '../../shared/update'
 import type { PackRequest, PackResult } from './core/packing/types'
 import type { PackSink, PackStatus } from './packing/types'
@@ -218,6 +218,15 @@ interface AppState {
    */
   estimatesScope: EstimatesScope
   setEstimatesScope: (estimatesScope: EstimatesScope) => void
+  /**
+   * The load-time offer to treat the loaded file as a new version of an
+   * earlier document (ADR-0034 §3), or null. Set by the panel's refresh after
+   * a load, cleared by Link, Keep separate, or the next load. Session state:
+   * *Keep separate* is remembered until the file is loaded again, and the
+   * offer stops for good once a receipt is saved under the new hash.
+   */
+  linkOffer: LinkOffer | null
+  setLinkOffer: (linkOffer: LinkOffer | null) => void
   /** Last storage failure, for surfacing rather than swallowing. */
   storageError: string | null
   setConfigurations: (configurations: ConfigurationSummary[]) => void
@@ -346,6 +355,8 @@ export const useAppStore = create<AppState>((set) => ({
   savedEstimates: [],
   estimatesScope: 'model',
   setEstimatesScope: (estimatesScope) => set({ estimatesScope }),
+  linkOffer: null,
+  setLinkOffer: (linkOffer) => set({ linkOffer }),
   storageError: null,
   setConfigurations: (configurations) => set({ configurations, storageError: null }),
   setSavedEstimates: (savedEstimates) => set({ savedEstimates, storageError: null }),

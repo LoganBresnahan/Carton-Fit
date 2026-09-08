@@ -904,6 +904,38 @@ input[type='number']::-webkit-outer-spin-button {
 .estimate-scope button:hover {
   border-color: var(--accent);
 }
+/* A receipt saved against an earlier version of the loaded document. */
+.estimate-version {
+  color: var(--accent);
+}
+/* The load-time link offer (ADR-0034 §3): one line, two answers, and it is
+   gone once either is given. */
+.estimate-link-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+.estimate-link-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.estimate-link-offer button {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+.estimate-link-offer button:hover {
+  border-color: var(--accent);
+}
 
 /* The connect panel (ADR-0030): one row per MCP client, in the same scrolling
    column as the inputs, so it borrows their spacing rather than introducing a

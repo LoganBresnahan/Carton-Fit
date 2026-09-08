@@ -19,6 +19,7 @@ export class EstimatesStore {
   readonly #insert: Statement
   readonly #recent: Statement
   readonly #byHash: Statement
+  readonly #byDocument: Statement
   readonly #byId: Statement
   readonly #now: () => number
 
@@ -37,6 +38,23 @@ export class EstimatesStore {
     this.#byHash = db.prepare(
       'SELECT * FROM estimates WHERE content_hash = ? ORDER BY created_at DESC, id DESC LIMIT ?'
     )
+    // The document's whole set (ADR-0034 §3): the hash's root, plus every hash
+    // linked to that root. A hash with no alias row is its own root, so this
+    // reduces to `forContent` for an unlinked part.
+    this.#byDocument = db.prepare(`
+      WITH root AS (
+        SELECT COALESCE(
+          (SELECT document_hash FROM document_versions WHERE content_hash = @hash), @hash
+        ) AS hash
+      )
+      SELECT * FROM estimates
+      WHERE content_hash = (SELECT hash FROM root)
+         OR content_hash IN (
+           SELECT content_hash FROM document_versions
+           WHERE document_hash = (SELECT hash FROM root)
+         )
+      ORDER BY created_at DESC, id DESC LIMIT @limit
+    `)
     this.#byId = db.prepare('SELECT * FROM estimates WHERE id = ?')
   }
 
@@ -66,9 +84,19 @@ export class EstimatesStore {
     return row === undefined ? null : hydrate(row)
   }
 
-  /** History for one part, newest first — "have I estimated this before?". */
+  /** History for one exact hash, newest first — "have I estimated this before?". */
   forContent(contentHash: string, limit = 50): EstimateRow[] {
     return (this.#byHash.all(contentHash, limit) as StoredRow[]).map(hydrate)
+  }
+
+  /**
+   * History for a hash's whole DOCUMENT — every version linked to it —
+   * newest first (ADR-0034 §3). What the scoped list shows. An empty hash
+   * matches nothing: rows saved with `''` are never anyone's document.
+   */
+  forDocument(contentHash: string, limit = 50): EstimateRow[] {
+    if (contentHash === '') return []
+    return (this.#byDocument.all({ hash: contentHash, limit }) as StoredRow[]).map(hydrate)
   }
 }
 

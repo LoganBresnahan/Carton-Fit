@@ -1,8 +1,15 @@
 import { test, expect } from '@playwright/test'
-import { mkdtempSync } from 'node:fs'
+import { copyFileSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { importSample, launchApp, readEstimate, setCarton, waitForEstimate } from './harness'
+import {
+  SAMPLES,
+  importSample,
+  launchApp,
+  readEstimate,
+  setCarton,
+  waitForEstimate
+} from './harness'
 
 /**
  * The storage contract, exercised across all three processes (ADR-0007).
@@ -37,7 +44,8 @@ test.describe('storage across main/preload/renderer', () => {
         health.available,
         `storage reported unavailable: ${health.error ?? '(no error given)'}`
       ).toBe(true)
-      expect(health.schemaVersion).toBe(1)
+      // Bumped by ADR-0034 §3's `document_versions` table.
+      expect(health.schemaVersion).toBe(2)
       // A fresh profile has nothing to recover from.
       expect(health.quarantined).toBeNull()
     } finally {
@@ -328,6 +336,72 @@ test.describe('saved configurations UI', () => {
       await toggle.click()
       await expect(items).toHaveCount(1)
       await expect(items.first()).toContainText('as1-oc-214.stp')
+    } finally {
+      await app.close()
+    }
+  })
+
+  test('a re-exported part is offered as a new version; the person decides (ADR-0034 §3)', async () => {
+    // Two samples stand in for rev A and rev B of one part: a copy of the
+    // assembly under the cube's file name is a different hash with the same
+    // name, which is all the offer's rule looks at.
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    const items = page.locator('[data-testid="estimate-item"]')
+    const offer = page.locator('[data-testid="estimate-link-offer"]')
+    const revB = join(mkdtempSync(join(tmpdir(), 'pe-e2e-revb-')), 'cube-10x10.stp')
+    copyFileSync(join(SAMPLES, 'as1-oc-214.stp'), revB)
+    try {
+      // Rev A: two receipts.
+      await importSample(page, 'cube-10x10.stp')
+      await waitForEstimate(page)
+      await expect(offer).toHaveCount(0)
+      await page.click('[data-testid="save-estimate"]')
+      await expect(items).toHaveCount(1)
+      await page.click('[data-testid="save-estimate"]')
+      await expect(items).toHaveCount(2)
+
+      // Rev B under the same name: unknown hash, so the offer appears, and
+      // the scoped list is empty until the person answers.
+      await page.setInputFiles('[data-testid="file-input"]', revB)
+      await page.waitForSelector('[data-testid="import-stats"]', { timeout: 30_000 })
+      await waitForEstimate(page)
+      await expect(offer).toContainText('2 saved estimates exist for an earlier cube-10x10.stp')
+      await expect(items).toHaveCount(0)
+
+      // Keep separate: nothing written, the offer goes, the list stays B's.
+      await page.click('[data-testid="estimate-link-decline"]')
+      await expect(offer).toHaveCount(0)
+      await expect(items).toHaveCount(0)
+
+      // Loading rev B again re-asks — nothing was linked, and no receipt was
+      // saved under it, so it is still unknown. This time: Link.
+      await importSample(page, 'as1-oc-214.stp')
+      await waitForEstimate(page)
+      await page.setInputFiles('[data-testid="file-input"]', revB)
+      await page.waitForSelector('[data-testid="import-stats"]', { timeout: 30_000 })
+      await waitForEstimate(page)
+      await expect(offer).toHaveCount(1)
+      await page.click('[data-testid="estimate-link-accept"]')
+      await expect(offer).toHaveCount(0)
+
+      // Rev A's receipts now show under rev B, labelled as the earlier version…
+      await expect(items).toHaveCount(2)
+      await expect(page.locator('[data-testid="estimate-earlier-version"]')).toHaveCount(2)
+      // …every row keeps the hash it was saved against…
+      const rows = await page.evaluate(() => window.api.storage.recentEstimates())
+      expect(new Set(rows.map((r) => r.contentHash)).size).toBe(1)
+      // …and a receipt saved now is the current version, unlabelled.
+      await page.click('[data-testid="save-estimate"]')
+      await expect(items).toHaveCount(3)
+      await expect(items.first().locator('[data-testid="estimate-earlier-version"]')).toHaveCount(0)
+      await expect(page.locator('[data-testid="estimate-earlier-version"]')).toHaveCount(2)
+
+      // Restoring an earlier version's receipt recomputes against the
+      // geometry loaded now (ADR-0016 §3) — which is what makes linking safe.
+      await page.click('[data-testid^="estimate-restore-"] >> nth=2')
+      await waitForEstimate(page)
     } finally {
       await app.close()
     }

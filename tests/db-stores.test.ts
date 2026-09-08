@@ -6,6 +6,7 @@ import type { Database } from 'better-sqlite3'
 import { openDatabase } from '../src/main/db/open'
 import { ConfigurationsStore } from '../src/main/db/configurations'
 import { EstimatesStore } from '../src/main/db/estimates'
+import { DocumentsStore } from '../src/main/db/documents'
 
 function freshDb(): Database {
   return openDatabase(join(mkdtempSync(join(tmpdir(), 'pe-db-')), 'estimator.db')).db
@@ -196,5 +197,167 @@ describe('EstimatesStore', () => {
     } finally {
       db.close()
     }
+  })
+})
+
+// Document versions (ADR-0034 §3): a document is a set of hashes, the user
+// links them, the name is only the hint, and no receipt is ever rewritten.
+describe('DocumentsStore', () => {
+  const receipt = (fileName: string, contentHash: string) => ({
+    fileName,
+    contentHash,
+    settings: SETTINGS,
+    result: { count: 1 }
+  })
+
+  it('an unlinked hash is its own document', () => {
+    const db = freshDb()
+    try {
+      const docs = new DocumentsStore(db)
+      expect(docs.documentOf('hash-a')).toBe('hash-a')
+      expect(docs.versionsOf('hash-a')).toEqual(['hash-a'])
+    } finally {
+      db.close()
+    }
+  })
+
+  it('linking widens the scope query to the set, and rows keep their own hash', () => {
+    const db = freshDb()
+    try {
+      let clock = 1
+      const estimates = new EstimatesStore(db, () => clock++)
+      const docs = new DocumentsStore(db, () => 100)
+      estimates.record(receipt('as1.stp', 'rev-a'))
+      estimates.record(receipt('as1.stp', 'rev-a'))
+      estimates.record(receipt('other.stp', 'unrelated'))
+      // Before the link: rev-b sees nothing of rev-a's history.
+      expect(estimates.forDocument('rev-b')).toEqual([])
+
+      docs.link('rev-b', 'rev-a')
+      estimates.record(receipt('as1.stp', 'rev-b'))
+
+      // Either hash reaches the whole set, newest first…
+      expect(estimates.forDocument('rev-b').map((r) => r.contentHash)).toEqual([
+        'rev-b',
+        'rev-a',
+        'rev-a'
+      ])
+      expect(estimates.forDocument('rev-a').map((r) => r.contentHash)).toEqual([
+        'rev-b',
+        'rev-a',
+        'rev-a'
+      ])
+      // …the exact-hash query is untouched…
+      expect(estimates.forContent('rev-a')).toHaveLength(2)
+      // …and the unrelated part stays out.
+      expect(estimates.forDocument('unrelated')).toHaveLength(1)
+      expect(docs.versionsOf('rev-b')).toEqual(['rev-a', 'rev-b'])
+    } finally {
+      db.close()
+    }
+  })
+
+  it('linking to a version resolves to the root, so the table stays one hop deep', () => {
+    const db = freshDb()
+    try {
+      const docs = new DocumentsStore(db)
+      docs.link('rev-b', 'rev-a')
+      docs.link('rev-c', 'rev-b')
+      expect(docs.documentOf('rev-c')).toBe('rev-a')
+      expect(docs.versionsOf('rev-a')).toEqual(['rev-a', 'rev-b', 'rev-c'])
+      // Linking a hash to its own document changes nothing.
+      docs.link('rev-a', 'rev-c')
+      expect(docs.documentOf('rev-a')).toBe('rev-a')
+    } finally {
+      db.close()
+    }
+  })
+
+  it('refuses an empty hash on either side', () => {
+    const db = freshDb()
+    try {
+      const docs = new DocumentsStore(db)
+      expect(() => docs.link('', 'rev-a')).toThrow(/empty hash/)
+      expect(() => docs.link('rev-a', '')).toThrow(/empty hash/)
+      expect(docs.linkOffer('', 'as1.stp')).toBeNull()
+      expect(new EstimatesStore(db).forDocument('')).toEqual([])
+    } finally {
+      db.close()
+    }
+  })
+
+  describe('linkOffer', () => {
+    it('offers only for an unknown hash whose file name another document has receipts under', () => {
+      const db = freshDb()
+      try {
+        const estimates = new EstimatesStore(db, () => 1)
+        const docs = new DocumentsStore(db)
+        estimates.record(receipt('as1.stp', 'rev-a'))
+        estimates.record(receipt('as1.stp', 'rev-a'))
+        estimates.record(receipt('as1.stp', 'rev-a'))
+
+        expect(docs.linkOffer('rev-b', 'as1.stp')).toEqual({
+          contentHash: 'rev-b',
+          documentHash: 'rev-a',
+          fileName: 'as1.stp',
+          count: 3
+        })
+        // A different name is not a hint.
+        expect(docs.linkOffer('rev-b', 'renamed.stp')).toBeNull()
+        // A hash that already has a receipt is known — no offer.
+        expect(docs.linkOffer('rev-a', 'as1.stp')).toBeNull()
+      } finally {
+        db.close()
+      }
+    })
+
+    it('a linked hash is known, and the count spans the whole document', () => {
+      const db = freshDb()
+      try {
+        const estimates = new EstimatesStore(db, () => 1)
+        const docs = new DocumentsStore(db)
+        estimates.record(receipt('as1.stp', 'rev-a'))
+        docs.link('rev-b', 'rev-a')
+        estimates.record(receipt('as1.stp', 'rev-b'))
+
+        // rev-b was linked, so loading it again asks nothing…
+        expect(docs.linkOffer('rev-b', 'as1.stp')).toBeNull()
+        // …and a third revision is offered the root, counting both versions.
+        expect(docs.linkOffer('rev-c', 'as1.stp')).toEqual({
+          contentHash: 'rev-c',
+          documentHash: 'rev-a',
+          fileName: 'as1.stp',
+          count: 2
+        })
+      } finally {
+        db.close()
+      }
+    })
+
+    it('when two documents share the name, the one saved to last is offered', () => {
+      const db = freshDb()
+      try {
+        let clock = 1
+        const estimates = new EstimatesStore(db, () => clock++)
+        const docs = new DocumentsStore(db)
+        estimates.record(receipt('plate.stp', 'old-plate'))
+        estimates.record(receipt('plate.stp', 'new-plate'))
+        expect(docs.linkOffer('newer-plate', 'plate.stp')?.documentHash).toBe('new-plate')
+      } finally {
+        db.close()
+      }
+    })
+
+    it('rows saved with an empty hash never make an offer', () => {
+      const db = freshDb()
+      try {
+        const estimates = new EstimatesStore(db, () => 1)
+        const docs = new DocumentsStore(db)
+        estimates.record(receipt('as1.stp', ''))
+        expect(docs.linkOffer('rev-b', 'as1.stp')).toBeNull()
+      } finally {
+        db.close()
+      }
+    })
   })
 })
