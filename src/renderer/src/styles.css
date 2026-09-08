@@ -867,6 +867,11 @@ input[type='number']::-webkit-outer-spin-button {
 .estimate-list button:hover {
   border-color: var(--accent);
 }
+.estimate-actions {
+  display: flex;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
 .estimate-more {
   font-size: 0.7rem;
 }

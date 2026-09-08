@@ -98,19 +98,25 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         makes it known. Pinned: v1→v2 on a populated db leaves every row's
         hash as saved; the e2e loads the assembly under the cube's file name
         as rev B, declines, reloads, links, and sees rev A's two receipts
-        labelled beside an unlabelled new one. *Observed during the build:*
-        the list orders by `created_at`, and this WSL2 machine's clock
-        jumped backwards ~107 s twice mid-run, putting the newest receipt
-        last — the third run and every run since were clean. Pre-existing
-        (ADR-0007's ordering), environmental, and a revisit trigger if it
-        shows on a Windows dogfood machine: id order is the honest tiebreak
-        and could be the primary key.
-      - [ ] **Delete a saved estimate from the panel** (§4). New prepared
+        labelled beside an unlabelled new one. *Found during the build and
+        fixed:* the list ordered by `created_at` with `id` as a tiebreak, and
+        this WSL2 machine (clocksource `tsc`) stamped one save 110 s ahead of
+        the saves either side of it — three times in ten runs — so the newest
+        receipt listed third. The wall clock is not monotonic and never was
+        the honest key; every receipt query now orders by `id`, the insertion
+        order, and `created_at` is only the time the row shows. Pinned in
+        `tests/db-stores.test.ts` with a stamp from the future.
+      - [x] **Delete a saved estimate from the panel** (§4). New prepared
         statement, `storage:estimates:remove` IPC and preload binding, a
         Delete beside *Restore inputs*. Not undoable and not on the wire —
         `list_saved_estimates`'s description already promises that. Tested at
         the store and the panel; the wire's append-only claim gets its
-        negative test (no such tool).
+        negative test (no such tool). *Shipped 2026-09-08:* no confirm step,
+        matching the preset Delete so the two read as one surface; the
+        service tells "gone" from "never existed" and neither is an error;
+        the existing no-delete-tool test now also pins the sentence in
+        `list_saved_estimates`'s description beside the absence. e2e: save
+        two, delete the newest, the older one is what the database holds.
       - [ ] **Saved estimates collapse into a `<details>` section** (§5) with
         the document's count in the summary line — the `ConnectClientRow`
         disclosure pattern. Feel is the acceptance test here, and the revisit

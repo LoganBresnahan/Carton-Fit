@@ -65,6 +65,9 @@ const storage: StorageApi = {
   recentEstimates: (limit?: number) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.estimatesRecent, limit) as Promise<EstimateRow[]>,
 
+  removeEstimate: (id: number) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.estimatesRemove, id) as Promise<boolean>,
+
   estimatesForContent: (contentHash: string, limit?: number) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.estimatesForContent, contentHash, limit) as Promise<
       EstimateRow[]

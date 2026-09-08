@@ -107,6 +107,26 @@ export async function refreshSavedEstimates(injected?: StorageApi): Promise<void
 }
 
 /**
+ * Discard a receipt (ADR-0034 §4). Mirrors `deleteConfiguration`: no confirm
+ * step, because the preset Delete has none and the two must feel like one
+ * surface; not an undo step, because the row is gone from the database and
+ * the undo stack holds inputs, not receipts. The list re-reads under the
+ * current scope afterwards.
+ *
+ * @returns true when a row was removed.
+ */
+export async function deleteEstimate(id: number, injected?: StorageApi): Promise<boolean> {
+  try {
+    const removed = await api(injected).removeEstimate(id)
+    await refreshSavedEstimates(injected)
+    return removed
+  } catch (error) {
+    fail(error)
+    return false
+  }
+}
+
+/**
  * Ask whether the loaded file should be offered as a new version of an
  * earlier document (ADR-0034 §3), and put the answer in the store. Called
  * after every load; with nothing loaded the offer is simply cleared. The rule

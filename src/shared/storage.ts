@@ -20,6 +20,7 @@ export const STORAGE_CHANNELS = {
   estimatesRecord: 'storage:estimates:record',
   estimatesRecent: 'storage:estimates:recent',
   estimatesForContent: 'storage:estimates:for-content',
+  estimatesRemove: 'storage:estimates:remove',
   estimatesForDocument: 'storage:estimates:for-document',
   documentsLinkOffer: 'storage:documents:link-offer',
   documentsLink: 'storage:documents:link'
@@ -97,6 +98,8 @@ export interface StorageApi {
   removeConfiguration(name: string): Promise<boolean>
   recordEstimate(entry: EstimateInput): Promise<number>
   recentEstimates(limit?: number): Promise<EstimateRow[]>
+  /** Discard one receipt (ADR-0034 §4). Not undoable; not on the MCP wire. */
+  removeEstimate(id: number): Promise<boolean>
   estimatesForContent(contentHash: string, limit?: number): Promise<EstimateRow[]>
   /** The hash's whole document — every linked version (ADR-0034 §3). */
   estimatesForDocument(contentHash: string, limit?: number): Promise<EstimateRow[]>

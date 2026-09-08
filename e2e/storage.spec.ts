@@ -407,6 +407,31 @@ test.describe('saved configurations UI', () => {
     }
   })
 
+  test('a saved estimate can be deleted from the panel (ADR-0034 §4)', async () => {
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    const items = page.locator('[data-testid="estimate-item"]')
+    try {
+      await importSample(page, 'cube-10x10.stl')
+      await waitForEstimate(page)
+      await page.click('[data-testid="save-estimate"]')
+      await expect(items).toHaveCount(1)
+      await page.click('[data-testid="save-estimate"]')
+      await expect(items).toHaveCount(2)
+
+      const [newest, oldest] = await page.evaluate(() => window.api.storage.recentEstimates())
+      await page.click(`[data-testid="estimate-delete-${newest.id}"]`)
+      await expect(items).toHaveCount(1)
+
+      // The right row went, and it went from the database, not just the list.
+      const left = await page.evaluate(() => window.api.storage.recentEstimates())
+      expect(left.map((r) => r.id)).toEqual([oldest.id])
+    } finally {
+      await app.close()
+    }
+  })
+
   test('a saved estimate survives a restart', async () => {
     const profile = [`--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`]
 

@@ -177,6 +177,11 @@ describe('the published surface', () => {
     expect(tools.map((tool) => tool.name).filter((name) => /delete|remove|clear/.test(name))).toEqual(
       []
     )
+    // ADR-0034 §4 gave the PANEL a Delete for saved estimates and kept it
+    // off the wire; the list tool's description carries that promise, and
+    // this pins the sentence beside the absence.
+    const list = tools.find((tool) => tool.name === 'list_saved_estimates')
+    expect(list?.description).toMatch(/cannot be deleted or replaced from here/)
   })
 
   it('warns about surviving overrides on apply_preset, where a client meets them', async () => {

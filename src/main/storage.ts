@@ -110,6 +110,10 @@ export function registerStorageIpc(): void {
     require_().estimates.recent(limit)
   )
 
+  ipcMain.handle(STORAGE_CHANNELS.estimatesRemove, (_event, id: number) =>
+    require_().estimates.remove(id)
+  )
+
   ipcMain.handle(
     STORAGE_CHANNELS.estimatesForContent,
     (_event, contentHash: string, limit?: number) =>

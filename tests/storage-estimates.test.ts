@@ -4,6 +4,7 @@ import { useAppStore } from '../src/renderer/src/store'
 import {
   acceptLinkOffer,
   declineLinkOffer,
+  deleteEstimate,
   refreshLinkOffer,
   refreshSavedEstimates,
   restoreEstimateSettings,
@@ -32,6 +33,12 @@ function fakeApi(rows: EstimateRow[] = []): StorageApi & { recorded: EstimateInp
       return stored.length
     },
     recentEstimates: async () => stored,
+    removeEstimate: async (id) => {
+      const at = stored.findIndex((r) => r.id === id)
+      if (at < 0) return false
+      stored.splice(at, 1)
+      return true
+    },
     estimatesForContent: async (hash) => stored.filter((r) => r.contentHash === hash),
     // The fake has no alias table: a document is one hash until a test links.
     estimatesForDocument: async (hash) => stored.filter((r) => r.contentHash === hash),
@@ -210,6 +217,43 @@ describe('saveEstimate', () => {
     useAppStore.getState().packSucceeded(RESULT, REQUEST, 12)
     expect(await saveEstimate(api)).toBe(true)
     expect(api.recorded[0].contentHash).toBe('')
+  })
+})
+
+// Delete (ADR-0034 §4): the person's act, from the panel, never from the wire.
+describe('deleteEstimate', () => {
+  const row = (id: number): EstimateRow => ({
+    id,
+    fileName: 'a.stp',
+    contentHash: 'h',
+    settings: {},
+    result: {},
+    createdAt: id
+  })
+
+  it('removes the row and re-lists', async () => {
+    const api = fakeApi([row(2), row(1)])
+    await refreshSavedEstimates(api)
+    expect(await deleteEstimate(2, api)).toBe(true)
+    expect(useAppStore.getState().savedEstimates.map((r) => r.id)).toEqual([1])
+  })
+
+  it('tells "never existed" from "gone", and neither is an error', async () => {
+    const api = fakeApi([row(1)])
+    expect(await deleteEstimate(99, api)).toBe(false)
+    expect(useAppStore.getState().storageError).toBeNull()
+    expect(useAppStore.getState().savedEstimates.map((r) => r.id)).toEqual([1])
+  })
+
+  it('a failed delete is reported and the list is left as it was', async () => {
+    const api = fakeApi([row(1)])
+    await refreshSavedEstimates(api)
+    api.removeEstimate = async () => {
+      throw new Error('storage is unavailable')
+    }
+    expect(await deleteEstimate(1, api)).toBe(false)
+    expect(useAppStore.getState().storageError).toMatch(/unavailable/)
+    expect(useAppStore.getState().savedEstimates.map((r) => r.id)).toEqual([1])
   })
 })
 

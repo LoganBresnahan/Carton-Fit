@@ -27,6 +27,19 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   the geometry loaded now. The database schema moves to version 2 to record the
   link; existing rows are untouched.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
+- **Saved estimates can be deleted.** Each row has a Delete beside *Restore
+  inputs*, like presets have had. Not undoable, and not available to an AI
+  assistant: the person at the keyboard can discard a receipt, an assistant
+  cannot discard one for them.
+  ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
+
+### Fixed
+
+- **Saved estimates list in the order they were saved, whatever the clock
+  says.** The list ordered by the timestamp on each row, and a machine whose
+  clock read ahead for one save put the newest receipt third. It now orders by
+  insertion; the time shown on a row is unchanged.
+  ([ADR-0007](doc/adr/0007-persistence-sqlite-in-main.md))
 
 - **Three fields an assistant reads now say whether they describe one part or
   all of them.** When a file contains eight copies of a nut, the app reported

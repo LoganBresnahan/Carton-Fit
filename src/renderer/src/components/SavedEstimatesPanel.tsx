@@ -3,6 +3,7 @@ import { documentHash, useAppStore } from '../store'
 import {
   acceptLinkOffer,
   declineLinkOffer,
+  deleteEstimate,
   refreshLinkOffer,
   refreshSavedEstimates,
   restoreEstimateSettings
@@ -59,14 +60,24 @@ function EstimateItem({
         <span className="estimate-summary" data-testid="estimate-summary">
           {estimateSummary(row)}
         </span>
-        <button
-          type="button"
-          data-testid={`estimate-restore-${row.id}`}
-          title="Put this estimate's inputs back — the result is recomputed, not replayed"
-          onClick={() => restoreEstimateSettings(row)}
-        >
-          Restore inputs
-        </button>
+        <span className="estimate-actions">
+          <button
+            type="button"
+            data-testid={`estimate-restore-${row.id}`}
+            title="Put this estimate's inputs back — the result is recomputed, not replayed"
+            onClick={() => restoreEstimateSettings(row)}
+          >
+            Restore inputs
+          </button>
+          <button
+            type="button"
+            data-testid={`estimate-delete-${row.id}`}
+            title="Discard this saved estimate — not undoable"
+            onClick={() => void deleteEstimate(row.id)}
+          >
+            Delete
+          </button>
+        </span>
       </div>
     </li>
   )
