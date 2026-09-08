@@ -10,7 +10,6 @@ import ThemeSelect from './components/ThemeSelect'
 import UpdateBanner from './components/UpdateBanner'
 import UnitPicker from './components/UnitPicker'
 import ConnectButton from './components/ConnectButton'
-import { ConfigurationsPanel } from './components/ConfigurationsPanel'
 import SavedEstimatesPanel from './components/SavedEstimatesPanel'
 import ViewToggle from './components/ViewToggle'
 import Viewport from './viewport/Viewport'
@@ -57,7 +56,6 @@ export default function App() {
             {/* Directly under the weight inputs it overrides — the section is
                 a correction to them, not an unrelated feature. */}
             <PartWeightsPanel />
-            <ConfigurationsPanel />
             <SavedEstimatesPanel />
           </div>
           <ResultsPanel />

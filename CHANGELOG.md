@@ -27,6 +27,12 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   the geometry loaded now. The database schema moves to version 2 to record the
   link; existing rows are untouched.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
+- **Presets are a picker beside the carton fields.** Choose one from a
+  dropdown under the Carton heading and it fills the fields; the dropdown
+  clears itself the moment you change a field, so it never claims a preset
+  that is no longer what is entered. Save and Delete sit with it. The standalone
+  list of presets is gone.
+  ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md))
 - **AI assistants moved to the header.** The connect surface, which sat at
   the bottom of the scrolling column beneath every preset and receipt, is now
   a button beside the theme picker that opens it in a dialog. Nothing about

@@ -1,4 +1,5 @@
 import { useAppStore } from '../store'
+import { PresetPicker } from './PresetPicker'
 import {
   WEIGHT_UNITS,
   gToWeight,
@@ -140,6 +141,10 @@ export default function InputsPanel() {
           {lengthUnitLabel(s.unitSystem)}
         </button>
       </div>
+
+      {/* Presets are carton inputs, so the picker sits under the heading of
+          the fields it fills (ADR-0034 §5). */}
+      <PresetPicker />
 
       {[0, 1, 2].map((i) => (
         <NumberField

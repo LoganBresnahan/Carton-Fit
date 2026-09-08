@@ -146,10 +146,20 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         connect specs' launch helpers call it. The global `* { margin: 0 }`
         reset pins a native dialog to the corner — `margin: auto` restores
         the centre.
-      - [ ] **Presets become a picker beside the carton inputs** (§5). Select +
+      - [x] **Presets become a picker beside the carton inputs** (§5). Select +
         save + delete next to the fields a preset fills; the standalone list
         goes. The "no part attached" hint stays, in whatever words fit a
-        picker.
+        picker. *Shipped 2026-09-08, awaiting the feel verdict:* `PresetPicker`
+        under the Carton heading — two compact rows, apply-or-delete and
+        name-and-save, the hint in ADR-0016 §3's own words beneath. The select
+        shows the last preset applied **until the inputs move**: any settings
+        write after the apply clears it to the placeholder (a ref set before
+        the load skips the apply's own write), so the picker never reads
+        "Standard carton" over a length someone changed. Delete acts on the
+        picked preset, no confirm, as before. `ConfigurationsPanel` is gone;
+        the `configurations-panel` test id moved to the picker so
+        `panel-layout.spec` still measures its left edge. `config-load-*`
+        buttons became `selectOption` in the two specs that pressed them.
       - [ ] **The wire follows** (§6, ADR-0029 amendment 8): optional `scope`
         on `list_saved_estimates` with the panel's default rule;
         `get_app_state.model.savedEstimates`. Additive, minor. Goldens and

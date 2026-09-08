@@ -172,7 +172,9 @@ test.describe('saved configurations UI', () => {
     ])
     try {
       await page.waitForSelector('[data-testid="configurations-panel"]')
-      await expect(page.locator('[data-testid="config-empty"]')).toBeVisible()
+      const picker = page.locator('[data-testid="preset-select"]')
+      await expect(picker).toBeDisabled()
+      await expect(picker).toContainText('No presets yet')
 
       // A carton worth remembering, in the UI's display units.
       await page.fill('[data-testid="dim-0"]', '18')
@@ -184,8 +186,19 @@ test.describe('saved configurations UI', () => {
       await page.fill('[data-testid="dim-0"]', '4')
       await expect(page.locator('[data-testid="dim-0"]')).toHaveValue('4')
 
-      await page.click('[data-testid="config-load-Big box"]')
+      await picker.selectOption('Big box')
       await expect(page.locator('[data-testid="dim-0"]')).toHaveValue('18')
+      // The picker reads the preset just applied…
+      await expect(picker).toHaveValue('Big box')
+      // …and comes off it the moment the fields move (ADR-0034 §5).
+      await page.fill('[data-testid="dim-0"]', '5')
+      await expect(picker).toHaveValue('')
+
+      // Delete acts on the picked preset, from the same two controls.
+      await picker.selectOption('Big box')
+      await page.click('[data-testid="config-delete-Big box"]')
+      await expect(page.locator('[data-testid="config-item"]')).toHaveCount(0)
+      await expect(picker).toBeDisabled()
     } finally {
       await app.close()
     }
@@ -208,7 +221,7 @@ test.describe('saved configurations UI', () => {
     try {
       // Listed on mount, from SQLite, in a brand-new process.
       await expect(second.page.locator('[data-testid="config-item"]')).toHaveCount(1)
-      await second.page.click('[data-testid="config-load-Persisted setup"]')
+      await second.page.locator('[data-testid="preset-select"]').selectOption('Persisted setup')
       await expect(second.page.locator('[data-testid="dim-1"]')).toHaveValue('7')
     } finally {
       await second.app.close()
