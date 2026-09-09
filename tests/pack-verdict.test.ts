@@ -381,6 +381,17 @@ describe('upperBoundLabel', () => {
   it('shows the bound even when the count has met it — that is optimality', () => {
     expect(upperBoundLabel(qty({ count: 12, upperBound: 12 }))).toBe('upper bound 12')
   })
+
+  it('says the bound is under the cap when the cap is what stopped the count', () => {
+    // 13th dogfood: "2 fit (upper bound 2)" beside "the carton itself would
+    // take 3" read as a contradiction, because the bound folds the cap in.
+    expect(upperBoundLabel(qty({ count: 2, upperBound: 2, binding: 'weight' }))).toBe(
+      'upper bound 2 under the cap'
+    )
+    expect(upperBoundLabel(qty({ count: 3, upperBound: 3, binding: 'geometry' }))).toBe(
+      'upper bound 3'
+    )
+  })
 })
 
 describe('freeSpaceNote', () => {

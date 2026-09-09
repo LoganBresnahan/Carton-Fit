@@ -1361,6 +1361,15 @@ seventh; ADR-0035 §4's two axes are independent on purpose, and the reply's
 `customer` already said so); and `binding.constraint` says the window and
 both exports call `geometry` *space*. Additive, minor.
 
+### Phase-2 contract amendment 17 (2026-09-09, thirteenth dogfood) — the lists count what they hid
+
+ADR-0035 amendment 1 carries the reasoning. On the wire:
+`list_presets.withheldByCustomer` and `list_saved_estimates.withheldByCustomer`,
+both `number`, the rows in the requested scope that the customer filter hid,
+`0` under `customer: "all"`. Two identical row sets under two labels were the
+finding; the count is the field that makes them different replies. Additive,
+minor.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

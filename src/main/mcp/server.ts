@@ -457,11 +457,18 @@ async function scopedEstimates(
   // All: a client can ask for every document's receipts for this customer,
   // or this document's for every customer.
   const filter = customerFilter(customer, doc.customer)
+  const hash = scope === 'model' && doc.contentHash !== null ? doc.contentHash : null
   const rows =
-    scope === 'model' && doc.contentHash !== null
-      ? storage.estimatesForDocument(doc.contentHash, limit, filter)
+    hash !== null
+      ? storage.estimatesForDocument(hash, limit, filter)
       : storage.recentEstimates(limit, filter)
-  return savedEstimatesReport(rows, scope, customer, customerNames(storage))
+  // Two lists that differ in label and not in content read as one list
+  // (13th dogfood, ADR-0035 amendment 1): say how many rows the filter hid.
+  const withheld =
+    filter === undefined
+      ? 0
+      : storage.countEstimates(hash) - storage.countEstimates(hash, filter)
+  return savedEstimatesReport(rows, scope, customer, customerNames(storage), withheld)
 }
 
 /** What the window knows that a database query needs: the loaded document
@@ -508,11 +515,17 @@ function registerDataTools(
       try {
         const doc = await context(drive)
         const filter = customer ?? 'active'
+        const scope = customerFilter(filter, doc.customer)
+        const withheld =
+          scope === undefined
+            ? 0
+            : storage.countConfigurations() - storage.countConfigurations(scope)
         return toolOk(
           presetsReport(
-            storage.listConfigurations(customerFilter(filter, doc.customer)),
+            storage.listConfigurations(scope),
             filter,
-            customerNames(storage)
+            customerNames(storage),
+            withheld
           )
         )
       } catch (err) {

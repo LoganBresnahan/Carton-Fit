@@ -555,6 +555,10 @@ describe('buildSummary', () => {
   it('carries the quantity bound on the Result line', () => {
     const text = buildSummary(input({ result: qtyResult({ count: 47, upperBound: 54 }) }))
     expect(text).toContain('Result: 47 fit (upper bound 54)')
+    const capped = buildSummary(
+      input({ result: qtyResult({ count: 2, upperBound: 2, binding: 'weight' }) })
+    )
+    expect(capped).toContain('Result: 2 fit (upper bound 2 under the cap)')
   })
 
   it('caps the part list and points at the CSV for the rest', () => {

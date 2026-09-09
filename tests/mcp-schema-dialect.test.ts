@@ -64,6 +64,8 @@ const inertStorage: ToolStorage = {
   recentEstimates: () => [],
   estimatesForDocument: () => [],
   estimateById: () => null,
+  countEstimates: () => 0,
+  countConfigurations: () => 0,
   listCustomers: () => []
 }
 

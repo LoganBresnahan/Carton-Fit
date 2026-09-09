@@ -232,8 +232,8 @@ Check and report:
   axis for it (`customer: "active"`, the default, is the app's current
   customer plus house; `"all"` is everyone). `scope: "all"` widens the
   documents, not the customers. If a row you expect is missing, say which
-  axis hid it and whether the reply's own `scope` and `customer` fields told
-  you before you worked it out.
+  axis hid it and whether the reply's own `scope`, `customer` and
+  `withheldByCustomer` fields told you before you worked it out.
 - Try to delete a preset or a saved estimate from where you are. You should
   find no way to do it — the person at the keyboard has Delete for both, you
   do not. Report what you find, and whether the surface made the absence

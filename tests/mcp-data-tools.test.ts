@@ -147,6 +147,10 @@ function fakeStorage(): ToolStorage & { presets: ConfigurationSummary[] } {
         customer
       ).slice(0, limit ?? 50),
     estimateById: (id) => ROWS.find((row) => row.id === id) ?? null,
+    countEstimates: (hash, customer) =>
+      forCustomer(hash === null ? ROWS : ROWS.filter((row) => row.contentHash === hash), customer)
+        .length,
+    countConfigurations: (customer) => forCustomer(presets, customer).length,
     listCustomers: () => CUSTOMERS
   }
 }
@@ -358,6 +362,7 @@ describe('reads answer from the database, not the window', () => {
       drive.customer = { id: 1, name: 'Acme' }
       const report = await call<{
         customer: string
+        withheldByCustomer: number
         presets: Array<{ name: string; customer: string | null }>
       }>('list_presets')
       expect(report.customer).toBe('active')
@@ -366,16 +371,28 @@ describe('reads answer from the database, not the window', () => {
         ['Half-height', null],
         ['Acme box', 'Acme']
       ])
+      // And says how many the filter hid — Beta's one (ADR-0035 amendment 1).
+      expect(report.withheldByCustomer).toBe(1)
     })
 
     it('list_presets: "all" is every customer’s, and says so', async () => {
       drive.customer = { id: 1, name: 'Acme' }
-      const report = await call<{ customer: string; presets: Array<{ name: string }> }>(
-        'list_presets',
-        { customer: 'all' }
-      )
+      const report = await call<{
+        customer: string
+        withheldByCustomer: number
+        presets: Array<{ name: string }>
+      }>('list_presets', { customer: 'all' })
       expect(report.customer).toBe('all')
       expect(report.presets.map((p) => p.name)).toContain('Beta box')
+      expect(report.withheldByCustomer).toBe(0)
+    })
+
+    it('house active hides every customer’s rows, and counts them', async () => {
+      const report = await call<{ withheldByCustomer: number; presets: Array<{ name: string }> }>(
+        'list_presets'
+      )
+      expect(report.presets.map((p) => p.name)).toEqual(['Standard 12in', 'Half-height'])
+      expect(report.withheldByCustomer).toBe(2)
     })
 
     it('house active means house only', async () => {
@@ -397,6 +414,31 @@ describe('reads answer from the database, not the window', () => {
         [7, null],
         [4, null]
       ])
+    })
+
+    it('list_saved_estimates counts the rows its customer filter hid, within the scope', async () => {
+      // The 13th run: scope "model" and scope "all" came back identical while a
+      // second customer's row sat hidden, and nothing in the reply said so.
+      ROWS.push({ ...ROWS[0], id: 8, customerId: 1 })
+      try {
+        drive.document = 'abc'
+        drive.customer = { id: 2, name: 'Beta' }
+        type Report = { withheldByCustomer: number; estimates: Array<{ id: number }> }
+        const model = await call<Report>('list_saved_estimates')
+        expect(model.estimates.map((r) => r.id)).toEqual([7])
+        expect(model.withheldByCustomer).toBe(1)
+        const everyone = await call<Report>('list_saved_estimates', { customer: 'all' })
+        expect(everyone.estimates.map((r) => r.id)).toEqual([7, 8])
+        expect(everyone.withheldByCustomer).toBe(0)
+        // The count is of THIS scope's rows: a hidden row under another
+        // document is not this document's business.
+        drive.document = 'def'
+        const other = await call<Report>('list_saved_estimates')
+        expect(other.estimates.map((r) => r.id)).toEqual([4])
+        expect(other.withheldByCustomer).toBe(0)
+      } finally {
+        ROWS.pop()
+      }
     })
 
     it('list_customers names them and who is active', async () => {
@@ -473,7 +515,12 @@ describe('reads answer from the database, not the window', () => {
     it('a document with no receipts is an empty scoped list, not everything', async () => {
       drive.document = 'never-saved'
       const report = await call<Report>('list_saved_estimates')
-      expect(report).toEqual({ scope: 'model', customer: 'active', estimates: [] })
+      expect(report).toEqual({
+        scope: 'model',
+        customer: 'active',
+        withheldByCustomer: 0,
+        estimates: []
+      })
     })
 
     it('the list a save lands in is the document’s', async () => {
@@ -598,11 +645,17 @@ describe('the report builders', () => {
   })
 
   it('an empty database is an empty list, not an error', () => {
-    expect(presetsReport([])).toEqual({ customer: 'all', presets: [] })
-    expect(savedEstimatesReport([])).toEqual({ scope: 'all', customer: 'all', estimates: [] })
+    expect(presetsReport([])).toEqual({ customer: 'all', withheldByCustomer: 0, presets: [] })
+    expect(savedEstimatesReport([])).toEqual({
+      scope: 'all',
+      customer: 'all',
+      withheldByCustomer: 0,
+      estimates: []
+    })
     expect(savedEstimatesReport([], 'model', 'active')).toEqual({
       scope: 'model',
       customer: 'active',
+      withheldByCustomer: 0,
       estimates: []
     })
   })

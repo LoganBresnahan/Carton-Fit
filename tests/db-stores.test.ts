@@ -448,6 +448,9 @@ describe('the customer filter (ADR-0035 §3)', () => {
       expect(names(presets.list({ activeId: acme }))).toEqual(['Acme box', 'House box'])
       // House active: house only — house IS the active customer then.
       expect(names(presets.list({ activeId: null }))).toEqual(['House box'])
+      expect(presets.count()).toBe(3)
+      expect(presets.count({ activeId: acme })).toBe(2)
+      expect(presets.count({ activeId: null })).toBe(1)
       expect(presets.get('Acme box')?.customerId).toBe(acme)
       expect(presets.get('House box')?.customerId).toBeNull()
     } finally {
@@ -493,6 +496,15 @@ describe('the customer filter (ADR-0035 §3)', () => {
         forAcme,
         house
       ])
+      // The counts behind "how many did the filter hide" (ADR-0035 amendment 1):
+      // the same WHERE clauses, no LIMIT.
+      expect(estimates.count()).toBe(4)
+      expect(estimates.count({ activeId: acme })).toBe(3)
+      expect(estimates.count({ activeId: null })).toBe(1)
+      expect(estimates.countForDocument('h')).toBe(4)
+      expect(estimates.countForDocument('h', { activeId: beta })).toBe(2)
+      expect(estimates.countForDocument('h2', { activeId: null })).toBe(1)
+      expect(estimates.countForDocument('')).toBe(0)
       // The tag was set at save and is on the row; there is no call to change it.
       expect(estimates.byId(forAcme)?.customerId).toBe(acme)
       expect(estimates.byId(house)?.customerId).toBeNull()

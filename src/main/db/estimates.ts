@@ -22,6 +22,8 @@ export class EstimatesStore {
   readonly #recent: Statement
   readonly #byHash: Statement
   readonly #byDocument: Statement
+  readonly #countRecent: Statement
+  readonly #countByDocument: Statement
   readonly #byId: Statement
   readonly #remove: Statement
   readonly #now: () => number
@@ -71,6 +73,28 @@ export class EstimatesStore {
         AND (@all = 1 OR customer_id IS NULL OR customer_id = @customer)
       ORDER BY id DESC LIMIT @limit
     `)
+    // The same two WHERE clauses, counted, so a list can say how many rows
+    // its customer filter withheld (ADR-0035 amendment 1): the count under
+    // no filter minus the count under the filter. No LIMIT — a count is not
+    // a page.
+    this.#countRecent = db.prepare(`
+      SELECT COUNT(*) AS n FROM estimates
+      WHERE (@all = 1 OR customer_id IS NULL OR customer_id = @customer)
+    `)
+    this.#countByDocument = db.prepare(`
+      WITH root AS (
+        SELECT COALESCE(
+          (SELECT document_hash FROM document_versions WHERE content_hash = @hash), @hash
+        ) AS hash
+      )
+      SELECT COUNT(*) AS n FROM estimates
+      WHERE (content_hash = (SELECT hash FROM root)
+         OR content_hash IN (
+           SELECT content_hash FROM document_versions
+           WHERE document_hash = (SELECT hash FROM root)
+         ))
+        AND (@all = 1 OR customer_id IS NULL OR customer_id = @customer)
+    `)
     this.#byId = db.prepare('SELECT * FROM estimates WHERE id = ?')
     this.#remove = db.prepare('DELETE FROM estimates WHERE id = ?')
   }
@@ -118,6 +142,18 @@ export class EstimatesStore {
     if (contentHash === '') return []
     const params = { hash: contentHash, limit, ...customerParams(customer) }
     return (this.#byDocument.all(params) as StoredRow[]).map(hydrate)
+  }
+
+  /** How many rows `recent` would list with no limit — under the filter, or all. */
+  count(customer?: CustomerScope): number {
+    return (this.#countRecent.get(customerParams(customer)) as { n: number }).n
+  }
+
+  /** How many rows `forDocument` would list with no limit. */
+  countForDocument(contentHash: string, customer?: CustomerScope): number {
+    if (contentHash === '') return 0
+    const params = { hash: contentHash, ...customerParams(customer) }
+    return (this.#countByDocument.get(params) as { n: number }).n
   }
 
   /**

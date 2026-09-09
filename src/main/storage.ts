@@ -184,6 +184,11 @@ export const storageForTools: ToolStorage = {
   estimatesForDocument: (contentHash, limit, customer) =>
     require_().estimates.forDocument(contentHash, limit, customer),
   estimateById: (id) => require_().estimates.byId(id),
+  countEstimates: (contentHash, customer) =>
+    contentHash === null
+      ? require_().estimates.count(customer)
+      : require_().estimates.countForDocument(contentHash, customer),
+  countConfigurations: (customer) => require_().configurations.count(customer),
   listCustomers: () => require_().customers.list()
 }
 

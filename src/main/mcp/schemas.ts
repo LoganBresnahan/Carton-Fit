@@ -612,8 +612,21 @@ const customerName = z
 
 export const listPresetsInput = { customer: customerFilterInput }
 
+/** The 13th run's finding: two lists that differ in label and not in content
+ *  read as one list. A count of what the filter hid is the field that can be
+ *  false (ADR-0035 amendment 1). */
+const withheldByCustomer = z
+  .number()
+  .int()
+  .nonnegative()
+  .describe(
+    'How many rows the customer filter hid from this reply — other customers’ rows that ' +
+      '`customer: "all"` would show. 0 when nothing was hidden, including under "all".'
+  )
+
 export const presetsOutput = {
   customer: customerFilter.describe('Which rows these are: "active" or "all".'),
+  withheldByCustomer,
   presets: z.array(z.object({ name: z.string(), savedAt, customer: customerName }))
 }
 
@@ -667,6 +680,7 @@ export const savedEstimatesOutput = {
       'either way under the `customer` filter beside it.'
   ),
   customer: customerFilter.describe('Which customers’ rows: "active" (plus house) or "all".'),
+  withheldByCustomer,
   estimates: z.array(
     z.object({
       id: z.number().describe('Pass this to restore_estimate.'),

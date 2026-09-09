@@ -297,7 +297,23 @@ reason names the bound as the stronger answer. That is the amendment's whole
 point: the strongest claim the reply can make about this carton, and the first
 one that is a proof rather than a search.
 
-## Revisit triggers
+## Amendment, 2026-09-09: the bound label says when the cap is inside it
+
+§7's label — *47 fit (upper bound 54)* — states the bound flatly because it
+is rigorous. It is also the bound on the answer *as asked*: the weight cap is
+folded in (ADR-0017 addendum 3 said so for the CSV and added two rows beside
+it). On the panel and in the summary export the label had no such neighbour,
+and the thirteenth dogfood read *2 fit (upper bound 2)* one line above a
+sentence saying the carton itself would take 3, and called it a contradiction
+a customer would see.
+
+`upperBoundLabel` now reads `binding`: when the weight cap is what stopped the
+count the label is *upper bound 2 under the cap*; when the carton did, it stays
+*upper bound 3*. Same function, so the panel and the summary agree as §7
+requires; the e2e that pins the 27,000 case is a geometry-bound case and is
+unchanged. Not a second number on the Result line — the carton's own capacity
+is already the binding sentence beneath it, backed by `spaceOnlyCount`, and
+the Result line's job is one count and one bound.
 
 - Accepted 2026-07-26 ahead of ADR-0003's dogfood trigger, as a deliberate call —
   the design resolved faster than the evidence would have arrived, and the upgrade

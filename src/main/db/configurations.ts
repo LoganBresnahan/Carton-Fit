@@ -19,6 +19,7 @@ export class ConfigurationsStore {
   readonly #upsert: Statement
   readonly #byName: Statement
   readonly #list: Statement
+  readonly #count: Statement
   readonly #remove: Statement
   readonly #setCustomer: Statement
   readonly #now: () => number
@@ -52,6 +53,10 @@ export class ConfigurationsStore {
       SELECT id, name, updated_at, customer_id FROM configurations
       WHERE (@all = 1 OR customer_id IS NULL OR customer_id = @customer)
       ORDER BY name ASC
+    `)
+    this.#count = db.prepare(`
+      SELECT COUNT(*) AS n FROM configurations
+      WHERE (@all = 1 OR customer_id IS NULL OR customer_id = @customer)
     `)
     this.#remove = db.prepare('DELETE FROM configurations WHERE name = ?')
     this.#setCustomer = db.prepare('UPDATE configurations SET customer_id = ? WHERE name = ?')
@@ -89,6 +94,11 @@ export class ConfigurationsStore {
       updatedAt: row.updated_at,
       customerId: row.customer_id
     }))
+  }
+
+  /** How many rows `list` would return — under the filter, or all (ADR-0035 amendment 1). */
+  count(customer?: CustomerScope): number {
+    return (this.#count.get(customerParams(customer)) as { n: number }).n
   }
 
   /** Returns whether a preset was actually removed, so callers can tell "gone" from "never existed". */

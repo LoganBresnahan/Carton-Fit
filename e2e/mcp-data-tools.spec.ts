@@ -146,6 +146,7 @@ test.describe('the data tier against a real database', () => {
 
       const saved = await callStructured<{
         scope: string
+        withheldByCustomer: number
         estimates: Array<{ id: number; file: string; summary: string }>
       }>(client, 'save_estimate', {})
       expect(saved.estimates).toHaveLength(1)
@@ -191,6 +192,7 @@ test.describe('the data tier against a real database', () => {
       expect(noSuchCustomer.isError).toBe(true)
       expect(JSON.stringify(noSuchCustomer.content)).toMatch(/created at the app/)
       expect(saved.estimates[0]).toMatchObject({ customer: null })
+      expect(saved.withheldByCustomer).toBe(0)
       // The same one-line receipt the app's own list renders (ADR-0016), so
       // what Claude reads out and what the person sees are one sentence.
       expect(row.summary).toContain(bigCount.toLocaleString('en-US'))

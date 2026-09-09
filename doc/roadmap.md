@@ -193,7 +193,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
-- [ ] 36. Dogfood follow-ups, 13th run — one Claude Opus 5 pass (Cowork, over
+- [x] 36. Dogfood follow-ups, 13th run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+e934339`, 2026-09-09, the first run
       against item 35's `setThisSession`. **Every packing number matched the
       reader's independent arithmetic** again — count, per-plate weight,
@@ -204,8 +204,12 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       anyway *and provenance proved it*. Five findings, verified here; none is
       a wrong number, two are refuted, and the open one is the second reader
       in two runs on the same seam.
-      - [ ] **Two lists that differ in label and not in content** (the
-        reader's worst; confirmed; the 12th run's reader hit the same seam
+      - [x] **Two lists that differ in label and not in content** (the
+        reader's worst; confirmed; *decided and shipped 2026-09-09* — ADR-0035
+        amendment 1, ADR-0029 amendment 17: `withheldByCustomer` on both list
+        replies from two `COUNT(*)` statements sharing the lists' WHERE
+        clauses; pinned in the sqlite store tests, the data-tools tests for
+        both lists and both scopes, and the fresh-profile e2e; the 12th run's reader hit the same seam
         from the description side). `scope: "model"` gave seven rows,
         `scope: "all"` the same seven, and only `customer: "all"` showed the
         eighth — another customer's receipt. The reply is labelled
@@ -219,7 +223,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         the rows the customer filter hid, zero when `customer: "all"` — a
         field that can be false, one extra count query. **Decision needed:**
         ADR-0035 amendment 1, or leave it at the label and the description.
-      - [ ] **Provenance is silent about the unit part** — refuted as
+      - [x] **Provenance is silent about the unit part** — refuted as
         proposed, recorded as a pattern. The reader set `unitPart` in the same
         `set_inputs` call as six groups and it appeared in neither list;
         proposed `notTracked: ["unitPart", "overrides"]`. That is a constant,
@@ -236,7 +240,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         `source`→`mode` rename settled that a description does not reach
         such a reader. No non-constant field exists here; recorded so the
         next proposal of the same constant is recognised.
-      - [ ] **The CSV's weights do not sum to its packed weight** — refuted,
+      - [x] **The CSV's weights do not sum to its packed weight** — refuted,
         and worth keeping: a plausible wrong finding. The reader summed
         *Unit weight × Qty* from rounded unit cells (8 × 0.012 …) and got
         13.233 against the *Packed weight* row's 13.229. The CSV's own
@@ -247,7 +251,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         instead of reading the total the file already carries. Nothing in
         the file says cells are 3 dp; nothing needs to while the totals row
         reconciles.
-      - [ ] **The summary's only bound is *upper bound N*** — half-right. The
+      - [x] **The summary's only bound is *upper bound N*** — half-right;
+        *the label shipped 2026-09-09* (ADR-0022 amendment): `upperBoundLabel`
+        reads `binding` and says *under the cap* when weight stopped the count,
+        on the panel and in the summary alike. The
         reader says the constructive number is "in the CSV only"; it is in
         the summary too, as the binding sentence the reader itself verified
         verbatim (*the carton itself would take 3: that many were placed
@@ -262,10 +269,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         did — a sentence backed by a field that already exists. Small; the
         user's call whether the Result line should carry it or the note
         already does the work.
-      - [ ] **`geometry` on the wire, *space* in the export** — already
+      - [x] **`geometry` on the wire, *space* in the export** — already
         recorded under item 35 (the enum's description says so on this very
         build; the reader read values). Nothing moves; noted as a recurrence.
-      - [ ] Coverage the reader flagged honestly: every mesh in the reference
+      - [x] Coverage the reader flagged honestly: every mesh in the reference
         file is closed, so whether an open-mesh warning survives export is
         unexercised by any dogfood run. The export builders test covers it
         synthetically; a real open file for the brief would close the gap.

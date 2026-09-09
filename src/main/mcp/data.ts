@@ -38,6 +38,10 @@ export interface ToolStorage {
   /** The loaded document's receipts, across its linked versions (ADR-0034 §3). */
   estimatesForDocument(contentHash: string, limit?: number, customer?: CustomerScope): EstimateRow[]
   estimateById(id: number): EstimateRow | null
+  /** Row counts under a filter, for saying how many the filter withheld
+   *  (ADR-0035 amendment 1). `contentHash` null counts every document. */
+  countEstimates(contentHash: string | null, customer?: CustomerScope): number
+  countConfigurations(customer?: CustomerScope): number
   /** Every customer (ADR-0035). Creating one is not here: it is the person's act. */
   listCustomers(): CustomerRow[]
 }
@@ -72,16 +76,20 @@ export function isoTime(epochMs: number): string {
 export interface PresetsReport {
   /** Which rows these are (ADR-0035 §4). */
   customer: CustomerFilter
+  /** How many rows the customer filter hid (ADR-0035 amendment 1); 0 under `'all'`. */
+  withheldByCustomer: number
   presets: Array<{ name: string; savedAt: string; customer: string | null }>
 }
 
 export function presetsReport(
   rows: readonly ConfigurationSummary[],
   customer: CustomerFilter = 'all',
-  names: CustomerNames = new Map()
+  names: CustomerNames = new Map(),
+  withheldByCustomer = 0
 ): PresetsReport {
   return {
     customer,
+    withheldByCustomer,
     presets: rows.map((row) => ({
       name: row.name,
       savedAt: isoTime(row.updatedAt),
@@ -95,6 +103,8 @@ export interface SavedEstimatesReport {
   scope: EstimatesScope
   /** Which customers' (ADR-0035 §4). */
   customer: CustomerFilter
+  /** How many rows in this scope the customer filter hid (ADR-0035 amendment 1); 0 under `'all'`. */
+  withheldByCustomer: number
   estimates: Array<{
     id: number
     file: string
@@ -108,11 +118,13 @@ export function savedEstimatesReport(
   rows: readonly EstimateRow[],
   scope: EstimatesScope = 'all',
   customer: CustomerFilter = 'all',
-  names: CustomerNames = new Map()
+  names: CustomerNames = new Map(),
+  withheldByCustomer = 0
 ): SavedEstimatesReport {
   return {
     scope,
     customer,
+    withheldByCustomer,
     estimates: rows.map((row) => ({
       id: row.id,
       file: row.fileName,

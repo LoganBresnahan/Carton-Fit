@@ -111,7 +111,12 @@ export function verdictCaption(result: PackResult, unitPartName?: string | null)
  */
 export function upperBoundLabel(result: PackResult): string | null {
   if (result.mode !== 'max-quantity' || result.upperBound === undefined) return null
-  return `upper bound ${result.upperBound.toLocaleString()}`
+  // The bound folds the weight cap in (ADR-0017 addendum 3 said so in the
+  // CSV's rows; the 13th dogfood read *2 fit (upper bound 2)* beside a
+  // sentence saying the carton takes 3 and called it a contradiction). When
+  // the cap is what stopped the count, the label says the bound is under it.
+  const underCap = result.binding === 'weight' ? ' under the cap' : ''
+  return `upper bound ${result.upperBound.toLocaleString()}${underCap}`
 }
 
 /** Extents descending, so two triples compare by eye down the line (ADR-0022 §7)

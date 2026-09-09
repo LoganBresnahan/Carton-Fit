@@ -95,6 +95,34 @@ customers is byte-identical.
   new name is the user's act, for the same reason a delete is (ADR-0029
   amendment 8): not undoable, and not something to do on a reader's guess.
 
+## Amendment 1 (2026-09-09) — a list says how many rows its filter hid
+
+§4 made the customer filter its own axis on the wire, defaulting to the
+active customer plus house, and put a `customer` label on every reply. Two
+readers in two runs then tripped on the same seam from opposite sides. The
+12th read `scope: "all"` as *every receipt* and found six of seven; its fix
+was the description, which now says the customer axis is separate. The 13th
+read that description, called `scope: "model"` and `scope: "all"`, got two
+replies identical in every row and different only in label, and still called
+it a trap — because the reply says *which* rows these are and not *how many*
+it withheld, and "all" is the call a reader makes to stop worrying.
+
+**Decision:** `withheldByCustomer` on both list replies — the number of rows
+in the requested scope that the customer filter hid, `0` under `customer:
+"all"` and `0` when nothing was hidden. Computed as the scope's count with no
+filter minus its count under the filter, from two `COUNT(*)` statements that
+share the lists' WHERE clauses and carry no LIMIT: a count is not a page.
+
+The axes stay independent. The panel's one *All* widens both only because the
+panel has one control; a client that can ask for either reading keeps both.
+What changes is that a list can now be read on its own: a reply with
+`withheldByCustomer: 1` is a different reply from one with `0`, where before
+the same rows under `"active"` and `"all"` were the same bytes.
+
+Not a `hiddenCustomers: [names]`: the names are the other customers' business,
+and a reader working for one customer does not need to know who else the shop
+works for to know its list is short.
+
 ## Consequences
 
 - The "why does this part have two receipts?" question gets a one-word answer

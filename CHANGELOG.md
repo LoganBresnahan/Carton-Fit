@@ -40,6 +40,17 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   filter, which is its own switch.
   ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md) amendment 2,
   [ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md) amendment 16)
+- **A list tells an assistant how many rows the customer filter hid.** The
+  preset and saved-estimate lists an assistant reads carry a count of the
+  other customers' rows they left out, so two lists that differ only in label
+  no longer read as one list.
+  ([ADR-0035](doc/adr/0035-customers-are-a-label-on-presets-and-receipts.md) amendment 1,
+  [ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md) amendment 17)
+- **The bound beside a weight-limited count says so.** *2 fit (upper bound 2
+  under the cap)* on the panel and in the summary export, where the bound
+  used to read like the carton's capacity one line above the sentence giving
+  the real one. ([ADR-0022](doc/adr/0022-extreme-point-placement-shelf-stays-as-incumbent.md),
+  amendment of 2026-09-09)
 - **A count with no part chosen says what it counted.** The result reads
   *1 fit — the whole file as one unit* on the panel, in both exports and to an
   assistant, instead of a bare number.
