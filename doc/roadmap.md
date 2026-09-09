@@ -193,6 +193,74 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [ ] 38. Dogfood follow-ups, 15th run — one Claude Opus 5 pass (Cowork, over
+      the remote-devices bridge) on `1.2.0+904d6bd`, 2026-09-09, the first run
+      on the brief that names every tool and the first with the bolt gone from
+      the warning. **Every packing number matched the reader's independent
+      arithmetic** — count, per-plate weight, the tie at 35 lb, the hand-over
+      at 100 lb, whole-file bound of 1 — both paths byte-identical to 17
+      digits; `setThisSession` and `withheldByCustomer` both read before the
+      reader needed them; `set_customer` proven inert on the numbers to the
+      bit. Five findings; two confirmed, one of them a wrong sentence on
+      three surfaces, and the other the rest of item 37's bolt.
+      - [ ] **A weightless pack leaves the app as a measured zero** (the
+        reader's worst; confirmed on the panel, the summary and the CSV).
+        `set_inputs`'s own description says *to run with no weight, set
+        partWeight to 0*; the wire then says `weightInput.supplied: false`
+        with a note. The panel's binding sentence for a geometry-bound count
+        says *the cap has room to spare* — an assessment of a weight nobody
+        gave — and the summary prints *Packed weight: 0 of 35 lb · Part
+        weight: 0 lb per part, entered directly*, the CSV *Packed weight
+        (lb),0* and no warning row. Not lossy: the exports assert the
+        opposite of the wire (*entered directly* against *supplied: false*),
+        in the artifact built to be pasted into a quote, and the plate's real
+        weight is 9.18 lb. `verdict.ts` already has `weightless(request)` and
+        uses it for the nothing-bound branch only. Derived, rule 5: one
+        function. `otherConstraintOf` returns `known: false, reason: "no part
+        weight was given"` for a geometry-bound weightless pack, so the wire's
+        `otherConstraint` stops claiming an arithmetic it never did and the
+        sentence reads *The carton stopped this at 3; no part weight was
+        given, so whether the cap would have is not established*. A
+        `weightlessWarning(request)` beside `openMeshWarning` feeds the panel,
+        both exports' warning channels and the wire's `weightInput.note`
+        (which has its own copy of the sentence today). The summary's weight
+        lines say *no part weight given* instead of a zero entered by hand;
+        the CSV's packed-weight cell is blank, the way max weight is blank
+        when infinite. **Decision needed:** the `otherConstraint` change is a
+        value change inside an existing union (ADR-0020 says a wrong meaning
+        may change); ADR-0017 addendum 6 and ADR-0029 amendment 19.
+      - [ ] **The nut's warning is false in both tiers** (confirmed, and
+        wider than the reader said). The reader showed the eight nut boxes
+        are one box under axis permutation and argued the *thorough* tier's
+        orientation search makes the placement irrelevant. True — and the
+        fast tier's `aabbOrientations` also lays every box in all six axis
+        permutations, so a permuted instance yields the same six candidates
+        in either tier and no count can depend on it. The alike test compares
+        extents *as placed*; the question the warning asks is whether the
+        instances differ in *shape*. Derived: `mixedInstanceKinds` compares
+        sorted extents (permutation-invariant), so the nut is alike and the
+        reference file carries no mixed-instances warning at all; a kind
+        whose instances differ after sorting — a non-90° rotation, or a
+        product name shared by two shapes — still fires. `inspect_model`'s
+        `instancesAlike` comes to mean *same shape*; `sizePerInstance` stays
+        largest-first whenever the instances are not identical as placed, so
+        the reader's *which of the eight* has one answer: all of them. Item
+        37 removed the bolt from this sentence for noise; this removes the
+        nut for being a permutation. Item 33's open sub-item on the warning's
+        wording stands for a file that earns it; the reference file no longer
+        does. ADR-0029 amendment 19, ADR-0002 addendum's reading corrected.
+      - [ ] **`sizePerInstance` cannot be acted on for a mixed kind** — the
+        third reader on it; folds into the above. With the permutation read
+        as alike, the sorted extents describe every nut and the reply says
+        so.
+      - [ ] **`binding.constraint` misleading read alone** — standing
+        refutation (ADR-0029 amendment 1, `doc/wire-rules.md`); the reader
+        recorded it as documented and so does this line.
+      - [ ] Aside the reader was right to raise: the app reads a file by
+        absolute path without the bridge's folder grant. The app's own file
+        access, by design — the MCP server runs on the machine the files are
+        on — and not gated by a client's consent surface. Noted in the brief's
+        connect section so the next reader is not surprised.
 - [x] 37. Dogfood follow-ups, 14th run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+5547fca`, 2026-09-09, the first run
       against item 36's count and label. **Every packing number matched the
