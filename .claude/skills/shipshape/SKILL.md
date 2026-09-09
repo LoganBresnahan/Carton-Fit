@@ -83,6 +83,18 @@ detail is not a decision.
 **Roadmap** (`doc/roadmap.md`): shipped work is checked off; the frontier
 matches reality; deferred sub-tasks are pinned as carry-ins, not dropped.
 
+**Wire rules** (`doc/wire-rules.md`): if the diff touches `src/main/mcp/`,
+every new sentence a reply can carry has a field behind it (rule 1), no new
+field is a constant (rule 2), and a new tool has a station in
+`doc/dogfood/mcp-session.md` in the same commit (rule 12):
+
+```bash
+git diff --name-only HEAD~1 -- src/main/mcp/ | grep -q . && \
+  diff <(grep -o "registerTool(\s*'[a-z_]*'" -A1 src/main/mcp/server.ts | grep -o "'[a-z_]*'" | tr -d "'" | sort) \
+       <(grep -o '`[a-z_]*`' doc/dogfood/mcp-session.md | tr -d '`' | sort -u) | grep '^<' || true
+# lines starting with '<' are tools the brief never names
+```
+
 **VISION.md**: still describes what the app actually does — inputs, modes,
 tiers, outputs. Scope changes land here, not just in code.
 

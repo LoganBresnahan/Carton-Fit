@@ -60,6 +60,12 @@ when scope changes.
   which nothing else points at. CI's gate only checks that the tag matches
   `package.json`; the rest are on you. What the number promises is ADR-0020 —
   and what an *unreleased* build's number promises is ADR-0027.
+- **Anything on the MCP surface — a tool, a field, a sentence — passes
+  `doc/wire-rules.md` first.** Thirteen rules distilled from fourteen dogfood
+  runs and eighteen amendments to ADR-0029, plus the standing refutations.
+  The one that matters most: write the structured fields before the prose
+  that reads them, and build the claims table (every sentence the tool can
+  say, and the field behind it) in the ADR before the first line of code.
 - **Every decision gets an ADR** in `doc/adr/NNNN-slug.md` (Nygard style: Context /
   Decision / Consequences / Alternatives / Revisit triggers). New dependency, changed
   algorithm or contract, pattern adopted or rejected — that's a decision. Implementation

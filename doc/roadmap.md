@@ -271,6 +271,13 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         their writes but do not say, at the point of writing, that the row
         cannot be removed from the wire — the `list_*` descriptions carry it.
         One clause in each description.
+      - [x] **The rules, in one place** (*2026-09-09*, the user's ask after
+        this run: "how will we learn what we have so far so we don't run
+        into as many bugs when we make more tools"). `doc/wire-rules.md`:
+        thirteen rules with the run and amendment that taught each, the
+        claims table to build before a tool, and the standing refutations.
+        CLAUDE.md, `/shipshape` and `/dogfood` point at it; items 19 and 23
+        carry it in.
       - [x] Aside: no folder grant was needed this time; the 12th run needed
         one. Client-side, not ours; noted so the brief's connect steps do not
         promise either.
@@ -1082,7 +1089,11 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       check would have quietly doubled the traffic and made the 60/hour limit a
       function of how often a window reloads.
 
-- [ ] 19. Tier 3: drop-in packing — **ADR-0023, still Proposed**. Voxelized
+- [ ] 19. Tier 3: drop-in packing — **ADR-0023, still Proposed**. *Carry-in
+      (2026-09-09):* anything this adds to the wire — a new tier value, a new
+      qualification, a note that says why a count moved — passes
+      `doc/wire-rules.md`, and the claims table is written in the ADR before
+      the first sentence is. Voxelized
       geometry dilated by clearance, an insertion-order constraint (each part must
       drop into place past the parts already there), warm-started from tier 2 so
       it is monotone and anytime; the witness is packing *instructions* — an
@@ -1665,7 +1676,11 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       Cost of not catching it: a handoff that asks a dogfooder to re-verify
       something the project proved two days earlier.
 
-- [ ] 23. Skid stage — **ADR-0031, Proposed 2026-09-02.** A program manager
+- [ ] 23. Skid stage — **ADR-0031, Proposed 2026-09-02.** *Carry-in
+      (2026-09-09):* the skid tools and fields go through `doc/wire-rules.md`
+      — fields before prose, the claims table in the ADR, a station in the
+      brief in the same commit, the skid scenarios in the goldens as the
+      third consumer. A program manager
       at a die-casting plant, via their quality manager: take a saved carton estimate to a skid
       build-out — three skid sizes (48×45, 26×26, 40×48 in) plus custom,
       column or interlock stacking, overhang flagged as non-functional, pieces

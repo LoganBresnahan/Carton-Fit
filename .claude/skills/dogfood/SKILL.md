@@ -87,7 +87,10 @@ one who checks the checker.
      it would have replaced one false claim with another. **Never implement a
      reader's proposed mechanism without deriving it yourself.**
 
-4. **Classify what survives.** A finding is one of:
+4. **Classify what survives.** Check `doc/wire-rules.md` first — its
+   standing refutations are the proposals that keep arriving, and a finding
+   that matches one is answered by pointing at the rule and recording the
+   recurrence, not by re-deriving. A finding is one of:
    - a **wrong number** — engine defect, the rarest by far;
    - a **wrong sentence** — prose asserting what no field establishes. The
      standing rule from ADR-0029's phase-2 amendments applies: the fix is a
