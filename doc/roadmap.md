@@ -193,6 +193,79 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [ ] 35. Dogfood follow-ups, 12th run — one Claude Opus 5 pass (Cowork,
+      driving the Windows machine over the remote-devices bridge) on
+      `1.2.0+e29c24c`, 2026-09-08, the first run against item 34's fixes.
+      **Every packing number matched the reader's independent arithmetic** —
+      count, per-plate weight to four decimals, packed weight, whole-file fill
+      (153.77 ÷ 288), the double bound at 35 lb and the change of hands at
+      100 lb — and the live and stateless paths were byte-identical again.
+      Every item-34 fix was seen working: *Nothing bound* at station 3 with
+      `bound: false` behind `constraint: "weight"`, the whole-file fill label,
+      `cleared.unitPart` on reload, exports carrying `Limit bound`, the
+      mixed-instances warning with its `!` in the summary. Four findings,
+      verified here; none is a wrong number.
+      - [ ] **`changedThisSession` diffs values, not writes** (the reader's
+        worst, confirmed in `changedGroups` and against ADR-0034 amendment 1's
+        own sentence). The reader set seven groups in one `set_inputs` call
+        to the values the app had inherited and got `[]`; then proved the
+        mechanism with a round trip — wall 0.25→0.5 listed `clearances`, 0.5
+        →0.25 dropped it. The description says *which of these inputs were
+        SET this session*, and the amendment says *the group just set appears
+        in `changedThisSession`* — both false for a write that lands on the
+        inherited value, which is exactly the write the brief prescribes
+        (*set what your answer depends on rather than trusting it*). A
+        session that does the defensive move and one that skips it read
+        identically. Derived, not adopted: the field is honest as **named** —
+        the values did not change, and the numbers are the same either way —
+        so it stays, and its description drops *set*. The reader's ask is a
+        second question, *did this session write it*, which needs a second
+        field: `setThisSession`, the groups any `updateSettings` has written
+        since launch, value-equal or not. Cheap (a `Set<InputGroup>` beside
+        `LAUNCH_SETTINGS`), can be empty, and the two together say the one
+        thing neither says alone — *written, and to the value it already
+        had*. One caveat for both fields the reader assumed away: "session"
+        is the app's launch, not the client's connection, so a second client
+        on the same running app inherits the first one's writes; the
+        description should say so. **Decision needed:** add `setThisSession`
+        as ADR-0034 amendment 2 (a wire addition, so also an ADR-0029
+        amendment), or leave the diff alone and fix only the two sentences.
+      - [ ] **`scope: "all"` is described as *every receipt for every part***
+        (confirmed in `listSavedEstimatesInput` and `savedEstimatesOutput`).
+        Seven receipts exist; the reader got six, the missing one another
+        customer's; only `customer: "all"` showed it. The data is right and
+        the reply's `customer: "active"` labels it — the two axes are
+        independent on purpose (ADR-0035 §4, the comment in `scopedEstimates`
+        says so) — but the `scope` description reads as absolute and is the
+        call a reader makes to stop worrying about scoping. Wrong sentence;
+        the field already exists, so the fix is the description: *every
+        part's, still under the customer filter*. The brief has the same gap
+        — station 6 names `scope: "all"` and never the customer axis, and the
+        word *customer* appears nowhere in it — which is item 34's open
+        pre-paste sub-item from the other side: a brief that never mentions
+        customers cannot ask for one to exist.
+      - [ ] **A preset applied over a live override changes the count the
+        preset was saved beside** — recorded, not a defect. The reader's own
+        audit says the description warns of it and the reply discloses it
+        (`overriddenKinds`, `countedWeightFrom: "override"`); the proposed
+        `presetSavedWithOverrides` cannot exist because a preset does not
+        record overrides at all — they belong to the file, not the carton
+        (ADR-0034 §2, `save_preset`'s description). What the reader is
+        really reporting is that a preset's *name* remembers an answer while
+        the preset holds a carton — the same mental-model seam the user
+        raised on the sidebar under item 33 (*what is a preset vs a saved
+        estimate*). Pinned there; nothing to build here that a field could
+        back.
+      - [ ] **One constraint, two names** — trivial, confirmed: the wire says
+        `constraint: "geometry"`, the panel and both exports say *Limited by:
+        space* (`bindingLabel`). Both are read by scripts — the CSV's comment
+        already refuses to rename the row for that reason — so neither value
+        moves; the wire's enum description should say the human surfaces
+        call it *space*.
+      - [ ] Station 0 read as SUSPECT only because the inputs arrived already
+        at station 4's configuration from the previous run and provenance
+        could not say the reader had re-set them — the first finding seen from
+        the other end. Not a second finding.
 - [ ] 34. Dogfood follow-ups, 11th run — two Claude Opus 5 passes (one in
       Cowork, one in the chat client) on `1.2.0+44a6ed9`, 2026-09-08, the
       first runs against items 26 and 27. **Every number matched both readers'
