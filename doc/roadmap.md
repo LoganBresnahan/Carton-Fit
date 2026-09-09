@@ -193,7 +193,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
-- [ ] 35. Dogfood follow-ups, 12th run — one Claude Opus 5 pass (Cowork,
+- [x] 35. Dogfood follow-ups, 12th run — one Claude Opus 5 pass (Cowork,
       driving the Windows machine over the remote-devices bridge) on
       `1.2.0+e29c24c`, 2026-09-08, the first run against item 34's fixes.
       **Every packing number matched the reader's independent arithmetic** —
@@ -205,9 +205,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       `cleared.unitPart` on reload, exports carrying `Limit bound`, the
       mixed-instances warning with its `!` in the summary. Four findings,
       verified here; none is a wrong number.
-      - [ ] **`changedThisSession` diffs values, not writes** (the reader's
+      - [x] **`changedThisSession` diffs values, not writes** (the reader's
         worst, confirmed in `changedGroups` and against ADR-0034 amendment 1's
-        own sentence). The reader set seven groups in one `set_inputs` call
+        own sentence). *Decided and shipped 2026-09-09* — ADR-0034 amendment 2,
+        ADR-0029 amendment 16: `setThisSession` beside the diff, from a
+        `settingsWritten` set the store unions on every write and a restore;
+        undo and redo re-apply and add nothing; the descriptions say the
+        session is the launch. Pinned in the provenance unit test (a write to
+        the inherited value is set, not changed; undo keeps the set as it was)
+        and the drive e2e (clearances written to their zero). The reader set seven groups in one `set_inputs` call
         to the values the app had inherited and got `[]`; then proved the
         mechanism with a round trip — wall 0.25→0.5 listed `clearances`, 0.5
         →0.25 dropped it. The description says *which of these inputs were
@@ -230,7 +236,9 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         description should say so. **Decision needed:** add `setThisSession`
         as ADR-0034 amendment 2 (a wire addition, so also an ADR-0029
         amendment), or leave the diff alone and fix only the two sentences.
-      - [ ] **`scope: "all"` is described as *every receipt for every part***
+      - [x] **`scope: "all"` is described as *every receipt for every part*** —
+        *fixed 2026-09-09:* both descriptions say *still under the customer
+        filter*, and station 6 of the brief names the second axis.
         (confirmed in `listSavedEstimatesInput` and `savedEstimatesOutput`).
         Seven receipts exist; the reader got six, the missing one another
         customer's; only `customer: "all"` showed it. The data is right and
@@ -244,7 +252,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         word *customer* appears nowhere in it — which is item 34's open
         pre-paste sub-item from the other side: a brief that never mentions
         customers cannot ask for one to exist.
-      - [ ] **A preset applied over a live override changes the count the
+      - [x] **A preset applied over a live override changes the count the
         preset was saved beside** — recorded, not a defect. The reader's own
         audit says the description warns of it and the reply discloses it
         (`overriddenKinds`, `countedWeightFrom: "override"`); the proposed
@@ -256,13 +264,14 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         raised on the sidebar under item 33 (*what is a preset vs a saved
         estimate*). Pinned there; nothing to build here that a field could
         back.
-      - [ ] **One constraint, two names** — trivial, confirmed: the wire says
+      - [x] **One constraint, two names** — trivial, confirmed (*the enum's
+        description now says it, 2026-09-09*): the wire says
         `constraint: "geometry"`, the panel and both exports say *Limited by:
         space* (`bindingLabel`). Both are read by scripts — the CSV's comment
         already refuses to rename the row for that reason — so neither value
         moves; the wire's enum description should say the human surfaces
         call it *space*.
-      - [ ] Station 0 read as SUSPECT only because the inputs arrived already
+      - [x] Station 0 read as SUSPECT only because the inputs arrived already
         at station 4's configuration from the previous run and provenance
         could not say the reader had re-set them — the first finding seen from
         the other end. Not a second finding.

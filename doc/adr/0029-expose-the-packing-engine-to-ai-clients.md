@@ -1345,6 +1345,22 @@ it, so a `set_inputs` shows its own group in the list. `get_app_state`'s
 description stops saying "nothing here distinguishes" and points at the
 field. Additive, minor.
 
+### Phase-2 contract amendment 16 (2026-09-09, twelfth dogfood) — written beside changed
+
+ADR-0034 amendment 2 carries the reasoning. On the wire:
+`inputs.provenance.setThisSession: InputGroup[]`, the groups written since
+the app launched whether or not the value moved, beside the unchanged
+`changedThisSession`. The reader that found it had set seven groups to the
+values the app had inherited and read `[]`. The descriptions of both lists
+and of the object drop *set* where they meant *changed*, and say that the
+session is the launch, not the connection. Same run, description-only:
+`list_saved_estimates.scope` no longer says *every receipt for every part* —
+it says *every part's, still under the customer filter* (a reader with a
+second customer's row got six of seven and only `customer: "all"` showed the
+seventh; ADR-0035 §4's two axes are independent on purpose, and the reply's
+`customer` already said so); and `binding.constraint` says the window and
+both exports call `geometry` *space*. Additive, minor.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

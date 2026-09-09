@@ -96,6 +96,7 @@ function snapshotState(units?: Partial<OutputUnits>): DriveOutcome['state'] {
       customer: activeCustomer(),
       settingsAtLaunch: LAUNCH_SETTINGS,
       launchSource: LAUNCH_SETTINGS_SOURCE,
+      settingsWritten: state.settingsWritten,
       fileName: state.file?.name ?? null,
       parts: state.parts,
       settings: state.settings,

@@ -244,10 +244,53 @@ reply, which a reader also asked for: that would be a constant, and a constant
 cannot qualify the sentence beside it (ADR-0029 amendment 12). The reply to
 `set_inputs` returns the state, so the group just set appears in
 `changedThisSession` — which is the disclosure that ask wanted, backed by a
-field that can be false.
+field that can be false. *(Corrected by amendment 2: it appears there only
+when the value moved.)*
 
 Nothing in §1–§6 changes. The document still owns the file-scoped state; the
 carton is still global; the flag names which is which.
+
+## Amendment 2 (2026-09-09) — written is a different question from changed
+
+Amendment 1 shipped on the evening of 2026-09-08 and the next reader, that
+night, did what the brief tells every reader to do: set every group the
+answer depended on rather than trust what it found. The values it set were
+the values the app had inherited, so `changedThisSession` said `[]` — and
+then it proved the mechanism with a round trip, wall 0.25 → 0.5 listing
+`clearances` and 0.5 → 0.25 dropping it again. A session that does the
+defensive move and one that skips it read identically, and the field's
+description said *which of these inputs were set this session* while the
+amendment above said *the group just set appears*. Both sentences were false
+for the one write the brief prescribes.
+
+The diff is honest as **named**. The numbers did not change, and the answer
+is the same whether a hand touched them or not; nothing about the count is
+in doubt. What the reader could not show was the process — that the inputs
+were its own — and that is a second question. Two questions, two fields.
+
+**Decision:** `inputs.provenance.setThisSession` — the input groups any write
+has touched since launch, value-equal or not. The store keeps the set beside
+the launch snapshot (`settingsWritten`), unioned on every `updateSettings`
+and on a restore; the diff stays as it was. A group in `setThisSession` and
+not in `changedThisSession` was written to the value it already had, which
+is the sentence neither list says alone. Both descriptions drop *set* where
+they meant *changed*.
+
+Two rules fell out of deriving it rather than adopting the reader's mechanism:
+
+- **Undo and redo are not writes.** They re-apply a snapshot of an earlier
+  write that already counted; letting them add every group in the snapshot
+  would mark the carton as *set* because the cap was undone. `restoreInputs`
+  takes a flag and the undo path passes it.
+- **"This session" is the app's launch, not the client's connection.** Both
+  lists are per launch, so a second client on the same running app sees the
+  first one's writes. The reader assumed otherwise; the description now says
+  so, because a field whose scope a reader guesses is a field that will be
+  read wrong.
+
+Not a `confirmedThisSession` (the reader's other name): the same set, and
+*confirmed* claims the value was checked against something, which a write
+does not do.
 
 ## Alternatives considered
 

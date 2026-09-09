@@ -15,7 +15,13 @@ import { clampPanelWidth, DEFAULT_PANEL_WIDTH } from './layout/panel-width'
 // The packing inputs live in packing/settings.ts so the main process can share
 // them (ADR-0029 phase 2); re-exported here because this is where the app has
 // always imported them from.
-import { DEFAULT_SETTINGS, settingsFromStored, type PackingSettings } from './packing/settings'
+import {
+  DEFAULT_SETTINGS,
+  settingsFromStored,
+  writtenGroups,
+  type InputGroup,
+  type PackingSettings
+} from './packing/settings'
 export {
   DEFAULT_SETTINGS,
   settingsFromStored,
@@ -194,6 +200,13 @@ interface AppState {
   // --- settings slice ---
   settings: PackingSettings
   updateSettings: (patch: Partial<PackingSettings>) => void
+  /** The input groups any write has touched since launch, whether or not the
+   *  value moved (ADR-0034 amendment 2). `changedGroups` against
+   *  `LAUNCH_SETTINGS` says whether the numbers differ from what the app
+   *  started with; this says whether this launch wrote them — and a group in
+   *  here and not there was written to the value it already had. Undo and
+   *  redo re-apply snapshots of earlier writes and add nothing. */
+  settingsWritten: InputGroup[]
 
   /** Which part max-quantity replicates, or null for the whole file as one
    *  rigid unit (ADR-0003). Deliberately NOT in the persisted settings: a part
@@ -227,7 +240,8 @@ interface AppState {
   restoreInputs: (
     settings: Partial<PackingSettings>,
     overrides: PartWeightOverrides,
-    unitPartName?: string | null
+    unitPartName?: string | null,
+    written?: boolean
   ) => void
 
   /** Which 3D view is showing (VISION: "toggle between model view and packed
@@ -389,7 +403,12 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   settings: LAUNCH_SETTINGS,
-  updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+  updateSettings: (patch) =>
+    set((s) => ({
+      settings: { ...s.settings, ...patch },
+      settingsWritten: writtenGroups(s.settingsWritten, patch)
+    })),
+  settingsWritten: [],
 
   unitPartName: null,
   setUnitPartName: (unitPartName) => set({ unitPartName }),
@@ -405,9 +424,10 @@ export const useAppStore = create<AppState>((set) => ({
       return { partWeightsG: next }
     }),
   setPartWeights: (partWeightsG) => set({ partWeightsG }),
-  restoreInputs: (patch, partWeightsG, unitPartName) =>
+  restoreInputs: (patch, partWeightsG, unitPartName, written = true) =>
     set((s) => ({
       settings: { ...s.settings, ...patch },
+      settingsWritten: written ? writtenGroups(s.settingsWritten, patch) : s.settingsWritten,
       partWeightsG,
       unitPartName: unitPartName === undefined ? s.unitPartName : unitPartName
     })),

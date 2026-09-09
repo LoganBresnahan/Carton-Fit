@@ -141,3 +141,17 @@ export function changedGroups(from: PackingSettings, to: PackingSettings): Input
   }
   return GROUP_ORDER.filter((group) => changed.has(group))
 }
+
+/** `already` plus the groups `patch` writes, in reply order — value-equal or
+ *  not. The other half of provenance (ADR-0034 amendment 2): `changedGroups`
+ *  says whether the numbers moved, this says whether a hand touched them. */
+export function writtenGroups(
+  already: readonly InputGroup[],
+  patch: Partial<PackingSettings>
+): InputGroup[] {
+  const written = new Set<InputGroup>(already)
+  for (const key of Object.keys(patch) as (keyof PackingSettings)[]) {
+    if (key in GROUP_OF) written.add(GROUP_OF[key])
+  }
+  return GROUP_ORDER.filter((group) => written.has(group))
+}

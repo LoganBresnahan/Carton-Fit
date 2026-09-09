@@ -33,6 +33,13 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   rest are from an earlier session or the defaults. Eight dogfood readers had
   asked. ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md) amendment 1,
   [ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md) amendment 15)
+  It also lists the groups *written* since launch, whether or not the value
+  moved, so an assistant that sets an input to the value it already had can
+  show it did. Undoing an edit does not count as writing one. Alongside, the
+  saved-estimates tool's "all" scope now says it stays within the customer
+  filter, which is its own switch.
+  ([ADR-0034](doc/adr/0034-the-loaded-model-owns-its-state.md) amendment 2,
+  [ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md) amendment 16)
 - **A count with no part chosen says what it counted.** The result reads
   *1 fit — the whole file as one unit* on the panel, in both exports and to an
   assistant, instead of a bare number.

@@ -147,10 +147,13 @@ function apply(entry: Entry): void {
     // have, and `partsForRequest` would silently pack everything while the
     // store claimed a unit part. Same rule the restore path uses.
     const state = useAppStore.getState()
+    // NOT a write for provenance's `setThisSession` (ADR-0034 amendment 2):
+    // the snapshot is an earlier write coming back, and it already counted.
     state.restoreInputs(
       entry.state.settings,
       entry.state.overrides,
-      prunedUnitPart(entry.state.unitPart, state.parts)
+      prunedUnitPart(entry.state.unitPart, state.parts),
+      false
     )
   } finally {
     // The store notifies subscribers synchronously inside `set`, so by here our

@@ -66,6 +66,7 @@ function fakeDrive(): DriveBridge & {
   const state = buildAppState({
     customer: null,
     settingsAtLaunch: DEFAULT_SETTINGS,
+    settingsWritten: [],
     launchSource: 'defaults',
     fileName: 'bracket.step',
     parts: [],

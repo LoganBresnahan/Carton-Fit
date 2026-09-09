@@ -373,9 +373,10 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
         'The running app’s state: which file is loaded, every input as the app understands it, ' +
         'mode, tier, display units, and this build’s version. Does not wait for an in-flight ' +
         'recompute — the estimate field says one is running instead. ' +
-        'THE INPUTS PERSIST between sessions: inputs.provenance says which groups this session ' +
-        'changed and whether the rest are an earlier session’s or the defaults, so set what ' +
-        'your answer depends on rather than trusting what you find. Overrides and the unit ' +
+        'THE INPUTS PERSIST between sessions: inputs.provenance says which groups this launch ' +
+        'has written (setThisSession), which of those changed value (changedThisSession), and ' +
+        'whether the rest are an earlier session’s or the defaults — so set what your answer ' +
+        'depends on rather than trusting what you find. Overrides and the unit ' +
         'part are the exception — they are cleared whenever a file loads. ' +
         'Values come back in the OUTPUT units (mm and g unless you ask otherwise), which are ' +
         'not the units the person is looking at: `displayUnits` says what the window shows. A ' +

@@ -56,6 +56,7 @@ export interface AppStateReport {
      *  amendment 1). The answer to "which of these did I set?". */
     provenance: {
       changedThisSession: InputGroup[]
+      setThisSession: InputGroup[]
       unchangedAre: 'earlier-session' | 'defaults'
     }
   }
@@ -72,6 +73,8 @@ export interface AppStateSource {
   /** The settings at launch and where they came from — see the store. */
   settingsAtLaunch: PackingSettings
   launchSource: 'earlier-session' | 'defaults'
+  /** The store's `settingsWritten` — groups touched since launch, value-equal or not. */
+  settingsWritten: InputGroup[]
   fileName: string | null
   parts: readonly ImportedPart[]
   settings: PackingSettings
@@ -126,6 +129,7 @@ export function buildAppState(
       },
       provenance: {
         changedThisSession: changedGroups(source.settingsAtLaunch, settings),
+        setThisSession: source.settingsWritten,
         unchangedAre: source.launchSource
       }
     },

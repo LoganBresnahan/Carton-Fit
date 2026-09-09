@@ -135,6 +135,18 @@ test('a drive journey: every reply carries the estimate for ITS OWN inputs', asy
       expect.arrayContaining(['mode', 'maxWeight', 'weight'])
     )
     expect(state.state.inputs.provenance.unchangedAre).toBe('defaults')
+    // …and which it WROTE (ADR-0034 amendment 2): the clearances below are set
+    // to the zero they already are, so they are written and not changed — the
+    // defensive move the brief prescribes, now visible when it lands on the
+    // inherited value.
+    expect(state.state.inputs.provenance.setThisSession).not.toContain('clearances')
+    const confirmed = await callStructured<Outcome>(client, 'set_inputs', {
+      clearances: { betweenParts: { value: 0, unit: 'mm' }, wall: { value: 0, unit: 'mm' } }
+    })
+    expect(confirmed.state.inputs.provenance.setThisSession).toEqual(
+      expect.arrayContaining(['mode', 'clearances', 'maxWeight', 'weight'])
+    )
+    expect(confirmed.state.inputs.provenance.changedThisSession).not.toContain('clearances')
   } finally {
     await client.close()
     await stopSpawnedApp(shim.profile)

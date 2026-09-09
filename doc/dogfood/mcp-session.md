@@ -106,10 +106,13 @@ the per-kind weight overrides belong to the loaded file, and `load_model`
 clears them and reports what it cleared (`cleared`), so nothing from an earlier
 session can reach your station-4 numbers through them. What the app does keep
 between sessions is the global carton — dimensions, clearances, the cap, the
-weight mode — and `inputs.provenance` tells you which groups this session
-changed and whether the rest came from an earlier session or the defaults.
-Set what your answer depends on rather than trusting what you find, and say
-what provenance reported before and after you did.
+weight mode — and `inputs.provenance` tells you which groups this launch has
+written (`setThisSession`), which of those changed value
+(`changedThisSession`), and whether the rest came from an earlier session or
+the defaults. Set what your answer depends on rather than trusting what you
+find, and say what provenance reported before and after you did: a group you
+wrote to the value it already had belongs in the first list and not the
+second, and that is the field showing you did the work.
 
 ### Station 1 — inspect a model
 
@@ -225,6 +228,12 @@ Check and report:
   claim. Then call `get_app_state` and check `file.savedEstimates` against what
   you saved. A list that shows another part's receipts under this one, or a
   count that disagrees with the list, is the failure mode here.
+- Receipts and presets also carry a customer, and every list has a second
+  axis for it (`customer: "active"`, the default, is the app's current
+  customer plus house; `"all"` is everyone). `scope: "all"` widens the
+  documents, not the customers. If a row you expect is missing, say which
+  axis hid it and whether the reply's own `scope` and `customer` fields told
+  you before you worked it out.
 - Try to delete a preset or a saved estimate from where you are. You should
   find no way to do it — the person at the keyboard has Delete for both, you
   do not. Report what you find, and whether the surface made the absence

@@ -293,7 +293,9 @@ export const estimateOutput = {
     })
   ]),
   binding: z.object({
-    constraint: z.enum(['geometry', 'weight']),
+    constraint: z
+      .enum(['geometry', 'weight'])
+      .describe('The window and both exports call "geometry" *space*; same constraint, one token here.'),
     // Required, not optional: "did anything actually stop this" is the
     // qualification the note used to overstate (2026-09-02 dogfood finding).
     bound: z.boolean(),
@@ -399,6 +401,11 @@ export const customerRef = z.union([
   z.null()
 ])
 
+/** The groups `inputs` is read in — the vocabulary of both provenance lists. */
+const inputGroups = z.array(
+  z.enum(['mode', 'tier', 'carton', 'clearances', 'maxWeight', 'weight', 'displayUnits'])
+)
+
 export const appStateObject = z.object({
   version: z.string().describe('The Carton Fit build answering — one version number for app and tools (ADR-0020).'),
   file: z.union([
@@ -445,18 +452,31 @@ export const appStateObject = z.object({
     displayUnits: z.object({ length: lengthUnit, maxWeight: weightUnit, partWeight: weightUnit }),
     provenance: z
       .object({
-        changedThisSession: z
-          .array(z.enum(['mode', 'tier', 'carton', 'clearances', 'maxWeight', 'weight', 'displayUnits']))
-          .describe('The input groups changed since the app launched — by you, or by the person at the window.'),
+        changedThisSession: inputGroups.describe(
+          'The input groups whose VALUE differs from what the app launched with. A group written ' +
+            'to the value it already had is not here — it is in setThisSession.'
+        ),
+        // The twelfth run (2026-09-08): a reader set seven groups to the values
+        // the app had inherited, got [], and proved it with a round trip —
+        // wall 0.25→0.5 listed clearances, 0.5→0.25 dropped it. Two questions,
+        // two fields (ADR-0034 amendment 2): did the numbers move, and did a
+        // hand touch them.
+        setThisSession: inputGroups.describe(
+          'The input groups WRITTEN since the app launched — by you, by another client on the ' +
+            'same running app, or by the person at the window — whether or not the value moved. ' +
+            'A group here and not in changedThisSession was set to the value it already had.'
+        ),
         unchangedAre: z
           .enum(['earlier-session', 'defaults'])
           .describe('What every group NOT in changedThisSession is: left by an earlier session, or the app’s defaults.')
       })
       .describe(
-        'Which of these inputs were set this session. The inputs persist between sessions, so ' +
-          'a group that is not in changedThisSession was inherited — set what your answer ' +
-          'depends on rather than trusting it. Overrides and the unit part are not listed: ' +
-          'they are cleared on every load (see load_model’s `cleared`).'
+        'Where these inputs came from. They persist between launches, so a group in neither list ' +
+          'was inherited untouched — set what your answer depends on rather than trusting it, and ' +
+          'setThisSession will show that you did even when the value was already right. "This ' +
+          'session" is the app’s launch, not your connection: a second client on the same running ' +
+          'app sees the first one’s writes. Overrides and the unit part are not listed: they are ' +
+          'cleared on every load (see load_model’s `cleared`).'
       )
   }),
   packStatus: z.enum(['idle', 'packing', 'done', 'failed']),
@@ -634,7 +654,8 @@ export const listSavedEstimatesInput = {
     .describe(
       '"model": the receipts kept for the loaded document — the same list the app’s panel ' +
         'shows, found by the file’s content (and any earlier versions the person linked), ' +
-        'never by its name. "all": every receipt for every part. Defaults to "model" when ' +
+        'never by its name. "all": every part’s receipts — still under the customer filter, ' +
+        'which is its own axis: `customer: "all"` widens that one. Defaults to "model" when ' +
         'a file is loaded and "all" otherwise; the reply’s `scope` says which you got.'
     ),
   limit: z.number().int().positive().optional().describe('How many, newest first. Defaults to 50.')
@@ -642,7 +663,8 @@ export const listSavedEstimatesInput = {
 
 export const savedEstimatesOutput = {
   scope: estimatesScope.describe(
-    'Which rows this is: "model" is the loaded document’s receipts, "all" is every part’s.'
+    'Which rows this is: "model" is the loaded document’s receipts, "all" is every part’s — ' +
+      'either way under the `customer` filter beside it.'
   ),
   customer: customerFilter.describe('Which customers’ rows: "active" (plus house) or "all".'),
   estimates: z.array(
