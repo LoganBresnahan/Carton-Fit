@@ -116,16 +116,45 @@ function extentsMatch(a: readonly number[], b: readonly number[]): boolean {
  * module they both already depend on, not in whichever tool wrote it first.
  */
 export function mixedInstanceKinds(parts: readonly ImportedPart[]): string[] {
-  const mixed: string[] = []
+  return [...instanceAgreement(parts)]
+    .filter(([, agreement]) => agreement === 'different')
+    .map(([kind]) => kind)
+}
+
+/**
+ * How a kind's instances agree: `identical` boxes as placed, `permuted` — one
+ * box under an axis permutation, which is what a 90° placement does — or
+ * `different` in shape. Only the last can move an answer: BOTH tiers lay every
+ * box in all six axis permutations (`aabbOrientations`, `thoroughOrientations`),
+ * so a permuted instance yields the same six candidates as its siblings. The
+ * 15th dogfood showed the reference file's eight nuts are one box permuted and
+ * had been qualifying every answer since the 7th.
+ */
+export type InstanceAgreement = 'identical' | 'permuted' | 'different'
+
+export function instanceAgreement(parts: readonly ImportedPart[]): Map<string, InstanceAgreement> {
+  const out = new Map<string, InstanceAgreement>()
   for (const [kind, instances] of groupByKind(parts)) {
     const [sample] = instances
     const sampleSize = aabbSize(computeAabb(sample.positions))
-    const alike = instances.every((part) =>
-      extentsMatch(sampleSize, aabbSize(computeAabb(part.positions)))
-    )
-    if (!alike) mixed.push(kind)
+    const sampleSorted = descending(sampleSize)
+    let agreement: InstanceAgreement = 'identical'
+    for (const part of instances) {
+      const size = aabbSize(computeAabb(part.positions))
+      if (extentsMatch(sampleSize, size)) continue
+      if (extentsMatch(sampleSorted, descending(size))) agreement = 'permuted'
+      else {
+        agreement = 'different'
+        break
+      }
+    }
+    out.set(kind, agreement)
   }
-  return mixed
+  return out
+}
+
+function descending(extent: readonly number[]): number[] {
+  return [...extent].sort((a, b) => b - a)
 }
 
 /** Weight overrides in grams, keyed by kind. Absent key = no override. */

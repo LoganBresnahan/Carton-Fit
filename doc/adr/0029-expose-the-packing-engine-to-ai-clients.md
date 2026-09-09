@@ -1403,6 +1403,45 @@ wire's rule.
 Also, description only: `save_preset` and `save_estimate` say at the point of
 writing that the row cannot be removed from the wire.
 
+### Amendment 19 (2026-09-09, fifteenth dogfood) — a weight nobody gave, and a turn that is not a shape
+
+**The weightless pack.** `set_inputs` says *to run with no weight, set
+partWeight to 0*, and the wire then answers `weightInput.supplied: false`
+with a note. The panel's binding sentence for the same pack said *the cap has
+room to spare*, the summary export *Packed weight: 0 of 35 lb · Part weight:
+0 lb per part, entered directly*, and the CSV printed the zero with no
+warning row — three surfaces asserting a measurement nobody made, in the
+artifact ADR-0017 exists because people paste it into quotes. `verdict.ts`
+already knew (`weightless`) and used it for the nothing-bound sentence
+alone. Now: `otherConstraintOf` returns `known: false, reason: "no part
+weight was given"` for a weightless pack under a cap, bound or not — a value
+change inside an existing union, allowed because the old value claimed an
+arithmetic that was never done — and the bound sentence reads *The carton
+stopped this at 3. No part weight was given, so whether the cap would have
+is not established.* A `weightlessWarning(request)` is the one sentence the
+panel, both exports' warning channels and `weightInput.note` read. The
+summary says *none — no part weight was given*; the CSV's packed-weight
+cell is blank, as its max-weight cell is when the cap is infinite.
+
+**The nut.** Amendment 18 took the bolt out of the mixed-instances sentence
+for noise. The reader showed the eight nuts are one box under an axis
+permutation and argued the thorough tier's orientation search makes the
+placement irrelevant. It is wider than that: the fast tier's
+`aabbOrientations` also lays every box in all six axis permutations, so a
+permuted instance yields the same six candidates as its siblings in either
+tier and no count can depend on it. The question the qualification asks is
+whether the instances differ in *shape*. `instanceAgreement` in
+`packing/kinds.ts` now reads each kind as `identical`, `permuted` or
+`different`; only `different` is mixed. `instancesAlike` on `inspect_model`
+means *same shape*; `sizePerInstance` stays largest-first whenever the
+instances are not identical as placed, so the size describes all eight nuts
+and the reader's *which of the eight* has one answer. The sentence changes
+from *do not share one bounding box … how the file happened to orient them*
+to *do not share one shape — their bounding boxes differ even when turned …
+how the file happened to build them*. The reference file now carries no
+mixed-instances qualification at all; every report from the 7th run to the
+15th carried one. Amendment 10's reasoning holds for a kind that earns it.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

@@ -121,6 +121,17 @@ describe('collectExport', () => {
     expect(collectExport()?.warnings).toEqual([])
   })
 
+  it('warns when the pack carried no weight at all (15th dogfood)', () => {
+    const state = useAppStore.getState()
+    state.importSucceeded([openCube('shell')], { elapsedMs: 1, partCount: 1, triangleCount: 10 }, 'h')
+    state.setPartWeight('shell', 50) // no open-mesh warning in the way
+    state.packSucceeded(RESULT, {
+      ...REQUEST,
+      parts: [{ name: 'shell', positions: new Float32Array(0), weightG: 0 }]
+    }, 5)
+    expect(collectExport()?.warnings.join(' ')).toContain('No part weight was given')
+  })
+
   it('still warns about the kinds that were NOT overridden', () => {
     loadOpenParts(['shell', 'cover'])
     useAppStore.getState().setPartWeight('shell', 50)
@@ -142,15 +153,15 @@ describe('collectExport', () => {
     // while the document said nothing about why they differed.
     const state = useAppStore.getState()
     state.importSucceeded(
-      // One KIND ("shell", "shell (2)"), two instances, different extents —
-      // which is what an assembly placement baked into the geometry looks like.
-      [openBox('shell', [10, 20, 30]), openBox('shell (2)', [30, 20, 10])],
+      // One KIND ("shell", "shell (2)"), two instances, different SHAPES —
+      // not a 90° turn of one box, which both tiers try anyway (15th dogfood).
+      [openBox('shell', [10, 20, 30]), openBox('shell (2)', [10, 20, 40])],
       { elapsedMs: 1, partCount: 2, triangleCount: 20 },
       'hash'
     )
     state.packSucceeded(RESULT, REQUEST, 5)
     const warnings = collectExport()?.warnings.join(' ') ?? ''
-    expect(warnings).toContain('do not share one bounding box')
+    expect(warnings).toContain('do not share one shape')
     expect(warnings).toContain('shell')
   })
 
@@ -162,7 +173,7 @@ describe('collectExport', () => {
     // above qualifies either way.
     const state = useAppStore.getState()
     state.importSucceeded(
-      [openBox('shell', [10, 20, 30]), openBox('shell (2)', [30, 20, 10]), openBox('plate')],
+      [openBox('shell', [10, 20, 30]), openBox('shell (2)', [10, 20, 40]), openBox('plate')],
       { elapsedMs: 1, partCount: 3, triangleCount: 30 },
       'hash'
     )
@@ -203,7 +214,7 @@ describe('the exports carry every warning the estimate carries', () => {
     // Both conditions live at once: one kind, two instances, different extents,
     // and every mesh open — so neither warning can mask the other's absence.
     state.importSucceeded(
-      [openBox('shell', [10, 20, 30]), openBox('shell (2)', [30, 20, 10])],
+      [openBox('shell', [10, 20, 30]), openBox('shell (2)', [10, 20, 40])],
       { elapsedMs: 1, partCount: 2, triangleCount: 20 },
       'hash'
     )

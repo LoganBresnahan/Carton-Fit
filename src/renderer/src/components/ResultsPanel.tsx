@@ -4,6 +4,7 @@ import {
   bindingLabel,
   freeSpaceNote,
   mixedInstancesWarning,
+  weightlessWarning,
   openMeshWarning,
   packedWeightG,
   truncatedLayoutNote,
@@ -54,6 +55,7 @@ export default function ResultsPanel() {
   const mixedInstances = mixedInstancesWarning(
     mixedInstanceKinds(partsForRequest(parts, settings, unitPartName))
   )
+  const noWeight = request ? weightlessWarning(request) : null
 
   if (status === 'idle' && !result) return null
 
@@ -133,6 +135,12 @@ export default function ResultsPanel() {
       {mixedInstances && (
         <p className="results-warning" data-testid="results-mixed-instances" role="alert">
           {mixedInstances}
+        </p>
+      )}
+
+      {noWeight && (
+        <p className="results-warning" data-testid="results-weightless" role="alert">
+          {noWeight}
         </p>
       )}
 

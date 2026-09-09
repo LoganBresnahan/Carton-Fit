@@ -1,9 +1,9 @@
-# Wire rules — what fourteen dogfood runs taught about the MCP surface
+# Wire rules — what fifteen dogfood runs taught about the MCP surface
 
 The rules a new tool, a new field, or a new sentence on the MCP surface has
 to pass before it ships. Each one was learned by a reader with a calculator
 finding a sentence no test asserted; the run and the amendment that taught it
-are named so the reasoning can be read in full. **Fourteen runs found one
+are named so the reasoning can be read in full. **Fifteen runs found one
 wrong number** (rule 6). Everything else was a sentence.
 
 Read this before writing the output schema of a tool. Read it again before
@@ -97,6 +97,14 @@ writing the prose that reads the schema. The order matters — see rule 1.
     `samples/goldens.ts` runs through the wire as well as the engine and the
     e2e, in inches, so a missed conversion cannot pass. A new tool that
     answers a number joins that test. *(ADR-0005; `tests/mcp-goldens.test.ts`.)*
+
+14. **A qualification fires on what can reach the answer, not on what is
+    unusual about the file.** The mixed-instances warning fired on a part
+    placed two ways, though both tiers try every 90° turn of every part and
+    the count could not depend on it; it qualified every answer on the
+    reference file for eight runs. Before a warning ships, derive the path
+    from the condition to the number; if there is none, there is no warning.
+    *(Amendment 19; roadmap item 38.)*
 
 ## Before a new tool: the claims table
 

@@ -2,7 +2,12 @@ import { lengthUnitLabel, mmToLength } from '../core/units'
 import { openMeshParts, partsForRequest } from '../packing/request'
 import { meshVolume } from '../core/geometry'
 import { mixedInstanceKinds } from '../packing/kinds'
-import { mixedInstancesWarning, openMeshWarning, truncatedLayoutNote } from '../packing/verdict'
+import {
+  mixedInstancesWarning,
+  openMeshWarning,
+  truncatedLayoutNote,
+  weightlessWarning
+} from '../packing/verdict'
 import { useAppStore } from '../store'
 import type { EstimateExport } from './types'
 
@@ -37,6 +42,9 @@ export function collectExport(): EstimateExport | null {
     // counted. Added on the 8th dogfood — the comment above was written before
     // that miss and named this exact line as the place to touch.
     mixedInstancesWarning(mixedInstanceKinds(partsForRequest(parts, settings, unitPartName))),
+    // A pack with no weight at all (15th dogfood): the request knows, and the
+    // exports used to print its zero as a weight someone entered.
+    weightlessWarning(packRequest),
     truncatedLayoutNote(packResult)
   ].filter((warning): warning is string => warning !== null)
 

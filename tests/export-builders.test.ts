@@ -529,6 +529,23 @@ describe('buildSummary', () => {
     expect(two).toContain('2 kinds overridden individually')
   })
 
+  it('says no weight was given instead of a zero entered by hand (15th dogfood)', () => {
+    const weightless = input({
+      settings: settings({ weightMode: 'direct', partWeightG: 0 }),
+      request: request({ parts: [{ name: 'bracket', positions: positions(), weightG: 0 }] }),
+      warnings: ['No part weight was given: every part was packed as weightless.']
+    })
+    const text = buildSummary(weightless)
+    expect(text).toContain('Packed weight: none — no part weight was given (cap 35 lb)')
+    expect(text).toContain('Part weight: none given')
+    expect(text).not.toContain('entered directly')
+    expect(text).not.toContain('0 of 35')
+    expect(text).toContain('! No part weight was given')
+    const csv = buildCsv(weightless)
+    expect(csv).toContain('Packed weight (lb),\n')
+    expect(csv).toContain('Warning,No part weight was given')
+  })
+
   it('leads with the override when every counted kind has one (14th dogfood)', () => {
     // A 12 lb plate packed twice is 24 lb, none of it from the density — the
     // quote block said "density 7.85 × volume — 1 kind overridden" and a reader

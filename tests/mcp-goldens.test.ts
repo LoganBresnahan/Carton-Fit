@@ -156,19 +156,17 @@ describe('inspect_model against the hand-computed goldens', () => {
     const report = await call<InspectReport>('inspect_model', {
       path: join(SAMPLES, AS1_ASSEMBLY.file)
     })
-    for (const kind of report.kinds) {
-      const { x, y, z } = kind.sizePerInstance
-      if (!kind.instancesAlike) {
-        // Largest first: the nut's instances are permutations of one box.
-        expect(x).toBeGreaterThanOrEqual(y)
-        expect(y).toBeGreaterThanOrEqual(z)
-      }
-    }
     const mixed = report.kinds.filter((kind) => !kind.instancesAlike).map((kind) => kind.kind)
-    // The nut only. The bolt read as mixed from the 7th dogfood to the 14th
-    // because its six boxes differ by 7.6 × 10⁻⁶ mm of tessellation noise and
-    // the alike test used the engine's EPS; the six bolts are one box.
-    expect(mixed.sort()).toEqual(['nut'])
+    // Nothing on the reference file is mixed in SHAPE (15th dogfood). The bolt
+    // read as mixed from the 7th run to the 14th over 7.6 × 10⁻⁶ mm of
+    // tessellation noise; the nut from the 7th to the 15th because two of the
+    // eight are the same box turned 90°, which both tiers try anyway. The
+    // nut's size is still reported largest-first, since "as placed" would
+    // describe two of them and not six.
+    expect(mixed).toEqual([])
+    const nut = report.kinds.find((kind) => kind.kind === 'nut')
+    expect(nut?.instancesAlike).toBe(true)
+    expect(nut?.sizePerInstance).toMatchObject({ x: 20, y: 15, z: 3 })
   })
 
   it('counts AS1’s 18 solids as 5 kinds', async () => {

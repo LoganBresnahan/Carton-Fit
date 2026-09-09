@@ -8,6 +8,7 @@ import {
   packedWeightG,
   truncatedLayout,
   upperBoundLabel,
+  weightlessWarning,
   utilizationPercent,
   bindingReport,
   verdictCaption,
@@ -252,9 +253,24 @@ describe('bindingReport', () => {
   it('drops the closer-limit ranking when every part is weightless', () => {
     const r = bindingReport(fit({ fits: true, placements: [placement] }), request(1000, 0))
     expect(r.bound).toBe(false)
-    expect(r.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arithmetic' })
+    // 15th dogfood: "the cap has room" against a zero nobody entered is not
+    // an arithmetic; whether the cap would have bound is simply not known.
+    expect(r.otherConstraint).toEqual({ known: false, reason: 'no part weight was given' })
     expect(r.note).toMatch(/No part weight was given/)
     expect(r.note).not.toMatch(/closer limit/)
+  })
+
+  it('a geometry-bound count with no weight given does not say the cap had room', () => {
+    const r = bindingReport(qty({ count: 3, binding: 'geometry', upperBound: 3 }), request(1000, 0))
+    expect(r.bound).toBe(true)
+    expect(r.otherConstraint).toEqual({ known: false, reason: 'no part weight was given' })
+    expect(r.note).toBe(
+      'The carton stopped this at 3. No part weight was given, so whether the cap would have is not established.'
+    )
+    expect(r.note).not.toMatch(/room to spare/)
+    // With a weight, the arithmetic claim stands.
+    const weighed = bindingReport(qty({ count: 3, binding: 'geometry', upperBound: 3 }), request(1000, 10))
+    expect(weighed.otherConstraint).toEqual({ known: true, atLimit: false, evidence: 'arithmetic' })
   })
 })
 
@@ -470,5 +486,22 @@ describe('freeSpaceNote', () => {
     expect(freeSpaceNote(nonFit(), 'metric')).toBeNull() // no largestFreeSpace
     expect(freeSpaceNote(fit({ fits: true, largestFreeSpace: [10, 10, 10] }), 'metric')).toBeNull()
     expect(freeSpaceNote(qty({ count: 3 }), 'metric')).toBeNull()
+  })
+})
+
+describe('weightlessWarning', () => {
+  const req = (weightG: number, parts = 1): PackRequest => ({
+    mode: 'max-quantity',
+    tier: 'fast',
+    carton: [100, 100, 100],
+    clearances: { betweenParts: 0, wall: 0 },
+    maxWeightG: 1000,
+    parts: Array.from({ length: parts }, (_, i) => ({ name: `p${i}`, positions: new Float32Array(0), weightG }))
+  })
+  it('fires only when every part is weightless, and says the answer is about space', () => {
+    expect(weightlessWarning(req(0))).toMatch(/No part weight was given/)
+    expect(weightlessWarning(req(0))).toMatch(/space only/)
+    expect(weightlessWarning(req(5))).toBeNull()
+    expect(weightlessWarning(req(0, 0))).toBeNull()
   })
 })

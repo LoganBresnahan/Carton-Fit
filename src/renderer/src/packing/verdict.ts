@@ -259,8 +259,24 @@ export interface BindingReport {
 /** True when the request carried no weight at all — every part weightless.
  *  Derived from the request rather than the settings so this module needs no
  *  settings: a weight of zero on every part IS "no weight was given". */
-function weightless(request: PackRequest): boolean {
+export function weightless(request: PackRequest): boolean {
   return request.parts.every((part) => part.weightG === 0)
+}
+
+/**
+ * The sentence for a pack that carried no weight at all — the panel, both
+ * exports and the wire's `weightInput.note` read this one function (15th
+ * dogfood: the wire said `supplied: false` while the summary export printed
+ * *0 lb per part, entered directly* and the panel said the cap had room to
+ * spare — three surfaces asserting a measurement nobody made, in the artifact
+ * built for quotes). Null when a weight was given.
+ */
+export function weightlessWarning(request: PackRequest): string | null {
+  if (request.parts.length === 0 || !weightless(request)) return null
+  return (
+    'No part weight was given: every part was packed as weightless, so the weight cap ' +
+    'could not bind and no packed weight here is a measurement. This answer is about space only.'
+  )
 }
 
 function otherConstraintOf(
@@ -297,6 +313,10 @@ function otherConstraintOf(
       : { known: true, atLimit: true, evidence: 'search' }
   }
   if (!capApplies) return { known: false, reason: 'no weight cap was supplied' }
+  // With no weight given the cap "had room" against a zero that is an absent
+  // input, not a measurement (15th dogfood). Whether the cap WOULD have bound
+  // is not established, and that is the honest field.
+  if (weightless(request)) return { known: false, reason: 'no part weight was given' }
   if (result.mode === 'max-quantity') {
     // The engine's own label carries this: it says 'geometry' exactly when the
     // weight cap allows strictly more copies than the carton does
@@ -360,6 +380,10 @@ export function bindingReport(result: PackResult, request: PackRequest): Binding
         'weigh more than the cap allows.'
     } else if (other.known) {
       note = `The carton stopped this${at}, not the weight cap — the cap has room to spare.`
+    } else if (weightless(request) && capApplies) {
+      note =
+        `The carton stopped this${at}. No part weight was given, so whether the cap would ` +
+        'have is not established.'
     } else {
       note = `The carton stopped this${at}; no weight cap applied.`
     }
@@ -389,14 +413,20 @@ export function bindingReport(result: PackResult, request: PackRequest): Binding
   // when the closest limit is weight the OTHER is space, settled by the
   // arrangement we hold; when it is space the other is weight, settled by
   // packed weight against the cap — arithmetic.
+  // …except when no weight was given (15th dogfood): "the cap has room" is
+  // then an arithmetic against an absent input, and the honest field is that
+  // the weight side is not known.
   return {
     constraint: result.binding,
     bound: false,
-    otherConstraint: {
-      known: true,
-      atLimit: false,
-      evidence: result.binding === 'weight' ? 'arrangement' : 'arithmetic'
-    },
+    otherConstraint:
+      capApplies && weightless(request)
+        ? { known: false, reason: 'no part weight was given' }
+        : {
+            known: true,
+            atLimit: false,
+            evidence: result.binding === 'weight' ? 'arrangement' : 'arithmetic'
+          },
     note
   }
 }
@@ -552,11 +582,14 @@ export function mixedInstancesWarning(mixedKinds: readonly string[]): string | n
   const list = rest > 0 ? `${shown.join(', ')} and ${rest} more` : shown.join(', ')
   // "Instances of X" is plural whatever X is — one KIND still has several
   // instances, which is the only way it can disagree with itself.
+  // Shape, not placement: a 90° placement is a permutation of one box and
+  // both tiers try all six, so it cannot reach the answer (15th dogfood). What
+  // is left is an instance whose box differs even when turned — a tilted
+  // placement, or one product name over two shapes.
   return (
-    `Instances of ${list} do not share one bounding box — the assembly places them at ` +
-    `different orientations, and STEP geometry arrives with that placement baked in. ` +
-    `Each instance was packed with its OWN box, so this answer depends on how the file ` +
-    `happened to orient them.`
+    `Instances of ${list} do not share one shape — their bounding boxes differ even when ` +
+    `turned, and STEP geometry arrives with each instance's placement baked in. Each was ` +
+    `packed with its OWN box, so this answer depends on how the file happened to build them.`
   )
 }
 

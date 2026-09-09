@@ -60,6 +60,12 @@ open details).
 Skip any of these that a previous pass already answered — say "already
 answered" rather than redoing them.
 
+One thing about file access, so it does not read as a finding: the app's
+tools read a model by absolute path with the app's own file access, on the
+machine the files are on. A client's folder-consent surface (a connected
+folder, a grant) does not gate what this app can read, and was never meant
+to.
+
 Bring the report back to the repo and run `/dogfood` with it.
 
 ---
@@ -137,7 +143,9 @@ Set up a fit-check in a carton you choose that comfortably holds everything.
 Report: does the answer distinguish *space* from *weight* honestly when no weight
 was supplied — or does it imply a weight conclusion it has no input for?
 
-Quote the binding sentence verbatim and name the field behind it.
+Quote the binding sentence verbatim and name the field behind it. Then export
+this space-only answer both ways and say whether the exports still say no
+weight was given, or print a weight.
 
 ### Station 3 — the same pack, with a real material
 

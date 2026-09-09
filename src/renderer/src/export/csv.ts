@@ -7,7 +7,8 @@ import {
   packedWeightG,
   utilizationPercent,
   verdictCaption,
-  verdictHeadline
+  verdictHeadline,
+  weightless
 } from '../packing/verdict'
 import { decimal, dimsText, lengthText, modeLabel, tierLabel, volumeText, weightText } from './format'
 import { measurementRows, type EstimateExport } from './types'
@@ -134,8 +135,13 @@ export function buildCsv(input: EstimateExport): string {
     row([`Clearance between parts (${length})`, lengthText(request.clearances.betweenParts, units)])
   )
   lines.push(row([`Clearance to wall (${length})`, lengthText(request.clearances.wall, units)]))
+  // Blank when no weight was given (15th dogfood), like an infinite cap below:
+  // a zero in this cell reads as a measurement, and the Warning row says why.
   lines.push(
-    row([`Packed weight (${capUnit})`, weightText(packedWeightG(result, request), capUnit)])
+    row([
+      `Packed weight (${capUnit})`,
+      weightless(request) ? '' : weightText(packedWeightG(result, request), capUnit)
+    ])
   )
   lines.push(
     row([

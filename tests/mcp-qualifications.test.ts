@@ -579,13 +579,14 @@ describe('every answer arrives qualified', () => {
     // uses each instance's OWN box, so this changes what the answer is made of.
     const report = await estimate({ mode: 'fit-check', path: AS1, carton: carton(1000) })
     const mixed = report.qualifications.mixedInstances
-    expect(mixed.affected).toBe(true)
-    if (!mixed.affected) throw new Error('affected')
-    expect(mixed.kinds).toContain('nut')
-    // 14th dogfood: the bolt is NOT mixed — six identical boxes to within
-    // float32 noise. A test asserting it was would be asserting the defect.
-    expect(mixed.kinds).not.toContain('bolt')
-    expect(mixed.note).toMatch(/own box/i)
+    // 15th dogfood: the reference file earns NO mixed-instances qualification.
+    // The nut's eight instances are one box under a 90° turn, and both tiers
+    // lay every box in all six permutations, so no count can depend on it;
+    // the bolt (14th) was tessellation noise. A test asserting either was
+    // mixed would be asserting the defect. The positive case is pinned on
+    // `mixedInstanceKinds` directly (part-kinds), the one function both
+    // tools call.
+    expect(mixed.affected).toBe(false)
 
     // One computation, two tools: whatever `inspect_model` reports as NOT alike
     // is exactly what the estimate qualifies. A second implementation of the
@@ -596,7 +597,7 @@ describe('every answer arrives qualified', () => {
       { path: AS1 }
     )
     const notAlike = inspected.kinds.filter((k) => !k.instancesAlike).map((k) => k.kind)
-    expect([...mixed.kinds].sort()).toEqual([...notAlike].sort())
+    expect(notAlike).toEqual([])
 
     // A file whose one kind has a single instance has nothing to qualify.
     const cube = await estimate({ mode: 'fit-check', path: CUBE, carton: carton(1000) })
@@ -703,17 +704,16 @@ describe('every answer arrives qualified', () => {
     expect(result.isError).toBe(true)
   })
 
-  it('flags a kind whose instances do not share a bounding box', async () => {
-    // AS1 instances one product at several orientations, and geometry arrives
-    // with the placement baked in — so a per-kind size describes ONE of them.
+  it('reads a 90° placement as the same shape, and sizes it largest-first', async () => {
+    // AS1 instances its nut at two placements, and geometry arrives with the
+    // placement baked in — so as-placed extents describe SOME of them. Since
+    // the 15th dogfood that is not "mixed": one box turned is one shape, and
+    // both tiers try every turn. The size is sorted so it describes all eight.
     const report = await call<InspectReport>('inspect_model', { path: AS1 })
-    const varying = report.kinds.filter((kind) => !kind.instancesAlike)
-    expect(varying.length).toBeGreaterThan(0)
-    expect(report.qualifications.mixedInstances.affected).toBe(true)
-    if (report.qualifications.mixedInstances.affected) {
-      expect(report.qualifications.mixedInstances.kinds).toEqual(
-        expect.arrayContaining(varying.map((kind) => kind.kind))
-      )
-    }
+    expect(report.kinds.filter((kind) => !kind.instancesAlike)).toEqual([])
+    expect(report.qualifications.mixedInstances.affected).toBe(false)
+    const nut = report.kinds.find((kind) => kind.kind === 'nut')
+    expect(nut?.sizePerInstance.x).toBeGreaterThanOrEqual(nut?.sizePerInstance.y ?? 0)
+    expect(nut?.sizePerInstance.y).toBeGreaterThanOrEqual(nut?.sizePerInstance.z ?? 0)
   })
 })

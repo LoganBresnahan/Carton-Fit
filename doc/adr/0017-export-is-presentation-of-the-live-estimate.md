@@ -247,6 +247,23 @@ Two runs, two layers of the same label. Worth naming the pattern: a number that
 needs a qualifier usually needs the *whole* qualifier, and shipping half of one
 buys a single release of quiet.
 
+## Addendum 6, 2026-09-09 (fifteenth dogfood): a weight nobody gave is not a zero
+
+§2 says a qualification on screen survives the export. A pack run with no
+weight at all — the app's own documented route to a space-only answer — was
+qualified on the wire (`weightInput.supplied: false`) and nowhere else: the
+summary printed *Packed weight: 0 of 35 lb · Part weight: 0 lb per part,
+entered directly* and the CSV a bare `0`, which is not a lost hedge but its
+opposite, in the document built to be pasted into a quote. The plate's real
+weight is 9.18 lb.
+
+The summary now says *Packed weight: none — no part weight was given (cap
+35 lb)* and *Part weight: none given*; the CSV leaves the packed-weight cell
+blank, as it already leaves the max-weight cell when the cap is infinite
+(blank rather than guessed); and both carry the same warning line the panel
+shows, from the one function in `verdict.ts` the wire's note reads too
+(ADR-0029 amendment 19). Pinned in the export builders and the collector.
+
 ## Revisit triggers
 
 - A real request to hand a formatted document to a customer → PDF, seeded from

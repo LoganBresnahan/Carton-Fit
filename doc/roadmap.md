@@ -193,7 +193,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
-- [ ] 38. Dogfood follow-ups, 15th run — one Claude Opus 5 pass (Cowork, over
+- [x] 38. Dogfood follow-ups, 15th run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+904d6bd`, 2026-09-09, the first run
       on the brief that names every tool and the first with the bolt gone from
       the warning. **Every packing number matched the reader's independent
@@ -203,8 +203,11 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       reader needed them; `set_customer` proven inert on the numbers to the
       bit. Five findings; two confirmed, one of them a wrong sentence on
       three surfaces, and the other the rest of item 37's bolt.
-      - [ ] **A weightless pack leaves the app as a measured zero** (the
-        reader's worst; confirmed on the panel, the summary and the CSV).
+      - [x] **A weightless pack leaves the app as a measured zero** (the
+        reader's worst; confirmed on the panel, the summary and the CSV;
+        *decided and shipped 2026-09-09* — ADR-0017 addendum 6, ADR-0029
+        amendment 19, exactly as derived below; pinned in pack-verdict, the
+        export builders and the collector).
         `set_inputs`'s own description says *to run with no weight, set
         partWeight to 0*; the wire then says `weightInput.supplied: false`
         with a note. The panel's binding sentence for a geometry-bound count
@@ -229,8 +232,11 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         when infinite. **Decision needed:** the `otherConstraint` change is a
         value change inside an existing union (ADR-0020 says a wrong meaning
         may change); ADR-0017 addendum 6 and ADR-0029 amendment 19.
-      - [ ] **The nut's warning is false in both tiers** (confirmed, and
-        wider than the reader said). The reader showed the eight nut boxes
+      - [x] **The nut's warning is false in both tiers** (confirmed, and
+        wider than the reader said; *shipped 2026-09-09*, ADR-0029 amendment
+        19: `instanceAgreement` reads identical / permuted / different, only
+        the last is mixed; goldens and qualifications tests assert the
+        reference file earns no warning; wire-rules gains rule 14). The reader showed the eight nut boxes
         are one box under axis permutation and argued the *thorough* tier's
         orientation search makes the placement irrelevant. True — and the
         fast tier's `aabbOrientations` also lays every box in all six axis
@@ -249,14 +255,14 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         nut for being a permutation. Item 33's open sub-item on the warning's
         wording stands for a file that earns it; the reference file no longer
         does. ADR-0029 amendment 19, ADR-0002 addendum's reading corrected.
-      - [ ] **`sizePerInstance` cannot be acted on for a mixed kind** — the
+      - [x] **`sizePerInstance` cannot be acted on for a mixed kind** — the
         third reader on it; folds into the above. With the permutation read
         as alike, the sorted extents describe every nut and the reply says
         so.
-      - [ ] **`binding.constraint` misleading read alone** — standing
+      - [x] **`binding.constraint` misleading read alone** — standing
         refutation (ADR-0029 amendment 1, `doc/wire-rules.md`); the reader
         recorded it as documented and so does this line.
-      - [ ] Aside the reader was right to raise: the app reads a file by
+      - [x] Aside the reader was right to raise: the app reads a file by
         absolute path without the bridge's folder grant. The app's own file
         access, by design — the MCP server runs on the machine the files are
         on — and not gated by a client's consent surface. Noted in the brief's

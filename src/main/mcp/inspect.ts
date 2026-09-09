@@ -1,6 +1,6 @@
 import { basename } from 'node:path'
 import { aabbSize, computeAabb, isClosedMesh, meshVolume } from '../../renderer/src/core/geometry'
-import { groupByKind, mixedInstanceKinds } from '../../renderer/src/packing/kinds'
+import { groupByKind, instanceAgreement } from '../../renderer/src/packing/kinds'
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
 import type { Vec3 } from '../../renderer/src/core/packing/types'
 import {
@@ -106,12 +106,16 @@ export function inspectParts(
   // which would read as one tool qualifying an answer the other does not.
   // Structural rather than tested: there is one function, so agreement is not
   // something the suite has to keep checking.
-  const mixedKinds = mixedInstanceKinds(parts)
-  const mixed = new Set(mixedKinds)
+  const agreement = instanceAgreement(parts)
+  const mixedKinds = [...agreement].filter(([, a]) => a === 'different').map(([kind]) => kind)
 
   for (const [kind, instances] of groups) {
     const [sample] = instances
-    const alike = !mixed.has(kind)
+    // Alike in SHAPE. A kind whose instances are one box under permutation is
+    // alike (15th dogfood — neither tier can tell the difference); its size is
+    // still reported largest-first below, because "as placed" would name one.
+    const placed = agreement.get(kind) ?? 'identical'
+    const alike = placed !== 'different'
     // Extents as modelled when the instances agree; largest-first when they
     // do not (11th dogfood): the instances of the reference file's nut differ
     // by PERMUTATION — 0.118×0.591×0.787 beside 0.787×0.591×0.118 — so sorted
@@ -120,7 +124,7 @@ export function inspectParts(
     // instance's numbers; no fixture has such a kind, and a range is the fix
     // for the day one does.
     const measured = aabbSize(computeAabb(sample.positions))
-    const sampleSize = alike ? measured : descendingExtents(measured)
+    const sampleSize = placed === 'identical' ? measured : descendingExtents(measured)
     const closed = isClosedMesh(sample.positions, sample.indices)
     if (!closed) openMeshKinds.push(kind)
 
@@ -182,10 +186,9 @@ export function inspectParts(
               affected: true,
               kinds: mixedKinds,
               note:
-                `Instances of ${mixedKinds.join(', ')} do not share one bounding box — the ` +
-                'assembly places them at different orientations, and geometry arrives with ' +
-                'that placement baked in. The size shown is one instance of each; volume is ' +
-                'unaffected.'
+                `Instances of ${mixedKinds.join(', ')} do not share one shape — their boxes ` +
+                'differ even when turned, and geometry arrives with each placement baked in. ' +
+                'The size shown is one instance of each; volume is unaffected.'
             }
     },
     units: { length: units.length }

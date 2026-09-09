@@ -46,6 +46,21 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   no longer read as one list.
   ([ADR-0035](doc/adr/0035-customers-are-a-label-on-presets-and-receipts.md) amendment 1,
   [ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md) amendment 17)
+- **A pack with no weight given says so everywhere.** Running with no part
+  weight is a space-only answer, and the panel, the summary and the CSV used
+  to print its zero as a weight someone entered, with the panel adding that
+  the cap had room to spare. All three now say no weight was given, the
+  summary and CSV carry the same warning line, and the cap's headroom is
+  reported as not established rather than as arithmetic on nothing.
+  ([ADR-0017](doc/adr/0017-export-copy-summary-and-csv.md) addendum 6,
+  [ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md)
+  amendment 19)
+- **A part placed two ways is one part.** The mixed-instances warning fired
+  when a part's instances sat at 90° to each other, though the packer tries
+  every 90° turn of every part anyway, so the count could not depend on it.
+  It now fires only when instances differ in shape. The sample assembly's
+  nut no longer triggers it. ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md),
+  amendment 19)
 - **The bolt in the sample assembly is no longer called mixed.** The check
   for whether a part's instances sit at different orientations tolerated only
   a millionth of a millimetre, so the rounding between two tessellations of

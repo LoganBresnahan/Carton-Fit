@@ -9,7 +9,8 @@ import {
   upperBoundLabel,
   utilizationPercent,
   verdictCaption,
-  verdictHeadline
+  verdictHeadline,
+  weightless
 } from '../packing/verdict'
 import { dimsText, lengthText, modeLabel, tierLabel, weightText } from './format'
 import { kindOf, overrideForPart, type PartWeightOverrides } from '../packing/kinds'
@@ -53,8 +54,16 @@ function weightLines(input: EstimateExport): string[] {
   // Packed-vs-cap shows in the cap's unit; per-part figures in the per-part
   // unit — the same split the panel makes (ADR-0024, ADR-0017 parity).
   const unit = settings.maxWeightUnit
-  const packed = weightText(packedWeightG(result, request), unit)
   const cap = Number.isFinite(request.maxWeightG) ? weightText(request.maxWeightG, unit) : '∞'
+  // No weight at all: say so, rather than a zero that reads as entered (15th
+  // dogfood). The warning line at the foot carries the full sentence.
+  if (weightless(request)) {
+    return [
+      `Packed weight: none — no part weight was given (cap ${cap} ${unit})`,
+      'Part weight: none given'
+    ]
+  }
+  const packed = weightText(packedWeightG(result, request), unit)
   const source =
     settings.weightMode === 'direct'
       ? `${weightText(settings.partWeightG, settings.partWeightUnit)} ` +

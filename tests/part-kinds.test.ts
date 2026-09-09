@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ALIKE_TOLERANCE_MM,
+  instanceAgreement,
   kindOf,
   mixedInstanceKinds,
   partKinds,
@@ -224,7 +225,24 @@ describe('mixedInstanceKinds', () => {
     for (let i = 0; i < positions.length; i += 3) if (positions[i] > 5) positions[i] += dx
     return { ...part, positions }
   }
-  const rotated = (name: string): ImportedPart => {
+  // A box under an axis permutation — what a 90° placement does to an AABB.
+  const permuted = (name: string): ImportedPart => {
+    const part = cube(name)
+    const positions = new Float32Array(part.positions)
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i] *= 3 // 30 × 10 × 10 …
+    }
+    return { ...part, positions }
+  }
+  const permutedOtherWay = (name: string): ImportedPart => {
+    const part = cube(name)
+    const positions = new Float32Array(part.positions)
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i + 2] *= 3 // … against 10 × 10 × 30
+    }
+    return { ...part, positions }
+  }
+  const stretchedY = (name: string): ImportedPart => {
     const part = cube(name)
     const positions = new Float32Array(part.positions)
     for (let i = 0; i < positions.length; i += 3) positions[i + 1] *= 2
@@ -236,8 +254,16 @@ describe('mixedInstanceKinds', () => {
     expect(mixedInstanceKinds([cube('bolt'), stretched('bolt (2)', ALIKE_TOLERANCE_MM / 2)])).toEqual([])
   })
 
-  it('still sees a real difference in extent, and a real change of orientation', () => {
+  it('still sees a real difference in shape', () => {
     expect(mixedInstanceKinds([cube('bolt'), stretched('bolt (2)', 0.01)])).toEqual(['bolt'])
-    expect(mixedInstanceKinds([cube('nut'), rotated('nut (2)'), cube('bolt')])).toEqual(['nut'])
+    expect(mixedInstanceKinds([cube('nut'), stretchedY('nut (2)'), cube('bolt')])).toEqual(['nut'])
+  })
+
+  it('a 90° placement is the same shape: both tiers try every permutation (15th dogfood)', () => {
+    // The reference file's eight nuts: 3 × 15 × 20 beside 20 × 15 × 3.
+    expect(mixedInstanceKinds([permuted('nut'), permutedOtherWay('nut (2)')])).toEqual([])
+    expect(instanceAgreement([permuted('nut'), permutedOtherWay('nut (2)')]).get('nut')).toBe('permuted')
+    expect(instanceAgreement([cube('bolt'), cube('bolt (2)')]).get('bolt')).toBe('identical')
+    expect(instanceAgreement([cube('nut'), stretchedY('nut (2)')]).get('nut')).toBe('different')
   })
 })

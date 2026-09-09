@@ -128,9 +128,9 @@ export const inspectOutput = {
         .number()
         .describe('Triangles across ALL instances of this kind — the only total here.'),
       sizePerInstance: dimensionsValue.describe(
-        'Bounding box of ONE instance, as modelled. When instancesAlike is false the extents ' +
-          'are sorted largest-first instead, so instances that differ only by orientation ' +
-          'agree on it; a kind whose instances differ in actual extent still gets one ' +
+        'Bounding box of ONE instance, as modelled, when every instance is placed the same ' +
+          'way. Otherwise the extents are sorted largest-first, so instances that are one box ' +
+          'turned 90° agree on it; a kind whose instances differ in shape still gets one ' +
           'instance’s numbers.'
       ),
       volumePerInstance: volumeValue.describe(
@@ -138,7 +138,13 @@ export const inspectOutput = {
           'divided it by count would be wrong by that factor.'
       ),
       closedMesh: z.boolean(),
-      instancesAlike: z.boolean()
+      instancesAlike: z
+        .boolean()
+        .describe(
+          'Whether every instance of this kind has the same SHAPE — one box, possibly turned ' +
+            '90° between instances, which no tier can tell apart. False only when an instance’s ' +
+            'box differs even when turned, and then the estimate qualifies its answer.'
+        )
     })
   ),
   qualifications: z.object({

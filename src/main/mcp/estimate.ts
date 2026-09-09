@@ -23,7 +23,8 @@ import {
   type UtilizationOf,
   mixedInstancesWarning,
   verdictCaption,
-  type BindingReport
+  type BindingReport,
+  weightlessWarning
 } from '../../renderer/src/packing/verdict'
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
 import {
@@ -396,10 +397,7 @@ function countedWeightFrom(
   return 'mixed'
 }
 
-function qualificationsOf(
-  context: LiveEstimateContext,
-  units: OutputUnits
-): EstimateQualifications {
+function qualificationsOf(context: LiveEstimateContext): EstimateQualifications {
   const { settings, request, result, parts, overrides } = context
   const requested = {
     betweenParts: settings.clearancePartMm,
@@ -418,7 +416,6 @@ function qualificationsOf(
   // not bind" note beside a weight-bound count would be a qualification that
   // lies (found writing the v2 drive spec; the v1 path had the same hole).
   const supplied = context.weightSupplied || Object.keys(overrides).length > 0
-  const cap = fromG(request.maxWeightG, units.weight)
 
   return {
     heuristic: {
@@ -440,10 +437,9 @@ function qualificationsOf(
         }
       : {
           supplied: false,
-          note:
-            'No part weight was given, so every part weighs nothing and the ' +
-            `${Math.round(cap.value * 100) / 100} ${cap.unit} cap could not bind. ` +
-            'This answer is about space only.'
+          // The one sentence every surface reads (15th dogfood); this note had
+          // its own copy for a week while the exports said the opposite.
+          note: weightlessWarning(request) ?? ''
         },
     clearances: clamped
       ? {
@@ -525,7 +521,7 @@ export function buildEstimateReport(
       of: utilizationBasis(request.mode, request.mode === 'max-quantity' ? context.unitPart : null)
         .of
     },
-    qualifications: qualificationsOf(context, units),
+    qualifications: qualificationsOf(context),
     units
   }
 }
