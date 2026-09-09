@@ -193,6 +193,82 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [ ] 36. Dogfood follow-ups, 13th run — one Claude Opus 5 pass (Cowork, over
+      the remote-devices bridge) on `1.2.0+e934339`, 2026-09-09, the first run
+      against item 35's `setThisSession`. **Every packing number matched the
+      reader's independent arithmetic** again — count, per-plate weight,
+      packed weight, the tie at 35 lb reported as a tie, the hand-over at
+      100 lb (3 of a possible 10), the whole-file bound of 1 checked by hand —
+      and all three paths were byte-identical. Station 0 read OK for the
+      first time since item 26 shipped: the reader set the inherited inputs
+      anyway *and provenance proved it*. Five findings, verified here; none is
+      a wrong number, two are refuted, and the open one is the second reader
+      in two runs on the same seam.
+      - [ ] **Two lists that differ in label and not in content** (the
+        reader's worst; confirmed; the 12th run's reader hit the same seam
+        from the description side). `scope: "model"` gave seven rows,
+        `scope: "all"` the same seven, and only `customer: "all"` showed the
+        eighth — another customer's receipt. The reply is labelled
+        (`customer: "active"`) and, since item 35, the description says the
+        axes are independent; the reader read both and still called it a trap,
+        because nothing in the reply says *how many* rows the filter hid, and
+        "all" is the call a reader makes to stop worrying. Derived, not
+        adopted: the axes stay independent (ADR-0035 §4 — the panel's one
+        *All* collapses them only because the panel has one control), and
+        the disclosure is a count: `withheldByCustomer` on both list replies,
+        the rows the customer filter hid, zero when `customer: "all"` — a
+        field that can be false, one extra count query. **Decision needed:**
+        ADR-0035 amendment 1, or leave it at the label and the description.
+      - [ ] **Provenance is silent about the unit part** — refuted as
+        proposed, recorded as a pattern. The reader set `unitPart` in the same
+        `set_inputs` call as six groups and it appeared in neither list;
+        proposed `notTracked: ["unitPart", "overrides"]`. That is a constant,
+        and a constant cannot qualify the sentence beside it (ADR-0029
+        amendment 12). The reason it is not tracked is that it *cannot* be
+        inherited: the unit part and overrides are not persisted and the app
+        reopens nothing at launch, so both are always null or set since a
+        load in this launch — `load_model`'s `cleared` is their provenance,
+        and the object's description says exactly this. Adding them to the
+        lists would make `unchangedAre: "earlier-session"` false for a null
+        unit part, which is a wrong sentence made by the fix. The reader
+        wrote "presumably deliberate — but nothing in the reply says that":
+        the third reader to read values and not descriptions, after the
+        `source`→`mode` rename settled that a description does not reach
+        such a reader. No non-constant field exists here; recorded so the
+        next proposal of the same constant is recognised.
+      - [ ] **The CSV's weights do not sum to its packed weight** — refuted,
+        and worth keeping: a plausible wrong finding. The reader summed
+        *Unit weight × Qty* from rounded unit cells (8 × 0.012 …) and got
+        13.233 against the *Packed weight* row's 13.229. The CSV's own
+        *Total weight* column, which exists for exactly this, sums to 13.229
+        (nut 0.092, rod 0.27, bolt 0.331, bracket 3.353, plate 9.183;
+        recomputed here from the mesh volumes with the CSV's `decimal`). The
+        step that was wrong: multiplying a rounded per-unit cell by a count
+        instead of reading the total the file already carries. Nothing in
+        the file says cells are 3 dp; nothing needs to while the totals row
+        reconciles.
+      - [ ] **The summary's only bound is *upper bound N*** — half-right. The
+        reader says the constructive number is "in the CSV only"; it is in
+        the summary too, as the binding sentence the reader itself verified
+        verbatim (*the carton itself would take 3: that many were placed
+        with the cap lifted*), so no quote loses it. What is real: on the
+        Result line, *2 fit (upper bound 2)* beside a sentence saying the
+        carton takes 3 reads as a contradiction to a customer, because the
+        parenthetical folds the cap in and says nothing about it (the same
+        thing addendum 3 of ADR-0017 fixed in the CSV with two extra rows).
+        Panel and summary share `upperBoundLabel` (ADR-0022 §7 parity).
+        Derived: the label could read `binding` — *upper bound 2 under the
+        cap* when weight bound it, plain *upper bound 3* when the carton
+        did — a sentence backed by a field that already exists. Small; the
+        user's call whether the Result line should carry it or the note
+        already does the work.
+      - [ ] **`geometry` on the wire, *space* in the export** — already
+        recorded under item 35 (the enum's description says so on this very
+        build; the reader read values). Nothing moves; noted as a recurrence.
+      - [ ] Coverage the reader flagged honestly: every mesh in the reference
+        file is closed, so whether an open-mesh warning survives export is
+        unexercised by any dogfood run. The export builders test covers it
+        synthetically; a real open file for the brief would close the gap.
 - [x] 35. Dogfood follow-ups, 12th run — one Claude Opus 5 pass (Cowork,
       driving the Windows machine over the remote-devices bridge) on
       `1.2.0+e29c24c`, 2026-09-08, the first run against item 34's fixes.
