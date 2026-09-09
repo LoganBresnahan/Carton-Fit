@@ -427,8 +427,10 @@ export const appStateObject = z.object({
         .optional()
         .describe(
           'How many saved estimates this document holds (on every reply that carries state), counting ' +
-            'every version the person has linked to it (ADR-0034). The rows themselves are ' +
-            'list_saved_estimates with scope "model".'
+            'every version the person has linked to it (ADR-0034) and EVERY customer’s rows — the ' +
+            'document’s total, where the app’s own panel counts house plus the active customer. ' +
+            'The rows themselves are list_saved_estimates with scope "model", whose ' +
+            'withheldByCustomer gives the split.'
         )
     })
   ]),

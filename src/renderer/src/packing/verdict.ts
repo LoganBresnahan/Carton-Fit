@@ -389,7 +389,11 @@ export function bindingReport(result: PackResult, request: PackRequest): Binding
     }
     return { constraint: result.binding, bound: true, otherConstraint: other, note }
   }
-  const pct = (fraction: number): string => `${Math.round(fraction * 1000) / 10}%`
+  // ONE formatter for a share (17th dogfood): this sentence printed 3.1%
+  // beside a Fill row that printed 3%, and the exports lost the digit in the
+  // direction of looking emptier. `utilizationPercent` is what every surface
+  // shows, so it is what this sentence says too.
+  const pct = utilizationPercent
   const placed = result.placements.length
   const fill = pct(result.utilization)
   let note: string

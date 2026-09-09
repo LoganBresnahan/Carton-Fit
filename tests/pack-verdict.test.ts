@@ -250,6 +250,16 @@ describe('bindingReport', () => {
     expect(lifted.otherConstraint).toEqual(r.otherConstraint)
   })
 
+  it('prints its shares with the same formatter as the Fill row (17th dogfood)', () => {
+    const r = bindingReport(
+      fit({ fits: true, placements: [placement], utilization: 0.0309 }),
+      request(1000, 378)
+    )
+    expect(r.note).toContain('38% of the weight cap and 3% of the carton')
+    expect(r.note).not.toContain('3.1%')
+    expect(utilizationPercent(0.0309)).toBe('3%')
+  })
+
   it('drops the closer-limit ranking when every part is weightless', () => {
     const r = bindingReport(fit({ fits: true, placements: [placement] }), request(1000, 0))
     expect(r.bound).toBe(false)

@@ -1476,6 +1476,19 @@ it is a comparison of values, not a history of edits.
 Recorded, not changed: `inputs.weight.mode` under an override (fifth reader;
 rule 4) and the unit part in provenance (fourth reader; standing refutation).
 
+### Amendment 21 (2026-09-09, seventeenth dogfood — the closing run) — one formatter, one clause
+
+The binding sentence printed *3.1% of the carton* beside a Fill row that
+printed *3%*: two formatters for one share, in one file, and the exports lost
+the digit in the direction of looking emptier. The sentence now uses
+`utilizationPercent`, the formatter every surface shows (rule 5). And
+`file.savedEstimates` says it counts every customer's rows — the document's
+total — where the panel beside it counts house plus the active customer; the
+list's `withheldByCustomer` gives the split. Three wording questions from the
+same run are the user's call and sit under roadmap item 41 with item 33. The
+loop rests for this surface: twelve runs of matching numbers, and the last
+three runs' findings each one rung below the last.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

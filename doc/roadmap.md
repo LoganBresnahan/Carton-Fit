@@ -207,14 +207,16 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       description, three recorded for the user's call. **The loop is done
       for this surface**: three runs of findings each one rung below the
       last, and the reference file has no more to say.
-      - [ ] **The Fill row rounds to a whole percent while the sentence
-        beside it says 3.1%** (confirmed, trivial, rule 5 inside one file):
+      - [x] **The Fill row rounds to a whole percent while the sentence
+        beside it says 3.1%** (confirmed, trivial, rule 5 inside one file;
+        *fixed 2026-09-09*, amendment 21):
         `utilizationPercent` rounds to `3%` for the panel's row and both
         exports, while `bindingReport`'s own `pct` helper prints one decimal
         in the note. Two formatters for one number; the exports lose a digit
         in the direction of looking emptier. One formatter.
-      - [ ] **`file.savedEstimates` counts every customer's rows; the panel
-        beside it counts house plus active** (confirmed; the reader saw 11
+      - [x] **`file.savedEstimates` counts every customer's rows; the panel
+        beside it counts house plus active** (confirmed; *description fixed
+        2026-09-09*, amendment 21; the reader saw 11
         under all three customers and could not tell which axis the count
         respects, because the one hidden row is another document). The wire
         asks storage for the document's rows with no customer filter; the
@@ -237,7 +239,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         Options: keep it (the two numbers are in the sentence, a reader can
         judge); or drop the last sentence in fit-check when nothing bound and
         let the two numbers stand. **User's call**, with item 33.
-      - [ ] **`inputs.weight` reports a 0 lb part weight where the report
+      - [x] **`inputs.weight` reports a 0 lb part weight where the report
         says none was supplied** — refuted as proposed, second reader on the
         sentinel. `inputs.weight` is the input (rule 4) and 0 lb IS the input
         the app documents for a space-only answer; `weightInput.supplied` is
