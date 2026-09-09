@@ -1370,6 +1370,39 @@ both `number`, the rows in the requested scope that the customer filter hid,
 finding; the count is the field that makes them different replies. Additive,
 minor.
 
+### Amendment 18 (2026-09-09, fourteenth dogfood) — the bolt was never mixed, and the quote names the hand
+
+Two corrections, no wire shape change.
+
+**The bolt.** Amendments 10 and 11 qualified every answer on the reference
+file with *instances of "nut", "bolt" do not share one bounding box*. The nut's
+half is true — two of eight sit at 90° to the rest. The bolt's half was seven
+millionths of a millimetre: the alike test in `packing/kinds.ts` compared
+extents with the engine's `EPS` (1e-6 mm), the tolerance for whether one box
+sits inside another, and three of the six bolts tessellate 7.6 × 10⁻⁶ mm
+narrower than the other three. A reader who checked the CSV found six
+identical rows and said so. The test now has its own tolerance, one micron
+(`ALIKE_TOLERANCE_MM`), and `inspect_model` and `estimate` — one function,
+per amendment 10 — report the nut alone. Every report from the 7th run to the
+14th carried the bolt in that sentence; the tests that asserted it now assert
+its absence. A wrong number under a wrong sentence, the first wrong number
+since the 6th run.
+
+**The summary export's weight line.** With every counted kind overridden by
+hand, the summary said *density 7.85 g/cm³ × part volume — 1 kind overridden
+individually*: the source that contributed nothing named first, the one that
+contributed everything as a clause. The wire already said
+`countedWeightFrom: "override"` and the CSV printed the override and no
+density line; the summary — the artifact ADR-0017 exists because people paste
+it into quotes — did not read the rule. It now derives the same reading over
+the parts the request counted and leads with the hand: *entered by hand —
+plate 12 lb — the density 7.85 g/cm³ × part volume was not used*. An override
+on a kind the request did not count qualifies nothing, which is also the
+wire's rule.
+
+Also, description only: `save_preset` and `save_estimate` say at the point of
+writing that the row cannot be removed from the wire.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

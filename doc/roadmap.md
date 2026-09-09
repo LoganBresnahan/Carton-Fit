@@ -193,7 +193,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
-- [ ] 37. Dogfood follow-ups, 14th run — one Claude Opus 5 pass (Cowork, over
+- [x] 37. Dogfood follow-ups, 14th run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+5547fca`, 2026-09-09, the first run
       against item 36's count and label. **Every packing number matched the
       reader's independent arithmetic** — count, per-kind weights to four
@@ -203,8 +203,11 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       is the field doing its job on its first outing. Six findings and two
       asides, verified here; **one is a wrong number**, the first since the
       6th run, and it is a millionth of a millimetre.
-      - [ ] **The bolt is flagged as mixed by float noise** (confirmed, wrong
-        number → wrong sentence). The reader noticed all six bolt rows in the
+      - [x] **The bolt is flagged as mixed by float noise** (confirmed, wrong
+        number → wrong sentence; *fixed 2026-09-09*, ADR-0029 amendment 18:
+        `ALIKE_TOLERANCE_MM = 1e-3` in `kinds.ts`, pinned by a test that
+        stretches a cube by 7.6 µm and by a rotation; goldens and
+        qualifications tests now assert the nut alone). The reader noticed all six bolt rows in the
         CSV are identical and the only difference anywhere is 23 nm. Measured
         here from the mesh: three bolts are 14.999977112 mm wide and three are
         14.999969482 — a difference of 7.6 × 10⁻⁶ mm, above `EPS = 1e-6` mm,
@@ -220,8 +223,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         EPS, which answers a different question. The goldens and
         qualifications tests that assert *nut and bolt* become *nut*; the
         ADR-0029 amendment 10/11 sentence is corrected.
-      - [ ] **The summary export leads with the density when none of the
-        weight came from it** (confirmed, wrong sentence). With the plate
+      - [x] **The summary export leads with the density when none of the
+        weight came from it** (confirmed, wrong sentence; *fixed 2026-09-09*,
+        same amendment: `countedOverrides` in `summary.ts` applies the wire's
+        rule over the counted parts; pinned in the export builders). With the plate
         overridden to 12 lb and the plate the only counted kind, the quote
         block says *Part weight: density 7.85 g/cm³ × part volume — 1 kind
         overridden individually*; 24 lb = 2 × 12 and the density-derived
@@ -232,7 +237,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         direct/density/override/mixed reading from the request's parts and
         the overrides, and leads with the override when every counted kind
         has one.
-      - [ ] **`set_inputs` says nothing about persisting** — refuted as
+      - [x] **`set_inputs` says nothing about persisting** — refuted as
         proposed, and the recurrence recorded. The sixth reader to ask; the
         proposed `persisted: ["carton", "maxWeight"]` is an echo of the
         request, which is a constant in the sense that matters (ADR-0029
@@ -243,30 +248,30 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         reader since the 6th has flagged that wire writes persist. That is
         ADR-0034 §2 ("new part, same box") holding under pressure, and if it
         is to move it moves as a decision, not as a field.
-      - [ ] **`changedThisSession` empties on a revert; the unit part is in
+      - [x] **`changedThisSession` empties on a revert; the unit part is in
         neither list** — refuted, both by design and both described since
         item 35 and the 13th run's second sub-item. The reader itself says
         `setThisSession` answers the question. Second reader on the unit
         part; the reason has not changed (it cannot be inherited; adding it
         makes `unchangedAre` false for null).
-      - [ ] **`sizePerInstance` does not say which instance** — refuted: since
+      - [x] **`sizePerInstance` does not say which instance** — refuted: since
         amendment 14b it is the extents largest-first for a mixed kind, and
         the description says so; the reader's "nut and nut(2) don't match"
         is the same box permuted (3 × 15 × 20 against 20 × 15 × 3, measured
         here).
-      - [ ] **`inputs.weight.mode: "density"` while the count came from an
+      - [x] **`inputs.weight.mode: "density"` while the count came from an
         override** — refuted: the 8th run renamed `source` to `mode` for
         exactly this and the description says *an input, not a claim about
         this answer*; the reader read values. Fourth reader on this field.
-      - [ ] **The summary omits the geometry and space-only bounds** — the
+      - [x] **The summary omits the geometry and space-only bounds** — the
         13th run's fourth sub-item again; the binding sentence carries the
         space claim in prose and the reader confirms nothing was lost.
         Recorded.
-      - [ ] Aside, cheap and true: `save_preset` and `save_estimate` announce
+      - [x] Aside, cheap and true (*done 2026-09-09*): `save_preset` and `save_estimate` announce
         their writes but do not say, at the point of writing, that the row
         cannot be removed from the wire — the `list_*` descriptions carry it.
         One clause in each description.
-      - [ ] Aside: no folder grant was needed this time; the 12th run needed
+      - [x] Aside: no folder grant was needed this time; the 12th run needed
         one. Client-side, not ours; noted so the brief's connect steps do not
         promise either.
 - [x] 36. Dogfood follow-ups, 13th run — one Claude Opus 5 pass (Cowork, over
@@ -580,8 +585,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         not share one bounding box … this answer depends on how the file
         happened to orient them"* — four lines of amber under a verdict that
         cannot move. The user's words: *it makes the app logic look bad
-        unless the user knows what it's talking about.* Two things are wrong
-        with it, and only one is wording. (1) **It is flat**: the same
+        unless the user knows what it's talking about.* (*2026-09-09, item
+        37:* the bolt's half of that sentence was float noise and is gone;
+        the nut's half is true, and the questions below stand for it.) Two
+        things are wrong with it, and only one is wording. (1) **It is flat**: the same
         sentence at the same volume for a 7% fit-check, where no box shape
         flips the verdict, and for a 780-count max-quantity, where one
         instance's box is multiplied out and the eight-times-wrong weight

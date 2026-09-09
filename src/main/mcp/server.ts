@@ -590,7 +590,8 @@ function registerDataTools(
       description:
         'Save the app’s CURRENT inputs — carton, clearances, weight cap, mode, tier, units — ' +
         'under a name, so they can be recalled later. Saves what is on screen, so set the ' +
-        'inputs first. An existing preset of the same name is replaced. ' +
+        'inputs first. An existing preset of the same name is replaced; nothing here can ' +
+        'remove one — the person at the window can. ' +
         'NOT saved: per-kind weight overrides and the unit part, which belong to the loaded ' +
         'file rather than to a carton — applying a preset leaves whatever overrides the ' +
         'session already carries, so check them before trusting the answer.',
@@ -677,7 +678,8 @@ function registerDataTools(
       description:
         'Keep the estimate the app is showing right now, with the inputs that produced it. ' +
         'Explicit by design: the app records nothing automatically, because only the person ' +
-        'asking knows which estimate was an answer rather than a keystroke (ADR-0016).',
+        'asking knows which estimate was an answer rather than a keystroke (ADR-0016). ' +
+        'The row cannot be removed from here; the person at the window can delete it.',
       inputSchema: wire(saveEstimateInput),
       outputSchema: wire(savedEstimatesOutput)
     },

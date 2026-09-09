@@ -582,7 +582,9 @@ describe('every answer arrives qualified', () => {
     expect(mixed.affected).toBe(true)
     if (!mixed.affected) throw new Error('affected')
     expect(mixed.kinds).toContain('nut')
-    expect(mixed.kinds).toContain('bolt')
+    // 14th dogfood: the bolt is NOT mixed — six identical boxes to within
+    // float32 noise. A test asserting it was would be asserting the defect.
+    expect(mixed.kinds).not.toContain('bolt')
     expect(mixed.note).toMatch(/own box/i)
 
     // One computation, two tools: whatever `inspect_model` reports as NOT alike

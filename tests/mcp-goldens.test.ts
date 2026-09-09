@@ -165,10 +165,10 @@ describe('inspect_model against the hand-computed goldens', () => {
       }
     }
     const mixed = report.kinds.filter((kind) => !kind.instancesAlike).map((kind) => kind.kind)
-    expect(mixed.sort()).toEqual([
-      'bolt',
-      'nut'
-    ])
+    // The nut only. The bolt read as mixed from the 7th dogfood to the 14th
+    // because its six boxes differ by 7.6 × 10⁻⁶ mm of tessellation noise and
+    // the alike test used the engine's EPS; the six bolts are one box.
+    expect(mixed.sort()).toEqual(['nut'])
   })
 
   it('counts AS1’s 18 solids as 5 kinds', async () => {

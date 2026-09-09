@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { kindOf, partKinds, pruneOverrides } from '../src/renderer/src/packing/kinds'
+import {
+  ALIKE_TOLERANCE_MM,
+  kindOf,
+  mixedInstanceKinds,
+  partKinds,
+  pruneOverrides
+} from '../src/renderer/src/packing/kinds'
 import {
   buildPackRequest,
   effectiveWeightG,
@@ -205,5 +211,33 @@ describe('pruneOverrides', () => {
 
   it('is empty for a file with nothing in common', () => {
     expect(pruneOverrides({ bolt: 7 }, [cube('widget')])).toEqual({})
+  })
+})
+
+// The alike test's tolerance (14th dogfood). The engine's EPS is for "does
+// this box sit inside that one"; two tessellations of one bolt disagree by
+// millionths of a millimetre and are still one bolt.
+describe('mixedInstanceKinds', () => {
+  const stretched = (name: string, dx: number): ImportedPart => {
+    const part = cube(name)
+    const positions = new Float32Array(part.positions)
+    for (let i = 0; i < positions.length; i += 3) if (positions[i] > 5) positions[i] += dx
+    return { ...part, positions }
+  }
+  const rotated = (name: string): ImportedPart => {
+    const part = cube(name)
+    const positions = new Float32Array(part.positions)
+    for (let i = 0; i < positions.length; i += 3) positions[i + 1] *= 2
+    return { ...part, positions }
+  }
+
+  it('ignores float noise: instances a few millionths of a millimetre apart are alike', () => {
+    expect(mixedInstanceKinds([cube('bolt'), stretched('bolt (2)', 7.6e-6)])).toEqual([])
+    expect(mixedInstanceKinds([cube('bolt'), stretched('bolt (2)', ALIKE_TOLERANCE_MM / 2)])).toEqual([])
+  })
+
+  it('still sees a real difference in extent, and a real change of orientation', () => {
+    expect(mixedInstanceKinds([cube('bolt'), stretched('bolt (2)', 0.01)])).toEqual(['bolt'])
+    expect(mixedInstanceKinds([cube('nut'), rotated('nut (2)'), cube('bolt')])).toEqual(['nut'])
   })
 })

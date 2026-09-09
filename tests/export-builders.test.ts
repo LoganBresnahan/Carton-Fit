@@ -511,16 +511,43 @@ describe('buildSummary', () => {
 
   it('qualifies the weight source when kinds were overridden (ADR-0018)', () => {
     // "density × volume" alone would be contradicted by the table under it.
+    const parts = [
+      { name: 'bracket', positions: positions(), weightG: lbToG(2) },
+      { name: 'bolt', positions: positions(), weightG: 7 },
+      { name: 'plate', positions: positions(), weightG: 9 }
+    ]
     const text = buildSummary(
       input({
         settings: settings({ weightMode: 'density', densityGPerCm3: 7.85 }),
+        request: request({ parts }),
         overrides: { bolt: 7 }
       })
     )
     expect(text).toContain('density 7.85 g/cm³ × part volume — 1 kind overridden individually')
 
-    const two = buildSummary(input({ overrides: { bolt: 7, plate: 9 } }))
+    const two = buildSummary(input({ request: request({ parts }), overrides: { bolt: 7, plate: 9 } }))
     expect(two).toContain('2 kinds overridden individually')
+  })
+
+  it('leads with the override when every counted kind has one (14th dogfood)', () => {
+    // A 12 lb plate packed twice is 24 lb, none of it from the density — the
+    // quote block said "density 7.85 × volume — 1 kind overridden" and a reader
+    // recomputing from steel would get 18.4.
+    const text = buildSummary(
+      input({
+        settings: settings({ weightMode: 'density', densityGPerCm3: 7.85 }),
+        request: request({ parts: [{ name: 'plate', positions: positions(), weightG: lbToG(12) }] }),
+        overrides: { plate: lbToG(12) }
+      })
+    )
+    expect(text).toContain(
+      'Part weight: entered by hand — plate 12 lb — the density 7.85 g/cm³ × part volume was not used'
+    )
+    expect(text).not.toContain('overridden individually')
+    // An override on a kind the request did not count changes nothing.
+    const stray = buildSummary(input({ overrides: { plate: lbToG(12) } }))
+    expect(stray).not.toContain('entered by hand')
+    expect(stray).not.toContain('overridden')
   })
 
   it('makes no such claim when nothing was overridden', () => {

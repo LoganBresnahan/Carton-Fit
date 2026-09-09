@@ -1,4 +1,4 @@
-import { aabbSize, computeAabb, EPS } from '../core/geometry'
+import { aabbSize, computeAabb } from '../core/geometry'
 import type { ImportedPart } from '../workers/import-protocol'
 
 // Part KINDS (ADR-0018): the grouping weight overrides bind to.
@@ -80,8 +80,20 @@ export function groupByKind(parts: readonly ImportedPart[]): Map<string, Importe
   return groups
 }
 
+/**
+ * How far two instances' extents may differ and still be "the same part, the
+ * same way up": one micron. NOT the engine's `EPS` (1e-6 mm), which answers
+ * whether one box sits inside another — the 14th dogfood found the reference
+ * file's six bolts split three and three by 7.6 × 10⁻⁶ mm of float32
+ * tessellation noise, above EPS, and every reader since the 7th had been told
+ * the bolt was placed at two orientations. A micron is three orders above
+ * float32 noise on a metre-scale part and three below any clearance; a real
+ * orientation change moves an extent by millimetres.
+ */
+export const ALIKE_TOLERANCE_MM = 1e-3
+
 function extentsMatch(a: readonly number[], b: readonly number[]): boolean {
-  return a.every((value, i) => Math.abs(value - b[i]) <= EPS)
+  return a.every((value, i) => Math.abs(value - b[i]) <= ALIKE_TOLERANCE_MM)
 }
 
 /**
@@ -127,7 +139,7 @@ export type PartWeightOverrides = Readonly<Record<string, number>>
  * the authority.
  */
 export function overrideForPart(
-  part: ImportedPart,
+  part: Pick<ImportedPart, 'name'>,
   names: ReadonlySet<string>,
   overrides: PartWeightOverrides
 ): number | null {

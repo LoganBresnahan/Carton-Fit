@@ -12,6 +12,8 @@ import {
   verdictHeadline
 } from '../packing/verdict'
 import { dimsText, lengthText, modeLabel, tierLabel, weightText } from './format'
+import { kindOf, overrideForPart, type PartWeightOverrides } from '../packing/kinds'
+import type { PackRequest } from '../core/packing/types'
 import { measurementRows, type EstimateExport } from './types'
 
 // The copy-summary text (ADR-0017 §1) — the paste-into-a-quote artifact.
@@ -62,12 +64,41 @@ function weightLines(input: EstimateExport): string[] {
   // Naming the source alone would misdescribe a mixed assembly (ADR-0018): the
   // per-part figures below come from entered weights for some kinds, so a flat
   // "density × volume" claim is contradicted by the table under it.
-  const overridden = Object.keys(input.overrides).length
-  const qualifier =
-    overridden > 0
-      ? ` — ${overridden} kind${overridden === 1 ? '' : 's'} overridden individually`
-      : ''
-  return [`Packed weight: ${packed} of ${cap} ${unit}`, `Part weight: ${source}${qualifier}`]
+  //
+  // And when EVERY counted kind is overridden, the source contributed nothing
+  // (14th dogfood: a 12 lb plate packed as 24 lb under "density 7.85 × volume
+  // — 1 kind overridden", the one artifact that leaves the building). Same
+  // rule as the wire's `countedWeightFrom`: judged over the parts the request
+  // actually counted, not over every override the file has.
+  const counted = countedOverrides(request, input.overrides)
+  const line =
+    counted.all && counted.kinds.length > 0
+      ? `Part weight: entered by hand — ` +
+        counted.kinds
+          .map(([kind, g]) => `${kind} ${weightText(g, settings.partWeightUnit)} ${settings.partWeightUnit}`)
+          .join(', ') +
+        ` — the ${source} was not used`
+      : `Part weight: ${source}` +
+        (counted.kinds.length > 0
+          ? ` — ${counted.kinds.length} kind${counted.kinds.length === 1 ? '' : 's'} overridden individually`
+          : '')
+  return [`Packed weight: ${packed} of ${cap} ${unit}`, line]
+}
+
+/** The overridden kinds among the parts the request counted, and whether that
+ *  is all of them — `estimate.ts`'s `countedWeightFrom`, for the export. */
+function countedOverrides(
+  request: PackRequest,
+  overrides: PartWeightOverrides
+): { all: boolean; kinds: Array<[string, number]> } {
+  const names = new Set(request.parts.map((part) => part.name))
+  const seen = new Map<string, number | null>()
+  for (const part of request.parts) {
+    const kind = kindOf(part.name, names)
+    if (!seen.has(kind)) seen.set(kind, overrideForPart(part, names, overrides))
+  }
+  const kinds = [...seen].filter((entry): entry is [string, number] => entry[1] !== null)
+  return { all: seen.size > 0 && kinds.length === seen.size, kinds }
 }
 
 function partLines(input: EstimateExport): string[] {
