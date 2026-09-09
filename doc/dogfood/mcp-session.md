@@ -215,7 +215,7 @@ interrupts the person whose machine you are already borrowing.
 
 `list_presets`, `save_preset`, `apply_preset`, `list_saved_estimates`,
 `save_estimate`, `restore_estimate`, `export_estimate` (both `csv` and
-`summary`).
+`summary`), `list_customers`, `set_customer`.
 
 Check and report:
 - Does an export carry every warning the estimate carried, or does a
@@ -228,6 +228,11 @@ Check and report:
   claim. Then call `get_app_state` and check `file.savedEstimates` against what
   you saved. A list that shows another part's receipts under this one, or a
   count that disagrees with the list, is the failure mode here.
+- Call `list_customers` and say who the app is working for. If there is more
+  than one customer, `set_customer` to another one and back, and say what
+  changed in both lists and what did not change in the estimate — nothing in
+  a count depends on the customer. Do not try to create one; you should find
+  no way to, and the reply should say why.
 - Receipts and presets also carry a customer, and every list has a second
   axis for it (`customer: "active"`, the default, is the app's current
   customer plus house; `"all"` is everyone). `scope: "all"` widens the

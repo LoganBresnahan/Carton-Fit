@@ -89,10 +89,12 @@ field is a constant (rule 2), and a new tool has a station in
 `doc/dogfood/mcp-session.md` in the same commit (rule 12):
 
 ```bash
-git diff --name-only HEAD~1 -- src/main/mcp/ | grep -q . && \
-  diff <(grep -o "registerTool(\s*'[a-z_]*'" -A1 src/main/mcp/server.ts | grep -o "'[a-z_]*'" | tr -d "'" | sort) \
-       <(grep -o '`[a-z_]*`' doc/dogfood/mcp-session.md | tr -d '`' | sort -u) | grep '^<' || true
-# lines starting with '<' are tools the brief never names
+diff <(grep -A1 "registerTool(" src/main/mcp/server.ts | grep -o "'[a-z_]*'" | tr -d "'" | sort) \
+     <(grep -o '`[a-z_]*`' doc/dogfood/mcp-session.md | tr -d '`' | sort -u) | grep '^<' \
+  || echo "every tool has a station"
+# lines starting with '<' are tools the brief never names. The name sits on
+# the line AFTER `registerTool(`, so -A1 is load-bearing. First run
+# (2026-09-09) found list_customers and set_customer missing.
 ```
 
 **VISION.md**: still describes what the app actually does — inputs, modes,
