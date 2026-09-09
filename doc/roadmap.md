@@ -193,6 +193,65 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [ ] 41. Dogfood follow-ups, 17th run — the closing run of this loop: one
+      Claude Opus 5 pass (Cowork, over the remote-devices bridge) on
+      `1.2.0+a537f70`, 2026-09-09. **Every packing number matched the
+      reader's independent arithmetic** for the twelfth run in a row, both
+      paths byte-identical; items 38 and 39 held on their first outing (blank
+      weight cells through the parts table, `kept` on a preset applied over
+      an override, the receipt count on every reply, `withheldByCustomer`
+      read before deduced). Provenance did real work: the inherited cap was
+      20 lb, `setThisSession: []` said so, and station 4 would have read 2
+      instead of 3 for a reader who trusted it. Five findings, none a wrong
+      number and none a wrong claim about a count; one trivial fix, one
+      description, three recorded for the user's call. **The loop is done
+      for this surface**: three runs of findings each one rung below the
+      last, and the reference file has no more to say.
+      - [ ] **The Fill row rounds to a whole percent while the sentence
+        beside it says 3.1%** (confirmed, trivial, rule 5 inside one file):
+        `utilizationPercent` rounds to `3%` for the panel's row and both
+        exports, while `bindingReport`'s own `pct` helper prints one decimal
+        in the note. Two formatters for one number; the exports lose a digit
+        in the direction of looking emptier. One formatter.
+      - [ ] **`file.savedEstimates` counts every customer's rows; the panel
+        beside it counts house plus active** (confirmed; the reader saw 11
+        under all three customers and could not tell which axis the count
+        respects, because the one hidden row is another document). The wire
+        asks storage for the document's rows with no customer filter; the
+        panel's summary line is the scoped list's length. Two readings of
+        "how many receipts does this document hold" that agree until a second
+        customer saves against the same part. Derived: the wire's count is
+        the document's total — that is the question `load_model` answers —
+        and the description says *every customer's*; the list's
+        `withheldByCustomer` gives the split. A sibling `forCustomer` count
+        is the field if a reader ever needs the other reading.
+      - [ ] **"Weight is the closer limit" compares a weight ratio to a
+        bounding-box fill** (recorded for the user; the wording cousin of
+        item 33's open sub-item). The engine's least-headroom rule
+        (`shelfFit.ts`, `extremePointFit.ts`) is documented and ADR-0029's
+        first amendment kept `constraint` naming the closest limit on purpose
+        — refused twice since. The reader's point is narrower and true: the
+        note prints both numbers and then draws a conclusion across two
+        scales, one of which cannot reach 100%. Nothing false at 37.8%
+        against 3.1%; not necessarily true near a crossover nobody can place.
+        Options: keep it (the two numbers are in the sentence, a reader can
+        judge); or drop the last sentence in fit-check when nothing bound and
+        let the two numbers stand. **User's call**, with item 33.
+      - [ ] **`inputs.weight` reports a 0 lb part weight where the report
+        says none was supplied** — refuted as proposed, second reader on the
+        sentinel. `inputs.weight` is the input (rule 4) and 0 lb IS the input
+        the app documents for a space-only answer; `weightInput.supplied` is
+        the claim, and a `spaceOnly: true` beside a value of 0 is a function
+        of the value (rule 2). Recorded so the third proposal is recognised.
+      - [ ] **Three surfaces name one carton three ways** (recorded, cosmetic,
+        user's call): the export body says both (*Carton (inner): 9 × 4 × 8
+        in / entered as outer 11 × 6 × 10 in with 1 in walls*), the
+        suggested filename uses the inner dims (`-9x4x8in`, from the
+        request), the receipt line the entered ones (`11×6×10 in`, from the
+        settings). ADR-0004 makes inner the physical truth and the receipt
+        line prints what the person typed so they recognise it; the filename
+        is the one that could go either way. If it moves, it moves to the
+        entered dims, since a file name is a label for a person.
 - [ ] 40. Curved faces run a little light — **ADR-0015 addendum, 2026-09-09;
       decision deferred.** Mesh volume is a tessellation's volume, and a
       faceted curve is inscribed in the true surface: about 1.6% low at
