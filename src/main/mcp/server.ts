@@ -6,6 +6,7 @@ import { readModel } from '../occt/ingest'
 import type { OcctWasmContext } from '../occt/wasmPath'
 import type {
   ClearedByLoad,
+  KeptByPreset,
   DriveBridge,
   CustomerRef,
   DriveOutcome,
@@ -220,7 +221,12 @@ export function createCartonFitServer(options: ServerOptions): McpServer {
 function stamped(
   outcome: DriveOutcome,
   version: string
-): { state: object; estimate: EstimateAvailability; cleared?: ClearedByLoad } {
+): {
+  state: object
+  estimate: EstimateAvailability
+  cleared?: ClearedByLoad
+  kept?: KeptByPreset
+} {
   // Spread first: `cleared` rides through on a load and is absent everywhere
   // else, which is what its optionality on the wire means.
   return { ...outcome, state: { ...outcome.state, version } }
@@ -630,8 +636,8 @@ function registerDataTools(
         'A preset carries carton, clearances, cap, mode, tier and units — NOT the unit part ' +
         'or per-kind weight overrides, which belong to the loaded file. Whatever the session ' +
         'already carries stays in force, so a preset saved beside one answer can come back ' +
-        'beside a different one: read overriddenKinds and countedWeightFrom in the reply ' +
-        'before trusting the count. ' +
+        'beside a different one: the reply’s `kept` names the unit part and overrides left ' +
+        'in force, and countedWeightFrom says whether they produced the count. ' +
         SETTLED,
       inputSchema: wire(applyPresetInput),
       outputSchema: wire(driveOutcomeOutput)

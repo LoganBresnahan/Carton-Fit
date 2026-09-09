@@ -46,6 +46,13 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
   no longer read as one list.
   ([ADR-0035](doc/adr/0035-customers-are-a-label-on-presets-and-receipts.md) amendment 1,
   [ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md) amendment 17)
+- **Applying a preset says what it left in place.** A preset never carries
+  per-part hand weights or the unit part, so an assistant applying one now
+  reads back exactly which of those stayed in force and produced the count
+  it sees. The parts table of a space-only export no longer prints zero
+  weights, and the saved-estimate count travels on every reply.
+  ([ADR-0029](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md),
+  amendment 20)
 - **A pack with no weight given says so everywhere.** Running with no part
   weight is a space-only answer, and the panel, the summary and the CSV used
   to print its zero as a weight someone entered, with the panel adding that

@@ -121,7 +121,9 @@ function partLines(input: EstimateExport): string[] {
     lines.push(
       `  ${row.name} — ${row.quantity.toLocaleString()} × ` +
         `(${dimsText(row.extentMm, units)} ${lengthUnitLabel(units)}), ` +
-        `${weightText(row.unitWeightG, weightUnit)} ${weightUnit} each`
+        // No weight given (16th dogfood): the header says *none* and this
+        // table said *0 lb each* on every row — the sentinel as a measurement.
+        (weightless(input.request) ? 'no weight given' : `${weightText(row.unitWeightG, weightUnit)} ${weightUnit} each`)
     )
   }
   const rest = rows.length - PARTS_SHOWN

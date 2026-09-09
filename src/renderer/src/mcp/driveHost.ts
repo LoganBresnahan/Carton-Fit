@@ -23,6 +23,7 @@ import { settingsPatchFrom } from '../../../main/mcp/inputs'
 import type { OutputUnits } from '../../../main/mcp/wire'
 import type {
   ClearedByLoad,
+  KeptByPreset,
   DriveAction,
   DriveEnvelope,
   DriveOutcome,
@@ -111,8 +112,9 @@ function snapshotState(units?: Partial<OutputUnits>): DriveOutcome['state'] {
 
 /**
  * Add the document's receipt count to a state snapshot (ADR-0029 amendment 8,
- * ADR-0034 §3) — on get_app_state and, since the 11th dogfood, on load_model:
- * the two calls whose answer is "what document is this". Asked of storage here rather than read from the store, because the
+ * ADR-0034 §3) — on every reply that carries state, since the 16th dogfood;
+ * before that on get_app_state and load_model only, and a client diffing
+ * replies watched the field come and go. Asked of storage here rather than read from the store, because the
  * store's list is under whatever scope the panel is showing. A storage
  * failure leaves the field absent: the count is a convenience, and the state
  * reply must not fail for want of it.
@@ -131,7 +133,12 @@ async function withDocumentCount(state: DriveOutcome['state']): Promise<DriveOut
 /** Settle, then answer with where the app now stands. */
 async function settledOutcome(units?: Partial<OutputUnits>): Promise<DriveOutcome> {
   const outcome = await settle.waitForSettle()
-  return { state: snapshotState(units), estimate: estimateFrom(outcome, units) }
+  // The count on EVERY reply (16th dogfood): it was on two of six, and a
+  // client diffing state across calls watched a field appear and vanish.
+  return {
+    state: await withDocumentCount(snapshotState(units)),
+    estimate: estimateFrom(outcome, units)
+  }
 }
 
 /** Wait for the import triggered by load_model to land in the store. The
@@ -196,10 +203,7 @@ async function handle(action: DriveAction): Promise<DriveResult> {
       // load is exactly when "how many receipts does this document hold" is
       // asked, and it was on get_app_state alone.
       const outcome = await settledOutcome(action.units)
-      return {
-        kind: 'outcome',
-        outcome: { ...outcome, state: await withDocumentCount(outcome.state), cleared }
-      }
+      return { kind: 'outcome', outcome: { ...outcome, cleared } }
     }
 
     case 'set_inputs': {
@@ -300,7 +304,15 @@ async function handle(action: DriveAction): Promise<DriveResult> {
           store.getState().storageError ?? `no saved preset called “${action.name}”.`
         )
       }
-      return { kind: 'outcome', outcome: await settledOutcome(action.units) }
+      // Read AFTER the apply, because the apply is what leaves them: a preset
+      // never carries the unit part or the overrides, so whatever is in force
+      // now was in force before and produced the count in this reply.
+      const after = store.getState()
+      const kept: KeptByPreset = {
+        unitPart: after.unitPartName,
+        overriddenKinds: Object.keys(after.partWeightsG)
+      }
+      return { kind: 'outcome', outcome: { ...(await settledOutcome(action.units)), kept } }
     }
 
     case 'save_estimate': {

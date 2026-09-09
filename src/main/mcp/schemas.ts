@@ -426,7 +426,7 @@ export const appStateObject = z.object({
         .int()
         .optional()
         .describe(
-          'On get_app_state and load_model: how many saved estimates this document holds, counting ' +
+          'How many saved estimates this document holds (on every reply that carries state), counting ' +
             'every version the person has linked to it (ADR-0034). The rows themselves are ' +
             'list_saved_estimates with scope "model".'
         )
@@ -460,7 +460,8 @@ export const appStateObject = z.object({
       .object({
         changedThisSession: inputGroups.describe(
           'The input groups whose VALUE differs from what the app launched with. A group written ' +
-            'to the value it already had is not here — it is in setThisSession.'
+            'to the value it already had — or moved and moved back — is not here; it is in ' +
+            'setThisSession. This is a comparison of values, not a history of edits.'
         ),
         // The twelfth run (2026-09-08): a reader set seven groups to the values
         // the app had inherited, got [], and proved it with a round trip —
@@ -516,6 +517,20 @@ export const driveOutcomeOutput = {
       'Only on load_model: the unit part and per-kind weight overrides this load threw ' +
         'away, since kind names belong to the file that was open. An empty list and a null ' +
         'unit part mean there was nothing to clear — not that clearing was skipped.'
+    ),
+  // The mirror (16th dogfood): a preset never carries these, so what a preset
+  // LEAVES in force is what produced the count beside it.
+  kept: z
+    .object({
+      unitPart: z.union([z.string(), z.null()]),
+      overriddenKinds: z.array(z.string())
+    })
+    .optional()
+    .describe(
+      'Only on apply_preset: the unit part and per-kind weight overrides the preset left in ' +
+        'force — a preset never carries either, so these produced the count in this reply ' +
+        'and the preset did not. Empty means nothing was in force. Read this before trusting ' +
+        'a count that differs from the one the preset was saved beside.'
     )
 }
 

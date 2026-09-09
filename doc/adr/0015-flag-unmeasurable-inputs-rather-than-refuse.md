@@ -84,8 +84,48 @@ arrangement it cannot prove optimal.
   will be used at all, and the warning would be stale the moment the user
   switched weight modes.
 
+## Addendum, 2026-09-09 (sixteenth dogfood): the bias this ADR does not flag
+
+This ADR flags the *catastrophic* case — an open mesh, whose volume is wrong
+rather than approximate — and says nothing about the systematic one. Mesh
+volume is the volume of a tessellation, and a tessellation of a curved face
+is inscribed in the true surface: a cylinder faceted `n` times around loses
+`1 − (n/2π)·sin(2π/n)` of its cross-section, about 1.6% at twenty facets,
+0.4% at forty. The importer runs at occt-import-js's default deflection —
+nothing in `src/main/occt` sets one — so the facet count is whatever that
+default gives each face.
+
+A reader on the sixteenth run derived this and checked it against the
+reference file: the plate is planar and its density weight reproduces a hand
+figure to five significant digits; the bolts and rod are not, so the
+whole-file 13.229 lb is low by a fraction nothing in the reply bounds.
+Irrelevant at 38% of a cap; not at 98%. No run has found a wrong number
+from it, and this addendum records the mechanism rather than a defect.
+
+**What the honest field is, and is not.** A constant note ("mesh volumes of
+curved parts run slightly low") is ADR-0029 amendment 12's constant and says
+nothing a reader can act on. The field that can be false is *per kind*:
+whether this kind has curved faces at all. The importer already returns
+per-vertex normals; a kind whose adjacent triangles share a normal
+everywhere is planar and exact, and one whose normals turn is faceted and
+low. A bound on *how* low needs the deflection the importer used, which is
+knowable if the import passes one explicitly instead of taking the default.
+
+**Decision deferred**, as roadmap item 40: `inspect_model.kinds[]` and the
+estimate's `weightInput` gain a per-kind `curvedFaces: boolean` (or a volume
+tolerance derived from an explicit deflection), and the density line on
+every surface reads it. Not built with the run's other findings because it
+is a new qualification, and ADR-0029's rule for those is a claims table
+before a sentence (`doc/wire-rules.md`, rule 14: derive the path from the
+condition to the number first). The path here is real — density × a low
+volume is a low weight against a hard cap — and the number it reaches is the
+count.
+
 ## Revisit triggers
 
+- **A density-derived weight lands within a few percent of the cap** on a
+  part with curved faces — then the addendum above is the bug, and item 40
+  is the fix.
 - Users report the warning firing on parts they consider closed → the weld
   tolerance in `defaultWeldTolerance` is the suspect, not this decision.
 - A material/density library arrives (ADR-0004's trigger) → density mode gets

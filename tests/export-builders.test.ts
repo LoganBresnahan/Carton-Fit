@@ -541,9 +541,15 @@ describe('buildSummary', () => {
     expect(text).not.toContain('entered directly')
     expect(text).not.toContain('0 of 35')
     expect(text).toContain('! No part weight was given')
+    // …and the parts table under the header (16th dogfood): no "0 lb each".
+    expect(text).toContain('bracket — 1 × (1 × 2 × 4 in), no weight given')
+    expect(text).not.toContain('0 lb each')
     const csv = buildCsv(weightless)
     expect(csv).toContain('Packed weight (lb),\n')
     expect(csv).toContain('Warning,No part weight was given')
+    const bracketRow = csv.split('\n').find((line) => line.startsWith('bracket,'))
+    expect(bracketRow).toMatch(/,,$/)
+    expect(bracketRow).not.toMatch(/,0,0$/)
   })
 
   it('leads with the override when every counted kind has one (14th dogfood)', () => {

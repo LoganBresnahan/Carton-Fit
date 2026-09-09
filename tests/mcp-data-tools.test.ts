@@ -254,8 +254,11 @@ describe('the published surface', () => {
       expect(description).toMatch(/override/i)
       expect(description).toMatch(/unit part/i)
     }
-    // And the reply's own fields are named, so the warning points somewhere.
-    expect(apply?.description).toMatch(/overriddenKinds/)
+    // And the reply's own fields are named, so the warning points somewhere:
+    // since the 16th dogfood that is `kept`, the mirror of load_model's
+    // `cleared` — what the preset left in force — beside countedWeightFrom.
+    expect(apply?.description).toMatch(/`kept`/)
+    expect(apply?.description).toMatch(/countedWeightFrom/)
   })
 
   it('does not offer inspect_model a weight unit it cannot use', async () => {

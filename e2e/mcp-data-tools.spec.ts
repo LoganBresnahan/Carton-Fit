@@ -36,7 +36,11 @@ test.describe('the data tier against a real database', () => {
     'needs the Electron-ABI build of better-sqlite3, which only a packaged build reliably has'
   )
 
-  type Outcome = { state: AppStateReport; estimate: DriveOutcome['estimate'] }
+  type Outcome = {
+    state: AppStateReport
+    estimate: DriveOutcome['estimate']
+    kept?: DriveOutcome['kept']
+  }
 
   function goldenNamed(name: string): (typeof GOLDEN_PACKS)[number] {
     const golden = GOLDEN_PACKS.find((pack) => pack.name === name)
@@ -110,6 +114,12 @@ test.describe('the data tier against a real database', () => {
       expect(applied.estimate.available).toBe(true)
       if (!applied.estimate.available) throw new Error('unreachable')
       expect(applied.estimate.report.outcome).toMatchObject({ count: big.count })
+      // What the preset LEFT in force (16th dogfood): nothing here, and the
+      // reply says so rather than omitting the field.
+      expect(applied.kept).toEqual({ unitPart: null, overriddenKinds: [] })
+      // The document's receipt count rides on this reply too, not only on
+      // get_app_state and load_model.
+      expect(applied.state.file).toMatchObject({ loaded: true, savedEstimates: 0 })
 
       // A preset that does not exist says so rather than silently doing nothing.
       const missing = await client.callTool({

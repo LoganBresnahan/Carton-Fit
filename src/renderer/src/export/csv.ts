@@ -90,8 +90,10 @@ export function buildCsv(input: EstimateExport): string {
         // density weight was multiplied from. Blank rather than guessed when
         // the caller could not supply it (2026-09-04).
         measurement.enclosedVolumeMm3 === null ? '' : volumeText(measurement.enclosedVolumeMm3, units),
-        weightText(measurement.unitWeightG, weight),
-        weightText(measurement.totalWeightG, weight)
+        // Blank when no weight was given (16th dogfood), like the packed-weight
+        // cell below: a 0 here is a sentinel that reads as a measurement.
+        weightless(request) ? '' : weightText(measurement.unitWeightG, weight),
+        weightless(request) ? '' : weightText(measurement.totalWeightG, weight)
       ])
     )
   }

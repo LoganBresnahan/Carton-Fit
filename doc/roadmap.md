@@ -193,7 +193,22 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
-- [ ] 39. Dogfood follow-ups, 16th run — one Claude Opus 5 pass (Cowork, over
+- [ ] 40. Curved faces run a little light — **ADR-0015 addendum, 2026-09-09;
+      decision deferred.** Mesh volume is a tessellation's volume, and a
+      faceted curve is inscribed in the true surface: about 1.6% low at
+      twenty facets around a cylinder, 0.4% at forty, at whatever deflection
+      occt-import-js defaults to. The plate is planar and exact (station 4
+      reproduces to five figures); the bolts and rod are not, and nothing in
+      any reply bounds it. No run has found a wrong number from it; a
+      density weight quoted within a few percent of a cap on a curved part is
+      where it would bite. The honest field is per kind — `curvedFaces`,
+      derivable from the normals the importer already returns — not a
+      constant note; a tolerance needs an explicit deflection on import.
+      Build order: claims table first (`doc/wire-rules.md`), then the flag on
+      `inspect_model.kinds[]` and the estimate's `weightInput`, then the
+      density line on panel, exports and wire reads it. Raised by the 16th
+      run's reader (item 39).
+- [x] 39. Dogfood follow-ups, 16th run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+656d547`, 2026-09-09, the first run
       with no mixed-instances warning on the reference file and the first to
       export a space-only pack after item 38. **Every packing number matched
@@ -203,17 +218,18 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       digits; item 38's exports held (*Packed weight: none — no part weight
       was given*, blank CSV cell, warning line in both). Six findings; two
       confirmed, one open question worth an ADR, three recorded.
-      - [ ] **A space-only export prints *0 lb each* in the parts table**
+      - [x] **A space-only export prints *0 lb each* in the parts table**
         (confirmed; the header block went blank at item 38 and the table did
-        not). The summary's parts list says *nut — 1 × (…), 0 lb each* and the
+        not; *fixed 2026-09-09*, amendment 20). The summary's parts list says *nut — 1 × (…), 0 lb each* and the
         CSV *Unit weight (lb),0 / Total weight (lb),0* on every row — the
         sentinel leaking into the table that reads as measurements, in the
         file someone pastes into a BOM after scrolling past the header. Rule 5
         again: the same `weightless(request)` the header reads blanks the
         per-part weight cells in both exports. Pinned in the export builders.
-      - [ ] **`apply_preset` narrates a count whose weight the preset never
+      - [x] **`apply_preset` narrates a count whose weight the preset never
         carried** (confirmed as a surface gap; the reader's proposed fix
-        redirected). A preset saved beside a count of 3 was applied with a
+        redirected; *shipped 2026-09-09* as `kept`, amendment 20, pinned in
+        the data-tools e2e). A preset saved beside a count of 3 was applied with a
         12 lb hand weight in force from an unrelated `restore_estimate`;
         the reply said *The weight cap stopped this at 1* and the fields
         (`overriddenKinds`, `countedWeightFrom: "override"`) carried the
@@ -226,17 +242,18 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         `load_model`'s `cleared`; empty when nothing was kept, so it can be
         false. The tool's text reply names it. **Decision needed:** ADR-0029
         amendment 20, additive.
-      - [ ] **`inputs.weight.mode` reads "density" under an override** —
+      - [x] **`inputs.weight.mode` reads "density" under an override** —
         standing refutation (`doc/wire-rules.md`, rule 4); the fifth reader,
         and this one filed it as low severity with the authoritative field
         named. Recorded.
-      - [ ] **`changedThisSession` is net-against-launch** — by design and
+      - [x] **`changedThisSession` is net-against-launch** — by design and
         described since item 35; the reader's nuance is real: *written to the
         value it already had* and *moved and came back* are two histories
         with one signature. One clause in the description. And the unit part
         in provenance, fourth reader — standing refutation, unchanged.
-      - [ ] **Mesh volumes carry an unstated tessellation bias** (open; real;
-        not a wrong number in any run). A faceted cylinder is inscribed in
+      - [x] **Mesh volumes carry an unstated tessellation bias** (open; real;
+        not a wrong number in any run; *documented 2026-09-09* as ADR-0015's
+        addendum and carried as roadmap item 40). A faceted cylinder is inscribed in
         the true surface, so mesh volume is low by about 1 − (n/2π)·sin(2π/n)
         — 1.6% at twenty facets around. The plate is planar and exact, which
         is why station 4 reproduces to five figures; the bolts and rod are
@@ -249,13 +266,13 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         needed:** whether `inspect_model` and the estimate's `weightInput`
         should carry a per-kind `curvedFaces` (or a volume tolerance) —
         ADR-0015's territory, as a revisit trigger it did not write.
-      - [ ] **`file.savedEstimates` appears on two replies and vanishes on
-        the rest** (confirmed, cosmetic). `load_model` and `get_app_state`
+      - [x] **`file.savedEstimates` appears on two replies and vanishes on
+        the rest** (confirmed, cosmetic; *fixed 2026-09-09*, amendment 20). `load_model` and `get_app_state`
         go through `withDocumentCount`; `set_inputs`, `set_customer`,
         `apply_preset`, `restore_estimate` do not. One count query per reply;
         every drive outcome should carry it, and the description should stop
         naming two tools.
-      - [ ] Aside: tools arrive deferred in this client and need a fetch
+      - [x] Aside: tools arrive deferred in this client and need a fetch
         before any is callable; a client that skips that step sees the app as
         absent. Client-side, noted here so it is not re-found.
 - [x] 38. Dogfood follow-ups, 15th run — one Claude Opus 5 pass (Cowork, over

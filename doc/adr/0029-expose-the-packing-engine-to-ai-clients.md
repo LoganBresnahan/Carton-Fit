@@ -1442,6 +1442,40 @@ how the file happened to build them*. The reference file now carries no
 mixed-instances qualification at all; every report from the 7th run to the
 15th carried one. Amendment 10's reasoning holds for a kind that earns it.
 
+### Amendment 20 (2026-09-09, sixteenth dogfood) — what a preset kept, and a count on every reply
+
+Four small things from one run, all additive.
+
+**`apply_preset.kept`.** A reader applied a preset saved beside a count of 3
+with a 12 lb hand weight in force from an unrelated `restore_estimate`, and
+read *The weight cap stopped this at 1*. Every clause true; every clause a
+trap, because the sentence attributes the 1 to the cap and rests on a weight
+the preset never carried. The fields were there (`overriddenKinds`,
+`countedWeightFrom: "override"`); the reader asked for the binding note to
+name them. That note is one function on four surfaces (rule 5) and the panel
+shows the override beside it, so the note is not where this belongs. The
+surprise is announced where the client meets it (amendment 6): the reply
+gains `kept: { unitPart, overriddenKinds }`, the file-scoped state the preset
+left in force — the mirror of `load_model`'s `cleared`, present even when
+empty for the same reason. The description points at it.
+
+**`file.savedEstimates` on every reply that carries state.** It rode on
+`get_app_state` and `load_model` and on nothing else; a client diffing
+replies watched it appear and vanish. `settledOutcome` adds it, so
+`set_inputs`, `set_customer`, `apply_preset`, `restore_estimate` and
+`set_part_weight` carry it too. One count query per reply.
+
+**The space-only parts table.** Amendment 19 blanked the exports' header for
+a pack with no weight; the parts table under it still said *0 lb each* on
+every row, and the CSV `0` twice per part. Same function, same blank.
+
+**One clause on `changedThisSession`.** A group moved and moved back has the
+same signature as one written to the value it had; the description now says
+it is a comparison of values, not a history of edits.
+
+Recorded, not changed: `inputs.weight.mode` under an override (fifth reader;
+rule 4) and the unit part in provenance (fourth reader; standing refutation).
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

@@ -84,7 +84,18 @@ export interface DriveOutcome {
    *  nothing, because "nothing was in force" is the answer to the same
    *  question. */
   cleared?: ClearedByLoad
+  /** What applying a preset LEFT IN FORCE (16th dogfood, ADR-0029 amendment
+   *  20): the unit part and per-kind overrides a preset never carries, named
+   *  in the reply where a client meets the count they produced. A reader
+   *  applied a preset saved beside 3 and read *the weight cap stopped this at
+   *  1* — true, and resting on a 12 lb hand weight from an unrelated restore
+   *  that the sentence never mentioned. Present only on apply_preset, and
+   *  present when empty, for the same reason `cleared` is. */
+  kept?: KeptByPreset
 }
+
+/** The same shape as `ClearedByLoad`, read the other way round. */
+export type KeptByPreset = ClearedByLoad
 
 /** The unit part and overrides a `load_model` dropped, named rather than
  *  implied by their absence from the state that follows. */
