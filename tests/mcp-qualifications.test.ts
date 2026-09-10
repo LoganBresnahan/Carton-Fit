@@ -158,6 +158,13 @@ describe('the schema rejects a reply with a hedge missing', () => {
     const mutated = structuredClone(report) as EstimateReport
     delete (mutated.qualifications.weightInput as unknown as Record<string, unknown>).meshVolumes
     expect(estimateSchema.safeParse(mutated).success).toBe(false)
+    // And its per-kind list and percent sibling (amendment 23), each on its own.
+    for (const key of ['perKind', 'volumeTolerancePercent']) {
+      const again = structuredClone(report) as EstimateReport
+      if (!again.qualifications.weightInput.supplied) throw new Error('weight was supplied')
+      delete (again.qualifications.weightInput.meshVolumes as unknown as Record<string, unknown>)[key]
+      expect(estimateSchema.safeParse(again).success, key).toBe(false)
+    }
   })
 
   it('rejects an inspect kind whose tessellation is unknown for no reason', async () => {
@@ -541,7 +548,14 @@ describe('every answer arrives qualified', () => {
       countedWeightFrom: 'direct',
       // Direct mode integrates no volume, so nothing is approximate and the
       // band is empty (ADR-0015 addendum 2) — a varying field, not a constant.
-      meshVolumes: { approximateKinds: [], volumeTolerance: 0, couldChangeCount: false, note: null }
+      meshVolumes: {
+        approximateKinds: [],
+        volumeTolerance: 0,
+        volumeTolerancePercent: 0,
+        perKind: [],
+        couldChangeCount: false,
+        note: null
+      }
     })
     expect(report.binding.constraint).toBe('weight')
   })
@@ -598,14 +612,14 @@ describe('every answer arrives qualified', () => {
   // ADR-0015 addendum 2: the field is on every density answer, the sentence
   // only where the band reaches the cap. Station 4's setup, three caps.
   describe('a density weight over curved faces says so, and says when it matters', () => {
-    const station4 = (capLb: number) =>
+    const station4 = (capLb: number, outer: [number, number, number] = [11, 6, 10]) =>
       estimate({
         path: AS1,
         mode: 'max-quantity',
         tier: 'thorough',
         carton: {
           measured: 'outer',
-          dimensions: { x: 11, y: 6, z: 10, unit: 'in' },
+          dimensions: { x: outer[0], y: outer[1], z: outer[2], unit: 'in' },
           wallThickness: { value: 1, unit: 'in' }
         },
         clearances: { betweenParts: { value: 0.25, unit: 'in' }, wall: { value: 0.25, unit: 'in' } },
@@ -627,19 +641,81 @@ describe('every answer arrives qualified', () => {
       expect(weightInput.meshVolumes.approximateKinds).toEqual(['plate'])
       expect(weightInput.meshVolumes.volumeTolerance).toBeGreaterThan(0.015)
       expect(weightInput.meshVolumes.volumeTolerance).toBeLessThan(0.025)
+      // The percent sibling is the same number ×100 (amendment 23).
+      expect(weightInput.meshVolumes.volumeTolerancePercent).toBeCloseTo(
+        weightInput.meshVolumes.volumeTolerance * 100,
+        9
+      )
+      expect(weightInput.meshVolumes.perKind).toEqual([
+        {
+          kind: 'plate',
+          volumeTolerance: weightInput.meshVolumes.volumeTolerance,
+          volumeTolerancePercent: weightInput.meshVolumes.volumeTolerancePercent
+        }
+      ])
       expect(weightInput.meshVolumes.couldChangeCount).toBe(false)
       expect(weightInput.meshVolumes.note).toBeNull()
     })
 
-    it('fires at 36.5 lb, where a fourth plate lighter by the band would slip under the cap', async () => {
-      // 4 × 9.18 = 36.7 lb > 36.5 ≥ 4 × (9.18 − 0.17) = 36.0.
+    it('stays silent at 36.5 lb in the brief’s carton: the weight band straddles the cap, but the carton is full (18th dogfood)', async () => {
+      // 4 × 9.18 = 36.7 lb > 36.5 ≥ 4 × (9.18 − 0.17) = 36.0 — by weight a
+      // fourth is ambiguous. But 9 × 4 × 8 in inside takes three plates and
+      // no more at any weight (spaceOnlyCount 3), and the 18th reader was
+      // sent to weigh a plate by a note printed beside the field proving no
+      // weight could matter.
       const report = await station4(36.5)
+      expect(report.outcome).toMatchObject({ mode: 'max-quantity', count: 3 })
+      if (report.outcome.mode !== 'max-quantity') return
+      expect(report.outcome.spaceOnlyCount).toEqual({ known: true, count: 3 })
+      const { weightInput } = report.qualifications
+      if (!weightInput.supplied) throw new Error('weight was supplied')
+      expect(weightInput.meshVolumes.couldChangeCount).toBe(false)
+      expect(weightInput.meshVolumes.note).toBeNull()
+    })
+
+    it('fires at 36.5 lb in a carton with room, where a fourth plate lighter by the band would slip under', async () => {
+      // The reader's isolating carton: outer 11 × 10 × 10, inner 9 × 8 × 8,
+      // which places nine plates with the cap lifted. Same cap, same band,
+      // and now the count genuinely could move.
+      const report = await station4(36.5, [11, 10, 10])
       expect(report.outcome).toMatchObject({ count: 3 })
+      if (report.outcome.mode !== 'max-quantity') return
+      expect(report.outcome.spaceOnlyCount.known && report.outcome.spaceOnlyCount.count).toBeGreaterThan(3)
       const { weightInput } = report.qualifications
       if (!weightInput.supplied) throw new Error('weight was supplied')
       expect(weightInput.meshVolumes.couldChangeCount).toBe(true)
       expect(weightInput.meshVolumes.note).toMatch(/“plate”/)
       expect(weightInput.meshVolumes.note).toMatch(/change the count/)
+    })
+
+    it('names each counted kind with its own tolerance on a mixed pack, and the headline is the largest', async () => {
+      // Station 3: five kinds. One scalar used to be the bolt's 2.1%, quoted
+      // for a pack that is 69% plate at 1.9%, with nothing saying it was a
+      // maximum (18th dogfood).
+      const report = await estimate({
+        path: AS1,
+        mode: 'fit-check',
+        tier: 'fast',
+        carton: carton(24, 'in'),
+        weight: { densityGPerCm3: 7.85 },
+        maxWeight: { value: 35, unit: 'lb' }
+      })
+      const { weightInput } = report.qualifications
+      if (!weightInput.supplied) throw new Error('weight was supplied')
+      const { perKind, approximateKinds, volumeTolerance } = weightInput.meshVolumes
+      expect(perKind.map((entry) => entry.kind)).toEqual(approximateKinds)
+      expect(approximateKinds).toHaveLength(5)
+      expect(Math.max(...perKind.map((entry) => entry.volumeTolerance))).toBe(volumeTolerance)
+      const bolt = perKind.find((entry) => entry.kind === 'bolt')!
+      const plate = perKind.find((entry) => entry.kind === 'plate')!
+      expect(bolt.volumeTolerance).toBeGreaterThan(plate.volumeTolerance)
+      expect(bolt.volumeTolerance).toBe(volumeTolerance)
+      // Each kind's figure agrees with inspect_model's, the same function.
+      const inspect = await call<InspectReport>('inspect_model', { path: AS1 })
+      for (const entry of perKind) {
+        const kind = inspect.kinds.find((k) => k.kind === entry.kind)!
+        expect(kind.tessellation.known && kind.tessellation.volumeTolerance).toBe(entry.volumeTolerance)
+      }
     })
 
     it('fires at 28 lb, where three plates heavier by the band would exceed it', async () => {
@@ -667,6 +743,8 @@ describe('every answer arrives qualified', () => {
       expect(weightInput.meshVolumes).toEqual({
         approximateKinds: [],
         volumeTolerance: 0,
+        volumeTolerancePercent: 0,
+        perKind: [],
         couldChangeCount: false,
         note: null
       })

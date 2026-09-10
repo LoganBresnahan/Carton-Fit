@@ -18,6 +18,7 @@ import {
   volumeFromMm3,
   type DimensionsValue,
   type OutputUnits,
+  percentOf,
   type VolumeValue
 } from './wire'
 
@@ -62,7 +63,14 @@ export interface KindReport {
    *  and how far the enclosed volume can be off either way (ADR-0015
    *  addendum 2). `known: false` for an STL: the file IS its mesh, and there
    *  is no surface behind it to compare a tessellation against. */
-  tessellation: Known<{ curvedFaces: boolean; facetTurnDeg: number; volumeTolerance: number }>
+  tessellation: Known<{
+    curvedFaces: boolean
+    facetTurnDeg: number
+    /** A fraction either way; `volumeTolerancePercent` is the same number ×100
+     *  (amendment 23: the one value here that named no unit). */
+    volumeTolerance: number
+    volumeTolerancePercent: number
+  }>
   /** True when every instance has the same bounding box. STEP geometry arrives
    *  with its assembly placement baked in (ADR-0002 addendum), so instances of
    *  one product sitting at different orientations have different boxes; when
@@ -103,7 +111,7 @@ export interface InspectQualifications {
  *  for the kind. */
 function tessellationOf(
   part: ImportedPart
-): Known<{ curvedFaces: boolean; facetTurnDeg: number; volumeTolerance: number }> {
+): KindReport['tessellation'] {
   const turn = facetTurnOf(part)
   if (turn === null) {
     return {
@@ -117,7 +125,8 @@ function tessellationOf(
     known: true,
     curvedFaces: turn > PLANAR_TURN_DEG,
     facetTurnDeg: turn,
-    volumeTolerance: tessellationTolerance(turn)
+    volumeTolerance: tessellationTolerance(turn),
+    volumeTolerancePercent: percentOf(tessellationTolerance(turn))
   }
 }
 

@@ -45,7 +45,8 @@ import {
   type DimensionsValue,
   type LengthValue,
   type OutputUnits,
-  type WeightValue
+  type WeightValue,
+  percentOf
 } from './wire'
 
 // `estimate` (ADR-0029 v1) — the app's answer, without the app.
@@ -220,7 +221,11 @@ export interface EstimateQualifications {
          *  22). `note` carries the sentence only when `couldChangeCount`. */
         meshVolumes: {
           approximateKinds: string[]
+          /** The LARGEST over `perKind` (amendment 23: it was one scalar with
+           *  nothing saying so, and it was the bolt's, quoted for the plate). */
           volumeTolerance: number
+          volumeTolerancePercent: number
+          perKind: Array<{ kind: string; volumeTolerance: number; volumeTolerancePercent: number }>
           couldChangeCount: boolean
           note: string | null
         }
@@ -456,7 +461,15 @@ function qualificationsOf(context: LiveEstimateContext): EstimateQualifications 
           mode: settings.weightMode,
           overriddenKinds: Object.keys(overrides),
           countedWeightFrom: countedWeightFrom(context),
-          meshVolumes: { ...meshVolumes, note: meshVolumeWarning(meshVolumes) }
+          meshVolumes: {
+            ...meshVolumes,
+            volumeTolerancePercent: percentOf(meshVolumes.volumeTolerance),
+            perKind: meshVolumes.perKind.map((entry) => ({
+              ...entry,
+              volumeTolerancePercent: percentOf(entry.volumeTolerance)
+            })),
+            note: meshVolumeWarning(meshVolumes)
+          }
         }
       : {
           supplied: false,

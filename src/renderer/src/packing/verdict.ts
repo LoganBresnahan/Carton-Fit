@@ -636,23 +636,39 @@ export function truncatedLayoutNote(result: PackResult): string | null {
 export interface MeshVolumeReport {
   /** Counted kinds whose grams came from a closed, curved, un-overridden mesh. */
   approximateKinds: string[]
-  /** The fraction, either way, those volumes can be off by — the largest over the kinds. 0 when none. */
+  /** The LARGEST tolerance over the kinds — a fraction either way, 0 when
+   *  none. A headline, not the band: `perKind` is what the band and the
+   *  exports read (18th dogfood, ADR-0029 amendment 23). */
   volumeTolerance: number
+  /** Each kind's own tolerance, in `approximateKinds` order. */
+  perKind: Array<{ kind: string; volumeTolerance: number }>
   /** The band test: whether the cap sits close enough to the packed weight that
    *  a volume error inside the tolerance could change the count. */
   couldChangeCount: boolean
 }
 
 /**
- * The band test. Only the approximate kinds' grams are in the band — a plate
- * priced by hand beside a density-priced bolt widens nothing.
+ * The band test. The band is Σ(each kind's tolerance × its grams) over the
+ * approximate kinds — a plate priced by hand beside a density-priced bolt
+ * widens nothing, and the bolt's coarseness widens only the bolt's grams
+ * (18th dogfood: one scalar times every gram quoted the bolt's 2.1% for a
+ * pack that was 69% plate at 1.9%).
  *
  *  - max-quantity: `count` units heavier by the band would exceed the cap, or
- *    — when the cap was what stopped `count + 1` — that many units lighter by
- *    the band would fit under it;
+ *    — when the cap was what stopped `count + 1` AND THE CARTON HAS ROOM FOR
+ *    IT — that many units lighter by the band would fit under the cap. The
+ *    room is `spaceOnlyCount > count`, ADR-0033's constructive field: what the
+ *    engine returns with the cap lifted, so what it would return with a
+ *    lighter unit. Not `geometryBound`, which a reader proposed: a loose bound
+ *    says a fourth was not proven impossible, and the engine would still say
+ *    3 because its own search found no room. The 18th dogfood found this
+ *    branch reading only the weight, and the reply told an engineer to go
+ *    weigh a plate the carton could not take a fourth of — rule 14 applied
+ *    halfway, the path from the carton to the count never derived;
  *  - fit-check: the file's total, every part, crosses the cap inside the band.
- *    The engine's actual placement is greedier than a total, so this is
- *    "could", stated as such.
+ *    A lighter file changes the unplaced list even when the verdict stays,
+ *    so no geometry gate here. The engine's actual placement is greedier
+ *    than a total, so this is "could", stated as such.
  */
 export function meshVolumeReport(
   result: PackResult,
@@ -662,6 +678,7 @@ export function meshVolumeReport(
   const report: MeshVolumeReport = {
     approximateKinds: approximate.kinds,
     volumeTolerance: approximate.tolerance,
+    perKind: approximate.perKind.map(({ kind, tolerance }) => ({ kind, volumeTolerance: tolerance })),
     couldChangeCount: false
   }
   const cap = request.maxWeightG
@@ -672,21 +689,21 @@ export function meshVolumeReport(
   // over `bolt (2)` alone carries no `bolt` to strip the ordinal against, so
   // the kind names join the set the ordinal test reads.
   const names = new Set([...request.parts.map((part) => part.name), ...approximate.kinds])
-  const inBand = new Set(approximate.kinds)
+  const toleranceOf = new Map(approximate.perKind.map(({ kind, tolerance }) => [kind, tolerance]))
   let total = 0
-  let approximateG = 0
+  let band = 0
   for (const part of request.parts) {
     total += part.weightG
-    if (inBand.has(kindOf(part.name, names))) approximateG += part.weightG
+    band += (toleranceOf.get(kindOf(part.name, names)) ?? 0) * part.weightG
   }
-  const band = approximate.tolerance * approximateG
   if (band <= 0) return report
 
   if (result.mode === 'max-quantity') {
     const count = result.count
     const tooMany = count * (total + band) > cap + EPS
     const capStoppedNext = (count + 1) * total > cap + EPS
-    const tooFew = capStoppedNext && (count + 1) * (total - band) <= cap + EPS
+    const cartonHasRoom = result.spaceOnlyCount > count
+    const tooFew = capStoppedNext && cartonHasRoom && (count + 1) * (total - band) <= cap + EPS
     report.couldChangeCount = tooMany || tooFew
     return report
   }
@@ -719,8 +736,9 @@ export function meshVolumeWarning(report: MeshVolumeReport): string | null {
     report.approximateKinds.length === 1
       ? `The weight of ${list} comes from`
       : `The weights of ${list} come from`
+  const spread = report.approximateKinds.length === 1 ? 'about' : 'up to about'
   return (
-    `${subject} the mesh volume of curved faces, which can run about ` +
+    `${subject} the mesh volume of curved faces, which can run ${spread} ` +
     `${toleranceText(report.volumeTolerance)} light or heavy at this facet size — and this pack ` +
     `sits close enough to the weight cap for that to change the count. Weigh one and enter it ` +
     `directly to settle it.`
@@ -734,9 +752,11 @@ export function meshVolumeWarning(report: MeshVolumeReport): string | null {
  * "mesh volume" without "approximate" was the omission (16th dogfood).
  */
 export function meshVolumeClause(report: MeshVolumeReport): string | null {
-  if (report.approximateKinds.length === 0) return null
-  return (
-    `mesh volumes of curved faces, approximate to about ` +
-    `${toleranceText(report.volumeTolerance)} either way: ${report.approximateKinds.join(', ')}`
-  )
+  if (report.perKind.length === 0) return null
+  // Each kind with its own figure (18th dogfood): one number for five kinds
+  // was the bolt's, quoted for the plate.
+  const kinds = report.perKind
+    .map(({ kind, volumeTolerance }) => `${kind} ${toleranceText(volumeTolerance)}`)
+    .join(', ')
+  return `mesh volumes of curved faces, approximate either way: ${kinds}`
 }

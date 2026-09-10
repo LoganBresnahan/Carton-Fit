@@ -239,12 +239,16 @@ describe('approximateVolumeKinds (ADR-0015 addendum 2)', () => {
     const report = approximateVolumeKinds([curvedPart('bolt', 14.5)], density, null, {})
     expect(report.kinds).toEqual(['bolt'])
     expect(report.tolerance).toBeCloseTo(0.0213, 3)
+    expect(report.perKind).toHaveLength(1)
+    expect(report.perKind[0].kind).toBe('bolt')
+    expect(report.perKind[0].tolerance).toBe(report.tolerance)
   })
 
   it('is empty for a planar B-rep — the cube is exact', () => {
     expect(approximateVolumeKinds([curvedPart('cube', 0)], density, null, {})).toEqual({
       kinds: [],
-      tolerance: 0
+      tolerance: 0,
+      perKind: []
     })
   })
 
@@ -266,6 +270,15 @@ describe('approximateVolumeKinds (ADR-0015 addendum 2)', () => {
     const report = approximateVolumeKinds(parts, density, null, { bolt: 50 })
     expect(report.kinds).toEqual(['rod'])
     expect(report.tolerance).toBeCloseTo(0.0101, 3)
+  })
+
+  it('carries each kind’s own tolerance, and the headline is the largest (18th dogfood)', () => {
+    const parts = [curvedPart('rod', 10), curvedPart('bolt', 14.5)]
+    const report = approximateVolumeKinds(parts, density, null, {})
+    expect(report.perKind.map((entry) => entry.kind)).toEqual(['rod', 'bolt'])
+    expect(report.perKind[0].tolerance).toBeCloseTo(0.0101, 3)
+    expect(report.perKind[1].tolerance).toBeCloseTo(0.0213, 3)
+    expect(report.tolerance).toBe(report.perKind[1].tolerance)
   })
 
   it('leaves an OPEN mesh to the open-mesh warning: wrong, not approximate', () => {

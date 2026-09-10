@@ -193,6 +193,66 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [x] 42. Dogfood follow-ups, 18th run — one Claude Opus 5 pass (Cowork, over
+      the remote-devices bridge) on `1.2.0+0a46ed3`, 2026-09-10, the first
+      run against item 40. **Every count matched the reader's own derivation**
+      (thirteenth straight run), both paths byte-identical, and station 1 did
+      what it was written to do: the reader predicted the plate and bracket
+      planar, read `curvedFaces: true` on all five kinds, looked at the
+      capture, and said the app was right. Station 4's new 36.5 lb cap caught
+      the band test's one hole on its first outing. Three findings on the
+      day-old field, all confirmed; two recurrences. All three built the
+      same day on the user's go-ahead (ADR-0029 amendment 23).
+      - [x] **`couldChangeCount` ignores the carton** (confirmed; the
+        reader's proposed field is half-right). At station 4's carton and a
+        36.5 lb cap the reply says `geometryBound: 3`, `spaceOnlyCount: 3` and
+        `couldChangeCount: true` in one response, and the note sends the
+        reader to weigh a plate that no weight can make a fourth of. The band
+        test's *too few* branch checks only that `count + 1` units lighter by
+        the band would clear the cap; it never asks whether the carton has
+        room for the unit. Reproduced: the same cap in an 11 × 10 × 10 outer
+        carton (`spaceOnlyCount: 9`) is correctly true, so the flag is right
+        wherever weight is the sole limit and wrong exactly where both limits
+        co-bind — the case the brief is built around, and rule 14's own
+        lesson (derive the path from the condition to the number) applied
+        halfway. **Derived fix:** gate the branch on `spaceOnlyCount > count`,
+        the constructive field (ADR-0033) — not on `geometryBound`, which the
+        reader proposed: a loose bound says a fourth was not proven
+        impossible, and the engine would still return 3 with a lighter plate
+        because its own cap-lifted search found no room. Pin at station 4's
+        carton (false) and the 11 × 10 × 10 one (true), both at 36.5 lb.
+      - [x] **`meshVolumes.volumeTolerance` is one scalar, silently the worst
+        kind's** (confirmed). Station 3 lists five approximate kinds beside
+        `0.0212` — the bolt's, 0.4% of the pack's weight; the plate, 69% of it,
+        is at 0.0190. Nothing on the wire says the number is a maximum, and
+        the band it feeds (`tolerance × every approximate gram`) overstates the
+        pack by the same margin. The summary clause prints the same one number
+        for five kinds. **Derived fix, additive (rule 7):** a per-kind list
+        beside the scalar, the band as Σ(tolerance × grams) over kinds, and
+        the summary clause naming each kind with its own figure; the scalar
+        stays, described as the largest.
+      - [x] **`volumeTolerance` is the one bare number on the surface**
+        (confirmed, surface gap). Every length and volume carries a unit and
+        `facetTurnDeg` names its own; a fraction of `0.01897` reads as 1.9% or
+        0.019% with nothing to choose between them, on the call a reader makes
+        *before* the estimate's prose exists to disambiguate it. The reader
+        proposed a rename; rule 7 says a sibling. **Derived fix:**
+        `volumeTolerancePercent` beside it everywhere the fraction appears,
+        computed from the fraction in one place (`percentOf`, wire.ts). The
+        user chose the sibling; *built 2026-09-10*.
+      - [x] **`openMesh: { affected: false }` carries no sentence** — refuted,
+        and the reader half-suspected it. A note on the negative case would
+        be a constant (rule 2): there is nothing to qualify. The positive
+        branch carries the consequence and the remedy; the description
+        carries the meaning for the negative one. Recorded so the next
+        proposal is recognised.
+      - [x] **Export filenames name the inner dimensions** — a recurrence of
+        item 41's open sub-item, second reader, same proposed direction
+        (entered dims, a filename is a label for a person). Still the user's
+        call; recorded there.
+      - [x] Aside: the remote-devices bridge again reported the server as
+        connected-not-announced with no tools listed until a refresh — item
+        39's aside, second occurrence, the client's and not ours.
 - [ ] 41. Dogfood follow-ups, 17th run — the closing run of this loop: one
       Claude Opus 5 pass (Cowork, over the remote-devices bridge) on
       `1.2.0+a537f70`, 2026-09-09. **Every packing number matched the
@@ -253,7 +313,8 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         settings). ADR-0004 makes inner the physical truth and the receipt
         line prints what the person typed so they recognise it; the filename
         is the one that could go either way. If it moves, it moves to the
-        entered dims, since a file name is a label for a person.
+        entered dims, since a file name is a label for a person. *Raised
+        again by the 18th run's reader (item 42), same direction.*
 - [x] 40. Curved faces run a little light — **ADR-0015 addendum 2, built
       2026-09-09.** Per kind on `inspect_model`: `tessellation` (`curvedFaces`,
       `facetTurnDeg`, `volumeTolerance` = 2·(1 − sin θ/θ), or `known: false`

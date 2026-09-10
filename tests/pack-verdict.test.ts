@@ -524,7 +524,7 @@ describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
   // = 4165.4 g, tolerance 1.9% → a band of 79 g per plate. Three plates spend
   // 12 496 g; four would spend 16 662 g.
   const plateG = 4165.4
-  const approx = { kinds: ['plate'], tolerance: 0.019 }
+  const approx = { kinds: ['plate'], tolerance: 0.019, perKind: [{ kind: 'plate', tolerance: 0.019 }] }
   const base = (maxWeightG: number, mode: 'max-quantity' | 'fit-check'): PackRequest => ({
     mode,
     tier: 'fast',
@@ -537,11 +537,20 @@ describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
     ...base(maxWeightG, 'max-quantity'),
     parts: [{ name: 'plate', positions: new Float32Array(3), weightG: plateG }]
   })
-  const three = (patch: Partial<MaxQuantityResult> = {}) => qty({ count: 3, binding: 'weight', ...patch })
+  // Three placed, and the carton would take more with the cap lifted — the
+  // 18th dogfood's isolating carton (11 × 10 × 10 outer), where the flag is
+  // honestly true. Station 4's own carton is `spaceOnlyCount: 3` (below).
+  const three = (patch: Partial<MaxQuantityResult> = {}) =>
+    qty({ count: 3, binding: 'weight', spaceOnlyCount: 9, ...patch })
 
   it('says false at a cap the count is robust against (station 4 at 35 lb = 15 876 g)', () => {
     const report = meshVolumeReport(three(), unit(15876), approx)
-    expect(report).toEqual({ approximateKinds: ['plate'], volumeTolerance: 0.019, couldChangeCount: false })
+    expect(report).toEqual({
+      approximateKinds: ['plate'],
+      volumeTolerance: 0.019,
+      perKind: [{ kind: 'plate', volumeTolerance: 0.019 }],
+      couldChangeCount: false
+    })
     expect(meshVolumeWarning(report)).toBeNull()
   })
 
@@ -550,12 +559,20 @@ describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
     expect(meshVolumeReport(three(), unit(16556), approx).couldChangeCount).toBe(true)
   })
 
-  it('says true when three plates HEAVIER by the band would exceed the cap', () => {
-    // 3 × (4165.4 + 79.1) = 12 734 g > 12 701 g (28 lb) ≥ 3 × 4165.4.
-    expect(meshVolumeReport(three(), unit(12701), approx).couldChangeCount).toBe(true)
+  it('says FALSE on that same cap when the carton has no room for a fourth (18th dogfood)', () => {
+    // Station 4's carton at 36.5 lb: the weight band straddles the cap, and
+    // `spaceOnlyCount: 3` says the engine places three with the cap lifted —
+    // so no lighter plate makes a fourth. The reply used to say "close enough
+    // to change the count" beside the field that proves it cannot.
+    expect(meshVolumeReport(three({ spaceOnlyCount: 3 }), unit(16556), approx).couldChangeCount).toBe(false)
   })
 
-  it('does not fire on a lighter unit when the CARTON was what stopped the fourth', () => {
+  it('says true when three plates HEAVIER by the band would exceed the cap — whatever the carton', () => {
+    // 3 × (4165.4 + 79.1) = 12 734 g > 12 701 g (28 lb) ≥ 3 × 4165.4.
+    expect(meshVolumeReport(three({ spaceOnlyCount: 3 }), unit(12701), approx).couldChangeCount).toBe(true)
+  })
+
+  it('does not fire on a lighter unit when the cap stopped nothing', () => {
     // Cap 100 lb: (count+1)·unit is under the cap, so the cap stopped nothing.
     expect(meshVolumeReport(three({ binding: 'geometry' }), unit(45359), approx).couldChangeCount).toBe(false)
   })
@@ -571,9 +588,10 @@ describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
   })
 
   it('is empty, with no band, when nothing was approximate or there is no cap', () => {
-    expect(meshVolumeReport(three(), unit(16556), { kinds: [], tolerance: 0 })).toEqual({
+    expect(meshVolumeReport(three(), unit(16556), { kinds: [], tolerance: 0, perKind: [] })).toEqual({
       approximateKinds: [],
       volumeTolerance: 0,
+      perKind: [],
       couldChangeCount: false
     })
     expect(meshVolumeReport(three(), unit(Infinity), approx).couldChangeCount).toBe(false)
@@ -593,16 +611,54 @@ describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
     expect(meshVolumeReport(fit(), { ...both, maxWeightG: 14300 }, approx).couldChangeCount).toBe(false)
   })
 
-  it('the warning names the kinds, the tolerance and the fix; the clause names the kinds always', () => {
+  it('widens each kind by ITS OWN tolerance, not the worst kind’s (18th dogfood)', () => {
+    // A 4165 g plate at 1.9% and a 25 g bolt at 2.1%: band = 79.1 + 0.5 =
+    // 79.7 g. The old scalar band, 2.1% × 4190 g = 88 g, would have straddled
+    // a cap 85 g over the total; the honest band does not.
+    const mixed = {
+      kinds: ['plate', 'bolt'],
+      tolerance: 0.021,
+      perKind: [
+        { kind: 'plate', tolerance: 0.019 },
+        { kind: 'bolt', tolerance: 0.021 }
+      ]
+    }
+    const two: PackRequest = {
+      ...base(4190.4 + 85, 'fit-check'),
+      parts: [
+        { name: 'plate', positions: new Float32Array(3), weightG: plateG },
+        { name: 'bolt', positions: new Float32Array(3), weightG: 25 }
+      ]
+    }
+    expect(meshVolumeReport(fit(), two, mixed).couldChangeCount).toBe(false)
+    expect(meshVolumeReport(fit(), { ...two, maxWeightG: 4190.4 + 75 }, mixed).couldChangeCount).toBe(true)
+  })
+
+  it('the warning names the kinds, the tolerance and the fix; the clause names each kind with its own figure', () => {
     const report = meshVolumeReport(three(), unit(16556), approx)
     const warning = meshVolumeWarning(report)
     expect(warning).toContain('“plate”')
-    expect(warning).toContain('1.9%')
+    expect(warning).toContain('about 1.9%')
+    expect(warning).not.toContain('up to about')
     expect(warning).toMatch(/change the count/)
     expect(warning).toMatch(/enter it directly/i)
-    expect(meshVolumeClause(report)).toBe(
-      'mesh volumes of curved faces, approximate to about 1.9% either way: plate'
+    expect(meshVolumeClause(report)).toBe('mesh volumes of curved faces, approximate either way: plate 1.9%')
+
+    const mixed = {
+      approximateKinds: ['plate', 'bolt'],
+      volumeTolerance: 0.021,
+      perKind: [
+        { kind: 'plate', volumeTolerance: 0.019 },
+        { kind: 'bolt', volumeTolerance: 0.021 }
+      ],
+      couldChangeCount: true
+    }
+    expect(meshVolumeWarning(mixed)).toContain('up to about 2.1%')
+    expect(meshVolumeClause(mixed)).toBe(
+      'mesh volumes of curved faces, approximate either way: plate 1.9%, bolt 2.1%'
     )
-    expect(meshVolumeClause({ approximateKinds: [], volumeTolerance: 0, couldChangeCount: false })).toBeNull()
+    expect(
+      meshVolumeClause({ approximateKinds: [], volumeTolerance: 0, perKind: [], couldChangeCount: false })
+    ).toBeNull()
   })
 })

@@ -128,9 +128,14 @@ export function facetTurnOf(part: ImportedPart): number | null {
 /** The kinds whose counted weight rests on an approximate volume, and how
  *  approximate. Empty and 0 when none does. */
 export interface ApproximateVolumes {
+  /** First-appearance order; the keys of `perKind`. */
   kinds: string[]
-  /** The largest `tessellationTolerance` over `kinds` — a fraction either way. */
+  /** The largest tolerance over `kinds` — a fraction either way. One number
+   *  for the headline; the band and the exports read `perKind` (18th dogfood:
+   *  the bolt's 2.1% was being quoted for a pack that was 69% plate at 1.9%). */
   tolerance: number
+  /** Each kind's own `tessellationTolerance`, in `kinds` order. */
+  perKind: Array<{ kind: string; tolerance: number }>
 }
 
 /**
@@ -147,7 +152,7 @@ export function approximateVolumeKinds(
   unitPartName: string | null,
   overrides: PartWeightOverrides
 ): ApproximateVolumes {
-  const none: ApproximateVolumes = { kinds: [], tolerance: 0 }
+  const none: ApproximateVolumes = { kinds: [], tolerance: 0, perKind: [] }
   if (settings.weightMode !== 'density') return none
   const names = new Set(parts.map((part) => part.name))
   const turnByKind = new Map<string, number>()
@@ -160,9 +165,14 @@ export function approximateVolumeKinds(
     turnByKind.set(kind, Math.max(turnByKind.get(kind) ?? 0, turn))
   }
   if (turnByKind.size === 0) return none
+  const perKind = [...turnByKind].map(([kind, turn]) => ({
+    kind,
+    tolerance: tessellationTolerance(turn)
+  }))
   return {
-    kinds: [...turnByKind.keys()],
-    tolerance: Math.max(...[...turnByKind.values()].map(tessellationTolerance))
+    kinds: perKind.map((entry) => entry.kind),
+    tolerance: Math.max(...perKind.map((entry) => entry.tolerance)),
+    perKind
   }
 }
 

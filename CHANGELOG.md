@@ -10,6 +10,17 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The curved-face warning no longer sends you to weigh a part when the
+  carton is already full.** It fired whenever the weight cap sat inside the
+  volume tolerance's band, even when the carton could not take another part
+  at any weight; now it also asks whether the carton has room. The summary
+  export's *Part weight* line names each kind with its own tolerance instead
+  of one figure for all, and an AI assistant gets the per-kind list, the band
+  built from each kind's own figure, and a percent beside every fraction.
+  ([ADR-0029 amendment 23](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 ### Added
 
 - **A density weight says how exact its volume was.** A curved face arrives

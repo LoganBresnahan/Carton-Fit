@@ -204,9 +204,10 @@ support.
 Then one more cap, **36.5 lb**, and look at what the reply says about the
 plate's weight. Work out for yourself: the plate's weight is density × a mesh
 volume, and the reply tells you how far that volume can be off. Does that band
-reach the cap at 36.5 lb? At 35? Does the reply's own field agree with your
-arithmetic each time, and is the sentence there exactly when the field says
-it should be?
+reach the cap at 36.5 lb? At 35? Remember the count has two limits, and a
+lighter plate only helps if the carton would take another one. Does the
+reply's own field agree with your arithmetic each time, and is the sentence
+there exactly when the field says it should be?
 
 ### Station 5 — driving the live app
 

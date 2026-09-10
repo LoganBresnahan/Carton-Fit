@@ -113,7 +113,7 @@ function input(patch: Partial<EstimateExport> = {}): EstimateExport {
     unitPartName: null,
     warnings: [],
     overrides: {},
-    meshVolumes: { approximateKinds: [], volumeTolerance: 0, couldChangeCount: false },
+    meshVolumes: { approximateKinds: [], volumeTolerance: 0, perKind: [], couldChangeCount: false },
     ...patch
   }
 }
@@ -518,12 +518,17 @@ describe('buildSummary', () => {
       input({
         settings: settings({ weightMode: 'density', densityGPerCm3: 7.85 }),
         request: request({ parts: [{ name: 'bolt', positions: positions(), weightG: 25 }] }),
-        meshVolumes: { approximateKinds: ['bolt'], volumeTolerance: 0.0212, couldChangeCount: false }
+        meshVolumes: {
+          approximateKinds: ['bolt'],
+          volumeTolerance: 0.0212,
+          perKind: [{ kind: 'bolt', volumeTolerance: 0.0212 }],
+          couldChangeCount: false
+        }
       })
     )
     expect(text).toContain(
       'Part weight: density 7.85 g/cm³ × part volume (mesh volumes of curved faces, ' +
-        'approximate to about 2.1% either way: bolt)'
+        'approximate either way: bolt 2.1%)'
     )
     const exact = buildSummary(
       input({

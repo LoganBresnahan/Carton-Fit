@@ -179,6 +179,13 @@ volume" without "approximate" is the omission the sixteenth reader found.
 One report, every surface (`meshVolumeReport` in `packing/verdict.ts`,
 rule 5): the panel, both exports and both estimate tools call it.
 
+*Amended 2026-09-10 by ADR-0029 amendment 23, after the first run against
+it:* the band test's *too few* branch also asks `spaceOnlyCount > count` —
+the description above derived the path from the weight and not the path
+from the carton, and the reply told an engineer to weigh a plate the carton
+could not take a fourth of. The band is now Σ(each kind's tolerance × its
+grams), and the tolerance rides the wire per kind with a percent sibling.
+
 **Not done, on purpose:** the sign per kind, and a tighter tolerance from the
 importer's deflection. Both are real work that no run has needed; the revisit
 trigger above still stands, and `facetTurnDeg` on the wire is the number a

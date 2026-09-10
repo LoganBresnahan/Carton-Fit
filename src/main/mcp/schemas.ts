@@ -158,9 +158,12 @@ export const inspectOutput = {
             volumeTolerance: z
               .number()
               .describe(
-                'How far, as a fraction EITHER WAY, the enclosed volume can be off at that facet ' +
+                'How far, as a FRACTION either way, the enclosed volume can be off at that facet ' +
                   'size: 2·(1 − sin θ/θ). 0 when planar. Multiply a density weight by it for the band.'
-              )
+              ),
+            volumeTolerancePercent: z
+              .number()
+              .describe('The same tolerance ×100 — 1.9 means 1.9% either way.')
           }),
           z.object({ known: z.literal(false), reason: z.string() })
         ])
@@ -405,12 +408,27 @@ export const estimateOutput = {
               ),
             volumeTolerance: z
               .number()
-              .describe('The largest tolerance over those kinds — a fraction either way. 0 when none.'),
+              .describe(
+                'The LARGEST tolerance over those kinds — a fraction either way, 0 when none. A ' +
+                  'headline: perKind carries each kind’s own, and the band is the sum of each ' +
+                  'kind’s tolerance × its grams.'
+              ),
+            volumeTolerancePercent: z.number().describe('The same largest tolerance ×100.'),
+            perKind: z
+              .array(
+                z.object({
+                  kind: z.string(),
+                  volumeTolerance: z.number(),
+                  volumeTolerancePercent: z.number()
+                })
+              )
+              .describe('Each approximate kind with its own tolerance, in approximateKinds order.'),
             couldChangeCount: z
               .boolean()
               .describe(
-                'Whether the weight cap sits inside the band that tolerance puts around the packed ' +
-                  'weight, so a volume error inside it could change the count. The note fires on this alone.'
+                'Whether the weight cap sits inside the band those tolerances put around the packed ' +
+                  'weight AND the carton has room for the count to move, so a volume error inside ' +
+                  'the band could change the count. The note fires on this alone.'
               ),
             note: z.string().nullable()
           })

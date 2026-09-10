@@ -125,6 +125,16 @@ export const dimsFromMm = (
  *  reply quoting inches and cubic millimetres would be arithmetically correct
  *  and useless. */
 export const volumeUnitFor = (unit: LengthUnit): VolumeUnit => (unit === 'in' ? 'in3' : 'mm3')
+/**
+ * A fraction as a percent, for the sibling beside every tolerance on the wire
+ * (ADR-0029 amendment 23). The 18th reader found `volumeTolerance: 0.01897`
+ * the one bare number on a surface where every other value names its unit —
+ * 1.9% or 0.019%, nothing to choose — on the call made BEFORE any prose
+ * exists to disambiguate it. Rule 7 says a sibling, not a rename; this is the
+ * one place it is computed, so the two spellings cannot drift.
+ */
+export const percentOf = (fraction: number): number => tidy(fraction * 100)
+
 export const volumeFromMm3 = (mm3: number, unit: LengthUnit): VolumeValue => ({
   value: tidy(mm3ToVolume(mm3, systemOf(unit))),
   unit: volumeUnitFor(unit)

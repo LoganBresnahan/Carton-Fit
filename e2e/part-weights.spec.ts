@@ -148,7 +148,9 @@ test('a density weight near the cap warns that the mesh volume could move the co
   await setCarton(page, [24, 24, 24])
   // The brief's station 4 cap: 3 plates at 9.18 lb sit at 27.6 lb, and a
   // 1.9% band (0.17 lb a plate) reaches neither 35 from below nor 4 × 9.18
-  // = 36.7 from above. Robust, so silent.
+  // = 36.7 from above. Robust, so silent. (A 24 in cube has room for many
+  // more plates, so the carton gate of amendment 23 is open here; the case
+  // where it closes is pinned on the wire at station 4's own carton.)
   await setField(page, 'max-weight', 35)
   await waitForEstimate(page)
   const warning = page.locator('[data-testid="results-mesh-volume"]')
@@ -166,7 +168,7 @@ test('a density weight near the cap warns that the mesh volume could move the co
   await page.click('[data-testid="copy-summary"]')
   await expect(page.locator('[data-testid="copy-summary"]')).toHaveText('Copied ✓')
   const text = await page.evaluate(() => navigator.clipboard.readText())
-  expect(text).toContain('approximate to about 1.9% either way: plate')
+  expect(text).toContain('approximate either way: plate 1.9%')
   expect(text).toContain('change the count')
 
   // Weigh one and enter it: the volume is out of the answer, so is the sentence.

@@ -208,9 +208,13 @@ describe('inspect_model against the hand-computed goldens', () => {
           expect(t.facetTurnDeg).toBeLessThan(30)
           const theta = (t.facetTurnDeg * Math.PI) / 180
           expect(t.volumeTolerance).toBeCloseTo(2 * (1 - Math.sin(theta) / theta), 9)
+          // The percent sibling is the fraction ×100 — a unit in the name for
+          // the one value here that had none (amendment 23).
+          expect(t.volumeTolerancePercent).toBeCloseTo(t.volumeTolerance * 100, 9)
         } else {
           expect(t.facetTurnDeg).toBe(0)
           expect(t.volumeTolerance).toBe(0)
+          expect(t.volumeTolerancePercent).toBe(0)
         }
       }
     })

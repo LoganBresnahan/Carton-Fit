@@ -1524,6 +1524,42 @@ behind every surface (rule 5). Station 1 of the brief asks the reader whether
 the flag is per kind and whether the plate is what they expected; station 4,
 run at the cap, is where `couldChangeCount` earns its keep.
 
+### Amendment 23 (2026-09-10, eighteenth dogfood, roadmap item 42) — the band test forgot the carton, and one tolerance for five kinds
+
+Amendment 22 shipped and the next reader ran station 4 at the new 36.5 lb
+cap: `couldChangeCount: true` beside `spaceOnlyCount: 3` in one reply, a
+note telling an engineer to weigh a plate the carton cannot take a fourth
+of. The *too few* branch of the band test asked only whether `count + 1`
+units lighter by the band would clear the cap; it never asked whether the
+carton had room for one. Rule 14 applied halfway: the path from the weight
+to the count was derived, the path from the carton to the count was not.
+
+**Decision (built the same day, on the user's go-ahead):** the branch
+gates on `spaceOnlyCount > count` — ADR-0033's constructive field, what the engine returns with the
+cap lifted — and not on `geometryBound`, which the reader proposed. A loose
+bound says a fourth was not proven impossible; the engine would still
+return 3 with a lighter plate because its own search found no room, so a
+warning gated on the bound would fire where nothing can change. The *too
+many* branch is untouched: a heavier unit lowers the count whatever the
+carton says. Fit-check's straddle is untouched too: a lighter file changes
+the unplaced list even when the verdict stays.
+
+Second, `meshVolumes.volumeTolerance` is the largest tolerance over the
+approximate kinds and nothing on the wire says so; in station 3 it is the
+bolt's 2.1% over a pack that is 69% plate at 1.9%. Additive fix (rule 7): a
+per-kind list beside the scalar, the band as the sum of each kind's
+tolerance times its grams, and the summary clause naming each kind with its
+own figure. Third, the fraction is the one number on this surface with no
+unit in its value or its name; the reader proposed a rename, rule 7 says a
+sibling (`volumeTolerancePercent`) — the user chose the sibling, computed
+in one place (`percentOf` in `wire.ts`) beside every tolerance the wire
+carries, so the two spellings cannot drift. Refuted and recorded: a sentence on
+`openMesh: { affected: false }` (a constant, rule 2). Recurrences: the
+filename (item 41), the bridge's late tool list (item 39).
+
+Station 1 and station 4's additions did exactly what they were written to
+do. Thirteenth straight run of matching counts.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The
