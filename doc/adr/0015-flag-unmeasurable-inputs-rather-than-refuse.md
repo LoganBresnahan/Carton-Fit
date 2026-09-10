@@ -121,6 +121,69 @@ condition to the number first). The path here is real — density × a low
 volume is a low weight against a hard cap — and the number it reaches is the
 count.
 
+## Addendum 2, 2026-09-09 — the decision: a per-kind field, read by the density line
+
+Built as roadmap item 40. The probe that settled the shape: on the reference
+assembly, occt-import-js emits *surface* normals — per vertex, from the
+B-rep face — so on a cylinder the three normals of one triangle turn by the
+facet's own subtended angle (14.5° on the bolt, 13.7° on the nut's thread
+hole and the plate's bolt holes), and on the cube they do not turn at all.
+That angle is the tessellation's coarseness, measured from the mesh the app
+actually integrated, and it is a better basis for a tolerance than the
+deflection parameter the addendum above proposed passing: the parameter says
+what was asked for, the angle says what was produced.
+
+**Three facts, three fields, per kind** (`core/geometry.ts`, read by
+`inspect_model.kinds[].tessellation`):
+
+- `curvedFaces` — any triangle's vertex normals turn by more than
+  `PLANAR_TURN_DEG` (0.1°, a tolerance named for the one question it answers:
+  is this triangle on a surface that turns). False on the cube, true on every
+  kind of the reference assembly — **including the plate**, which the
+  sixteenth reader called planar: its bolt holes are cylinders.
+- `facetTurnDeg` — the largest such turn. 0 when planar.
+- `volumeTolerance` — the fraction the enclosed volume can be off by, either
+  way: `2·(1 − sin θ/θ)` at θ = the largest turn. A chord across an arc of
+  θ loses `1 − sin θ/θ` of the sector it spans; a doubly curved surface
+  (a fillet, a sphere) loses it in both directions, hence the 2. About 2.1%
+  at 14.5°. *Either way*, because an inscribed polygon understates a convex
+  surface and overstates a hole — the plate's mesh volume is high, the rod's
+  low, and the sign per kind is not something this addendum claims to know.
+
+The field is `Known<…>`: an STL is its mesh, there is no surface behind it to
+be a tessellation *of*, so for a mesh-origin part the answer is
+`known: false` with that reason — not `curvedFaces: false`, which would say
+"exact" about a file that may be a twenty-facet cylinder. That is why
+`ImportedPart` now carries `origin: 'brep' | 'mesh'`: the STL loader emits
+facet normals that cannot be told from a planar solid's surface normals.
+
+**The path to the count, and the gate on the sentence** (rule 14 of
+`doc/wire-rules.md`). Density × an approximate volume is an approximate weight
+against a hard cap, and that reaches the count only when the cap is within the
+band. So the estimate carries `weightInput.meshVolumes` —
+`approximateKinds` (counted, density-derived, closed, not overridden, with
+curved faces: the same scoping as the open-mesh warning, and an open mesh is
+excluded because its volume is wrong rather than approximate),
+`volumeTolerance` (the largest over those kinds) and `couldChangeCount`,
+which is the band test: for max-quantity, whether `count` units heavier by
+the band would exceed the cap, or `count + 1` units lighter by it would fit
+under a cap that bound; for fit-check, whether the file's total crosses the
+cap inside the band. The warning on the panel, in both exports and in the
+wire's note fires on `couldChangeCount` alone — at 38% of the cap the field
+says false and the surfaces say nothing, which is what rule 14 asks. The
+summary export's *Part weight: density × part volume* line reads
+`approximateKinds` and names them with the tolerance whenever it is
+non-empty: that line is a claim about where the grams came from, and "mesh
+volume" without "approximate" is the omission the sixteenth reader found.
+
+One report, every surface (`meshVolumeReport` in `packing/verdict.ts`,
+rule 5): the panel, both exports and both estimate tools call it.
+
+**Not done, on purpose:** the sign per kind, and a tighter tolerance from the
+importer's deflection. Both are real work that no run has needed; the revisit
+trigger above still stands, and `facetTurnDeg` on the wire is the number a
+reader needs to do either by hand.
+
 ## Revisit triggers
 
 - **A density-derived weight lands within a few percent of the cap** on a

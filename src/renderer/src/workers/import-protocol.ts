@@ -31,6 +31,16 @@ export interface ImportedPart {
   normals: Float32Array | null
   /** Triangle vertex indices, three per triangle. */
   indices: Uint32Array
+  /**
+   * What stands behind the triangles (ADR-0015 addendum 2). `brep`: a solid
+   * the importer tessellated, whose normals are SURFACE normals and turn
+   * within a triangle wherever the face curves — so "does this kind have
+   * curved faces" is answerable. `mesh`: the file IS the mesh (STL); its
+   * normals are facet normals, indistinguishable from a planar solid's, and
+   * there is no surface behind it to compare a tessellation against. Absent
+   * on a part built by hand — read as `mesh`, the answer that claims nothing.
+   */
+  origin?: 'brep' | 'mesh'
 }
 
 /** Worker → renderer, success. */

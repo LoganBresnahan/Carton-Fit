@@ -254,8 +254,20 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         line prints what the person typed so they recognise it; the filename
         is the one that could go either way. If it moves, it moves to the
         entered dims, since a file name is a label for a person.
-- [ ] 40. Curved faces run a little light — **ADR-0015 addendum, 2026-09-09;
-      decision deferred.** Mesh volume is a tessellation's volume, and a
+- [x] 40. Curved faces run a little light — **ADR-0015 addendum 2, built
+      2026-09-09.** Per kind on `inspect_model`: `tessellation` (`curvedFaces`,
+      `facetTurnDeg`, `volumeTolerance` = 2·(1 − sin θ/θ), or `known: false`
+      for an STL, which is its mesh); on the estimate's `weightInput`,
+      `meshVolumes` with the counted approximate kinds, the tolerance and
+      `couldChangeCount` — the band test that gates the sentence on every
+      surface (rule 14); the summary's density line names the kinds always.
+      `ImportedPart.origin` tells a B-rep's surface normals from an STL's
+      facet normals. The probe that settled it: **the plate is curved** — its
+      bolt holes are cylinders — at a 13.7° step like the nut's thread; the
+      cube is the only planar golden. Amendment 22 carries the claims table;
+      station 1, 3 and 4 of the brief ask for it. *Deferred from the original
+      note:* the sign per kind, and a tighter bound from an explicit
+      deflection. The original note follows. Mesh volume is a tessellation's volume, and a
       faceted curve is inscribed in the true surface: about 1.6% low at
       twenty facets around a cylinder, 0.4% at forty, at whatever deflection
       occt-import-js defaults to. The plate is planar and exact (station 4

@@ -1489,6 +1489,41 @@ same run are the user's call and sit under roadmap item 41 with item 33. The
 loop rests for this surface: twelve runs of matching numbers, and the last
 three runs' findings each one rung below the last.
 
+### Amendment 22 (2026-09-09, roadmap item 40) — a curved face is a field, and the density line reads it
+
+The sixteenth reader derived that a faceted curve is inscribed in its surface,
+so mesh volume runs low on a cylinder and — this amendment adds — high on a
+hole. ADR-0015 addendum 2 carries the decision and the geometry; this is the
+wire. Additive, a minor under ADR-0020 §3: two new fields, nothing renamed.
+
+`inspect_model.kinds[].tessellation` is `Known<{ curvedFaces, facetTurnDeg,
+volumeTolerance }>`, `known: false` for an STL with the reason that an STL is
+its mesh. `estimate` and `get_estimate` gain, under `weightInput` when a
+weight was supplied, `meshVolumes: { approximateKinds, volumeTolerance,
+couldChangeCount }`, scoped like `openMesh` to the parts the pack counted and
+empty in direct mode or under overrides. `ImportedPart.origin` (`brep` |
+`mesh`) is what makes the first honest for STL.
+
+The claims table, written before the code:
+
+| The sentence the tool can say | What it asserts | The field behind it |
+| --- | --- | --- |
+| *bolt is a tessellation of curved faces* | some triangle's vertex normals turn by more than 0.1° | `kinds[].tessellation.curvedFaces` |
+| *its facets turn up to 14.5° at a step* | the largest such turn | `kinds[].tessellation.facetTurnDeg` |
+| *so its enclosed volume can be off by about 2.1% either way* | 2·(1 − sin θ/θ) at that turn | `kinds[].tessellation.volumeTolerance` |
+| *cube-10x10 is an STL — its mesh is the model; nothing to compare a tessellation against* | the part came from a mesh file | `kinds[].tessellation.known: false` + `reason` |
+| *the weights of bolt, nut came from mesh volumes of curved faces, approximate to about 2.1%* | those counted kinds were density-priced from a closed, curved, un-overridden mesh | `weightInput.meshVolumes.approximateKinds`, `.volumeTolerance` |
+| *…and the cap is close enough for that to change the count* | the band test (ADR-0015 addendum 2) | `weightInput.meshVolumes.couldChangeCount` |
+| (nothing) | no counted kind is density-priced from a curved mesh | `approximateKinds: []`, `volumeTolerance: 0` |
+
+The warning sentence — panel, both exports, the wire's `note` — fires on
+`couldChangeCount` alone (rule 14); the summary export's density line names
+`approximateKinds` and the tolerance whenever there are any (rule 1: the line
+is a claim about where the grams came from). One function, `meshVolumeReport`,
+behind every surface (rule 5). Station 1 of the brief asks the reader whether
+the flag is per kind and whether the plate is what they expected; station 4,
+run at the cap, is where `couldChangeCount` earns its keep.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

@@ -3,6 +3,8 @@ import {
   bindingHeading,
   bindingLabel,
   freeSpaceNote,
+  meshVolumeReport,
+  meshVolumeWarning,
   mixedInstancesWarning,
   weightlessWarning,
   openMeshWarning,
@@ -14,7 +16,7 @@ import {
   verdictCaption,
   verdictHeadline
 } from '../packing/verdict'
-import { openMeshParts, partsForRequest } from '../packing/request'
+import { approximateVolumeKinds, openMeshParts, partsForRequest } from '../packing/request'
 import { mixedInstanceKinds } from '../packing/kinds'
 import SaveEstimateButton from './SaveEstimateButton'
 import CopySummaryButton from './CopySummaryButton'
@@ -56,6 +58,19 @@ export default function ResultsPanel() {
     mixedInstanceKinds(partsForRequest(parts, settings, unitPartName))
   )
   const noWeight = request ? weightlessWarning(request) : null
+  // Fires only when the tessellation's band around the packed weight reaches
+  // the cap (ADR-0015 addendum 2) — the field behind it is on the wire always,
+  // the sentence only when it can move the count.
+  const meshVolume =
+    request && result
+      ? meshVolumeWarning(
+          meshVolumeReport(
+            result,
+            request,
+            approximateVolumeKinds(parts, settings, unitPartName, partWeightsG)
+          )
+        )
+      : null
 
   if (status === 'idle' && !result) return null
 
@@ -141,6 +156,12 @@ export default function ResultsPanel() {
       {noWeight && (
         <p className="results-warning" data-testid="results-weightless" role="alert">
           {noWeight}
+        </p>
+      )}
+
+      {meshVolume && (
+        <p className="results-warning" data-testid="results-mesh-volume" role="alert">
+          {meshVolume}
         </p>
       )}
 

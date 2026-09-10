@@ -7,7 +7,7 @@ import type { OcctWasmContext } from '../src/main/occt/wasmPath'
 import { resetOcctForTests } from '../src/main/occt/ingest'
 import type { EstimateReport } from '../src/main/mcp/estimate'
 import type { InspectReport } from '../src/main/mcp/inspect'
-import { AS1_ASSEMBLY, CUBE_STEP, GOLDEN_PACKS } from '../samples/goldens'
+import { AS1_ASSEMBLY, CUBE_STEP, CUBE_STL, GOLDEN_PACKS } from '../samples/goldens'
 
 // The MCP tools as the goldens' THIRD consumer (ADR-0005, ADR-0029 slice
 // `goldens-third-consumer`).
@@ -182,6 +182,39 @@ describe('inspect_model against the hand-computed goldens', () => {
     expect(report.kinds).toHaveLength(report.totals.kinds)
     expect(Math.max(...report.kinds.map((kind) => kind.count))).toBe(8) // the nuts
   })
+
+  // ADR-0015 addendum 2 / amendment 22: the per-kind tessellation facts,
+  // against the goldens' by-inspection judgement of each product.
+  for (const golden of [CUBE_STEP, CUBE_STL, AS1_ASSEMBLY]) {
+    it(`says which of ${golden.file}'s kinds have curved faces, or that it cannot tell`, async () => {
+      const report = await call<InspectReport>('inspect_model', { path: join(SAMPLES, golden.file) })
+      const seen = Object.fromEntries(report.kinds.map((kind) => [kind.kind, kind.tessellation]))
+      for (const [kind, curved] of Object.entries(golden.curvedKinds!)) {
+        const t = seen[kind]
+        expect(t, `kind ${kind} missing from ${golden.file}`).toBeDefined()
+        if (curved === null) {
+          expect(t.known).toBe(false)
+          if (!t.known) expect(t.reason).toMatch(/STL/)
+          continue
+        }
+        expect(t.known).toBe(true)
+        if (!t.known) continue
+        expect(t.curvedFaces, kind).toBe(curved)
+        if (curved) {
+          // Whatever deflection occt chose, the step is a real tessellation's
+          // — coarser than noise, finer than a crease — and the tolerance is
+          // what 2·(1 − sin θ/θ) gives for it.
+          expect(t.facetTurnDeg).toBeGreaterThan(1)
+          expect(t.facetTurnDeg).toBeLessThan(30)
+          const theta = (t.facetTurnDeg * Math.PI) / 180
+          expect(t.volumeTolerance).toBeCloseTo(2 * (1 - Math.sin(theta) / theta), 9)
+        } else {
+          expect(t.facetTurnDeg).toBe(0)
+          expect(t.volumeTolerance).toBe(0)
+        }
+      }
+    })
+  }
 
   it('reports in inches when asked, without touching the weight units', async () => {
     const report = await call<InspectReport>('inspect_model', {

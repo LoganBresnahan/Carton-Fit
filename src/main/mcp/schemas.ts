@@ -138,6 +138,36 @@ export const inspectOutput = {
           'divided it by count would be wrong by that factor.'
       ),
       closedMesh: z.boolean(),
+      // ADR-0015 addendum 2 / amendment 22. Known-or-reason, like every
+      // absence on this surface: an STL cannot answer, and `curvedFaces:
+      // false` would read as "exact" about a twenty-facet cylinder.
+      tessellation: z
+        .union([
+          z.object({
+            known: z.literal(true),
+            curvedFaces: z
+              .boolean()
+              .describe(
+                'Whether any triangle of this kind lies on a face that curves — the importer’s ' +
+                  'surface normals turn within it. A curved face is faceted, so the enclosed ' +
+                  'volume is a tessellation’s: low on a convex surface, high in a hole.'
+              ),
+            facetTurnDeg: z
+              .number()
+              .describe('The largest turn of the surface normals within one triangle, in degrees. 0 when planar.'),
+            volumeTolerance: z
+              .number()
+              .describe(
+                'How far, as a fraction EITHER WAY, the enclosed volume can be off at that facet ' +
+                  'size: 2·(1 − sin θ/θ). 0 when planar. Multiply a density weight by it for the band.'
+              )
+          }),
+          z.object({ known: z.literal(false), reason: z.string() })
+        ])
+        .describe(
+          'Whether this kind’s mesh is a tessellation of curved faces, and how approximate that ' +
+            'makes its volume. Unknown for an STL: the file is its mesh.'
+        ),
       instancesAlike: z
         .boolean()
         .describe(
@@ -362,6 +392,30 @@ export const estimateOutput = {
           .describe(
             'Where the grams behind THIS answer came from: override when every counted part ' +
               'was priced by hand, mixed when some were, else the mode that derived them.'
+          ),
+        // ADR-0015 addendum 2 / amendment 22: the field is always here, the
+        // sentence only when the band reaches the cap (wire rule 14).
+        meshVolumes: z
+          .object({
+            approximateKinds: z
+              .array(z.string())
+              .describe(
+                'Counted kinds whose grams were density × the volume of a tessellation of curved ' +
+                  'faces (closed, not overridden). Empty in direct mode.'
+              ),
+            volumeTolerance: z
+              .number()
+              .describe('The largest tolerance over those kinds — a fraction either way. 0 when none.'),
+            couldChangeCount: z
+              .boolean()
+              .describe(
+                'Whether the weight cap sits inside the band that tolerance puts around the packed ' +
+                  'weight, so a volume error inside it could change the count. The note fires on this alone.'
+              ),
+            note: z.string().nullable()
+          })
+          .describe(
+            'How approximate the density-derived grams behind this answer are, and whether it matters here.'
           )
       }),
       z.object({ supplied: z.literal(false), note: z.string() })

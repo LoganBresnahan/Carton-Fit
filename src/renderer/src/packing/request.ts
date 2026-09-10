@@ -1,6 +1,6 @@
-import { isClosedMesh, meshVolume } from '../core/geometry'
+import { facetTurnDeg, isClosedMesh, meshVolume, PLANAR_TURN_DEG, tessellationTolerance } from '../core/geometry'
 import { densityWeightG } from '../core/units'
-import { overrideForPart, type PartWeightOverrides } from './kinds'
+import { kindOf, overrideForPart, type PartWeightOverrides } from './kinds'
 import { innerCartonMm, type PackingSettings } from './settings'
 import type { PackPart, PackRequest } from '../core/packing/types'
 import type { ImportedPart } from '../workers/import-protocol'
@@ -107,6 +107,63 @@ export function openMeshParts(
     .filter((part) => overrideForPart(part, names, overrides) === null)
     .filter((part) => !isClosed(part))
     .map((part) => part.name)
+}
+
+// The tessellation's coarseness, memoized like closedness and for the same
+// reason. Only a B-rep's surface normals can answer (ADR-0015 addendum 2);
+// a mesh-origin part, or one with no normals, answers "unknown" as null.
+const turnCache = new WeakMap<ImportedPart, number | null>()
+
+/** Largest turn of the surface normals within one triangle, in degrees — or
+ *  null when the part's normals cannot say (an STL, or no normals at all). */
+export function facetTurnOf(part: ImportedPart): number | null {
+  const cached = turnCache.get(part)
+  if (cached !== undefined) return cached
+  const turn =
+    part.origin === 'brep' && part.normals ? facetTurnDeg(part.normals, part.indices) : null
+  turnCache.set(part, turn)
+  return turn
+}
+
+/** The kinds whose counted weight rests on an approximate volume, and how
+ *  approximate. Empty and 0 when none does. */
+export interface ApproximateVolumes {
+  kinds: string[]
+  /** The largest `tessellationTolerance` over `kinds` — a fraction either way. */
+  tolerance: number
+}
+
+/**
+ * The kinds whose density-derived weight was integrated over a tessellation of
+ * curved faces (ADR-0015 addendum 2): scoped exactly like {@link openMeshParts}
+ * — the parts this request packs, density mode only, overridden kinds retired —
+ * and additionally CLOSED, because an open mesh's volume is wrong rather than
+ * approximate and already has its own warning. In first-appearance order, one
+ * entry per kind.
+ */
+export function approximateVolumeKinds(
+  parts: readonly ImportedPart[],
+  settings: PackingSettings,
+  unitPartName: string | null,
+  overrides: PartWeightOverrides
+): ApproximateVolumes {
+  const none: ApproximateVolumes = { kinds: [], tolerance: 0 }
+  if (settings.weightMode !== 'density') return none
+  const names = new Set(parts.map((part) => part.name))
+  const turnByKind = new Map<string, number>()
+  for (const part of partsForRequest(parts, settings, unitPartName)) {
+    if (overrideForPart(part, names, overrides) !== null) continue
+    if (!isClosed(part)) continue
+    const turn = facetTurnOf(part)
+    if (turn === null || turn <= PLANAR_TURN_DEG) continue
+    const kind = kindOf(part.name, names)
+    turnByKind.set(kind, Math.max(turnByKind.get(kind) ?? 0, turn))
+  }
+  if (turnByKind.size === 0) return none
+  return {
+    kinds: [...turnByKind.keys()],
+    tolerance: Math.max(...[...turnByKind.values()].map(tessellationTolerance))
+  }
 }
 
 /**

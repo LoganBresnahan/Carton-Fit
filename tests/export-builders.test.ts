@@ -113,6 +113,7 @@ function input(patch: Partial<EstimateExport> = {}): EstimateExport {
     unitPartName: null,
     warnings: [],
     overrides: {},
+    meshVolumes: { approximateKinds: [], volumeTolerance: 0, couldChangeCount: false },
     ...patch
   }
 }
@@ -507,6 +508,30 @@ describe('buildSummary', () => {
     )
     expect(text).toContain('Carton (inner): 11.5 × 11.5 × 11.5 in')
     expect(text).toContain('entered as outer 12 × 12 × 12 in with 0.25 in walls')
+  })
+
+  it('says how exact the volume behind a density weight was (ADR-0015 addendum 2)', () => {
+    // The line is a claim about where the grams came from, so it carries the
+    // tessellation's tolerance whenever a counted kind was curved — near the
+    // cap or not. The warning is a separate sentence in `warnings`.
+    const text = buildSummary(
+      input({
+        settings: settings({ weightMode: 'density', densityGPerCm3: 7.85 }),
+        request: request({ parts: [{ name: 'bolt', positions: positions(), weightG: 25 }] }),
+        meshVolumes: { approximateKinds: ['bolt'], volumeTolerance: 0.0212, couldChangeCount: false }
+      })
+    )
+    expect(text).toContain(
+      'Part weight: density 7.85 g/cm³ × part volume (mesh volumes of curved faces, ' +
+        'approximate to about 2.1% either way: bolt)'
+    )
+    const exact = buildSummary(
+      input({
+        settings: settings({ weightMode: 'density', densityGPerCm3: 7.85 }),
+        request: request({ parts: [{ name: 'cube', positions: positions(), weightG: 25 }] })
+      })
+    )
+    expect(exact).toContain('Part weight: density 7.85 g/cm³ × part volume\n')
   })
 
   it('qualifies the weight source when kinds were overridden (ADR-0018)', () => {

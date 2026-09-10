@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildPackRequest, openMeshParts, partWeightG } from '../src/renderer/src/packing/request'
+import {
+  approximateVolumeKinds,
+  buildPackRequest,
+  openMeshParts,
+  partWeightG
+} from '../src/renderer/src/packing/request'
 import { useAppStore, type PackingSettings } from '../src/renderer/src/store'
 import type { ImportedPart } from '../src/renderer/src/workers/import-protocol'
 
@@ -209,5 +214,75 @@ describe('openMeshParts', () => {
     const density = settings({ weightMode: 'density', densityGPerCm3: 1 })
     expect(partWeightG(cubePart(), density)).toBeCloseTo(1, 9)
     expect(partWeightG(openCubePart(), density)).toBeCloseTo(2 / 3, 9)
+  })
+})
+
+/** The closed cube as a B-rep the importer tessellated, with surface normals
+ *  that TURN across every triangle by `turnDeg` — a stand-in for a curved
+ *  face, since a cube's own faces would not. */
+function curvedPart(name: string, turnDeg: number, origin: 'brep' | 'mesh' = 'brep'): ImportedPart {
+  const part = cubePart(name)
+  const theta = (turnDeg * Math.PI) / 180
+  const normals = new Float32Array(part.positions.length)
+  // Vertex 0 looks along +x, every other vertex is turned by θ — so any
+  // triangle touching vertex 0 (there are several) turns by exactly θ.
+  for (let v = 0; v < part.positions.length / 3; v++) {
+    normals.set(v === 0 ? [1, 0, 0] : [Math.cos(theta), Math.sin(theta), 0], v * 3)
+  }
+  return { ...part, normals, origin }
+}
+
+describe('approximateVolumeKinds (ADR-0015 addendum 2)', () => {
+  const density = settings({ weightMode: 'density', densityGPerCm3: 7.85 })
+
+  it('names a density-priced kind whose surface normals turn, with the tolerance for its step', () => {
+    const report = approximateVolumeKinds([curvedPart('bolt', 14.5)], density, null, {})
+    expect(report.kinds).toEqual(['bolt'])
+    expect(report.tolerance).toBeCloseTo(0.0213, 3)
+  })
+
+  it('is empty for a planar B-rep — the cube is exact', () => {
+    expect(approximateVolumeKinds([curvedPart('cube', 0)], density, null, {})).toEqual({
+      kinds: [],
+      tolerance: 0
+    })
+  })
+
+  it('claims nothing about a mesh-origin part: an STL is its mesh', () => {
+    // The same turning normals, but from a file that IS the mesh — the flat
+    // normals an STL really carries would read as planar, which is the lie
+    // this guards against (the field is unknown, not false).
+    expect(approximateVolumeKinds([curvedPart('cyl', 14.5, 'mesh')], density, null, {}).kinds).toEqual([])
+    expect(approximateVolumeKinds([{ ...curvedPart('cyl', 14.5), origin: undefined }], density, null, {}).kinds).toEqual([])
+  })
+
+  it('is empty in direct mode — no volume was integrated', () => {
+    const direct = settings({ weightMode: 'direct', partWeightG: 100 })
+    expect(approximateVolumeKinds([curvedPart('bolt', 14.5)], direct, null, {}).kinds).toEqual([])
+  })
+
+  it('retires a kind whose weight was entered by hand', () => {
+    const parts = [curvedPart('bolt', 14.5), curvedPart('rod', 10)]
+    const report = approximateVolumeKinds(parts, density, null, { bolt: 50 })
+    expect(report.kinds).toEqual(['rod'])
+    expect(report.tolerance).toBeCloseTo(0.0101, 3)
+  })
+
+  it('leaves an OPEN mesh to the open-mesh warning: wrong, not approximate', () => {
+    const open = { ...curvedPart('shell', 14.5), indices: openCubePart('shell').indices }
+    expect(approximateVolumeKinds([open], density, null, {}).kinds).toEqual([])
+  })
+
+  it('is scoped to the parts a max-quantity run counts', () => {
+    const parts = [curvedPart('bolt', 14.5), curvedPart('rod', 10)]
+    const quantity = { ...density, mode: 'max-quantity' as const }
+    expect(approximateVolumeKinds(parts, quantity, 'rod', {}).kinds).toEqual(['rod'])
+  })
+
+  it('groups instances under their kind, at the kind’s largest step', () => {
+    const parts = [curvedPart('bolt', 10), curvedPart('bolt (2)', 14.5)]
+    const report = approximateVolumeKinds(parts, density, null, {})
+    expect(report.kinds).toEqual(['bolt'])
+    expect(report.tolerance).toBeCloseTo(0.0213, 3)
   })
 })

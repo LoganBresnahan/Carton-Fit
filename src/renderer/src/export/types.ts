@@ -1,4 +1,5 @@
 import { computeAabb, aabbSize } from '../core/geometry'
+import type { MeshVolumeReport } from '../packing/verdict'
 import type { PackRequest, PackResult, Vec3 } from '../core/packing/types'
 import type { PackingSettings } from '../store'
 import type { PartWeightOverrides } from '../packing/kinds'
@@ -50,6 +51,15 @@ export interface EstimateExport {
    * built without it leaves the column blank rather than guessing.
    */
   enclosedVolumeMm3?: Readonly<Record<string, number>>
+  /**
+   * Which counted kinds were priced from a tessellation of curved faces, and
+   * the tolerance (ADR-0015 addendum 2). REQUIRED, like `overrides`: the
+   * summary's density line reads it, and an export built without it would
+   * print "density × part volume" as if the volume were exact — the silent
+   * omission the sixteenth dogfood found. The warning itself travels in
+   * `warnings` like every other qualification.
+   */
+  meshVolumes: MeshVolumeReport
 }
 
 /** One part's measurements, in canonical units — formatting happens per format. */

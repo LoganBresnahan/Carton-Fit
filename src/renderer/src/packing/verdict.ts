@@ -8,6 +8,8 @@ import type {
 } from '../core/packing/types'
 import { lengthUnitLabel, type UnitSystem } from '../core/units'
 import { dimsText } from '../export/format'
+import { kindOf } from './kinds'
+import type { ApproximateVolumes } from './request'
 
 // Result presentation (roadmap item 4). Lives on the RENDERER side, not in
 // core/packing, because it is presentation rather than engine math — and
@@ -622,5 +624,119 @@ export function truncatedLayoutNote(result: PackResult): string | null {
     `Showing ${result.placements.length.toLocaleString()} of ` +
     `${result.count.toLocaleString()} in the 3D view — the count is exact, the ` +
     `drawing is partial.`
+  )
+}
+
+/**
+ * Whether density-derived weights integrated over tessellations of curved
+ * faces could reach THIS count — and which kinds, and by how much (ADR-0015
+ * addendum 2). One report behind the panel, both exports and both estimate
+ * tools (wire rule 5).
+ */
+export interface MeshVolumeReport {
+  /** Counted kinds whose grams came from a closed, curved, un-overridden mesh. */
+  approximateKinds: string[]
+  /** The fraction, either way, those volumes can be off by — the largest over the kinds. 0 when none. */
+  volumeTolerance: number
+  /** The band test: whether the cap sits close enough to the packed weight that
+   *  a volume error inside the tolerance could change the count. */
+  couldChangeCount: boolean
+}
+
+/**
+ * The band test. Only the approximate kinds' grams are in the band — a plate
+ * priced by hand beside a density-priced bolt widens nothing.
+ *
+ *  - max-quantity: `count` units heavier by the band would exceed the cap, or
+ *    — when the cap was what stopped `count + 1` — that many units lighter by
+ *    the band would fit under it;
+ *  - fit-check: the file's total, every part, crosses the cap inside the band.
+ *    The engine's actual placement is greedier than a total, so this is
+ *    "could", stated as such.
+ */
+export function meshVolumeReport(
+  result: PackResult,
+  request: PackRequest,
+  approximate: ApproximateVolumes
+): MeshVolumeReport {
+  const report: MeshVolumeReport = {
+    approximateKinds: approximate.kinds,
+    volumeTolerance: approximate.tolerance,
+    couldChangeCount: false
+  }
+  const cap = request.maxWeightG
+  if (approximate.kinds.length === 0 || approximate.tolerance <= 0 || !Number.isFinite(cap)) {
+    return report
+  }
+  // The kinds were resolved against the WHOLE file; a max-quantity request
+  // over `bolt (2)` alone carries no `bolt` to strip the ordinal against, so
+  // the kind names join the set the ordinal test reads.
+  const names = new Set([...request.parts.map((part) => part.name), ...approximate.kinds])
+  const inBand = new Set(approximate.kinds)
+  let total = 0
+  let approximateG = 0
+  for (const part of request.parts) {
+    total += part.weightG
+    if (inBand.has(kindOf(part.name, names))) approximateG += part.weightG
+  }
+  const band = approximate.tolerance * approximateG
+  if (band <= 0) return report
+
+  if (result.mode === 'max-quantity') {
+    const count = result.count
+    const tooMany = count * (total + band) > cap + EPS
+    const capStoppedNext = (count + 1) * total > cap + EPS
+    const tooFew = capStoppedNext && (count + 1) * (total - band) <= cap + EPS
+    report.couldChangeCount = tooMany || tooFew
+    return report
+  }
+  report.couldChangeCount =
+    (total <= cap + EPS && total + band > cap + EPS) || (total > cap + EPS && total - band <= cap + EPS)
+  return report
+}
+
+/** One formatter for the tolerance, wherever it is printed. */
+export function toleranceText(fraction: number): string {
+  return `${(fraction * 100).toFixed(1)}%`
+}
+
+function kindList(kinds: readonly string[]): string {
+  const shown = kinds.slice(0, 3).map((name) => `“${name}”`)
+  const rest = kinds.length - shown.length
+  return rest > 0 ? `${shown.join(', ')} and ${rest} more` : shown.join(', ')
+}
+
+/**
+ * The sentence for a count the tessellation could move — null otherwise.
+ * Fires on `couldChangeCount` alone (wire rule 14): a 2% band around a weight
+ * at 38% of the cap reaches nothing, and saying so on every answer would
+ * teach readers to skip it.
+ */
+export function meshVolumeWarning(report: MeshVolumeReport): string | null {
+  if (!report.couldChangeCount) return null
+  const list = kindList(report.approximateKinds)
+  const subject =
+    report.approximateKinds.length === 1
+      ? `The weight of ${list} comes from`
+      : `The weights of ${list} come from`
+  return (
+    `${subject} the mesh volume of curved faces, which can run about ` +
+    `${toleranceText(report.volumeTolerance)} light or heavy at this facet size — and this pack ` +
+    `sits close enough to the weight cap for that to change the count. Weigh one and enter it ` +
+    `directly to settle it.`
+  )
+}
+
+/**
+ * The clause the summary export's density line carries whenever a counted
+ * kind was priced from a curved mesh — null when none was. Always, not only
+ * near the cap: that line is a claim about where the grams came from, and
+ * "mesh volume" without "approximate" was the omission (16th dogfood).
+ */
+export function meshVolumeClause(report: MeshVolumeReport): string | null {
+  if (report.approximateKinds.length === 0) return null
+  return (
+    `mesh volumes of curved faces, approximate to about ` +
+    `${toleranceText(report.volumeTolerance)} either way: ${report.approximateKinds.join(', ')}`
   )
 }

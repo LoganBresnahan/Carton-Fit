@@ -5,6 +5,7 @@ import {
   bindingLabel,
   bindingReport,
   freeSpaceNote,
+  meshVolumeClause,
   packedWeightG,
   upperBoundLabel,
   utilizationPercent,
@@ -68,7 +69,13 @@ function weightLines(input: EstimateExport): string[] {
     settings.weightMode === 'direct'
       ? `${weightText(settings.partWeightG, settings.partWeightUnit)} ` +
         `${settings.partWeightUnit} per part, entered directly`
-      : `density ${settings.densityGPerCm3} g/cm³ × part volume`
+      : `density ${settings.densityGPerCm3} g/cm³ × part volume` +
+        // The volume is a tessellation's wherever a face curves (ADR-0015
+        // addendum 2): the line claims where the grams came from, so it
+        // says how exact that was, whether or not the cap is near.
+        (meshVolumeClause(input.meshVolumes) !== null
+          ? ` (${meshVolumeClause(input.meshVolumes)})`
+          : '')
 
   // Naming the source alone would misdescribe a mixed assembly (ADR-0018): the
   // per-part figures below come from entered weights for some kinds, so a flat

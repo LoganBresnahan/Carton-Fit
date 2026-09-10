@@ -12,6 +12,19 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Added
 
+- **A density weight says how exact its volume was.** A curved face arrives
+  faceted, so the mesh volume behind a density weight runs a little low on a
+  cylinder and a little high in a hole — about 2% either way at the facet
+  size the importer uses. The app now measures that per part kind and says so:
+  *inspect_model* reports whether each kind has curved faces, how coarse its
+  facets are and the volume tolerance that gives (or that it cannot tell, for
+  an STL, which is its own mesh); the summary export's *Part weight* line names
+  the kinds priced from curved meshes and the tolerance; and the estimate panel,
+  both exports and the AI-assistant reply warn — only when the weight cap sits
+  close enough to the packed weight that a volume error inside the tolerance
+  could change the count — and say what to do: weigh one and enter it directly,
+  which retires the warning. ([ADR-0015 addendum 2](doc/adr/0015-flag-unmeasurable-inputs-rather-than-refuse.md),
+  [ADR-0029 amendment 22](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
 - **Customers.** A *Working for* selector in the header holds the customer
   you are working for; *House* is the default and means everyone. Presets and
   saved estimates you save are tagged with it, the preset picker shows house

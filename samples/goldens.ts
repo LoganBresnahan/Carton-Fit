@@ -28,6 +28,13 @@ export interface GoldenPart {
   volumeMm3?: number
   /** False for a deliberately open mesh (see OPEN_CUBE_STL). Absent means closed. */
   closedMesh?: boolean
+  /**
+   * Per kind, whether the product has curved faces — by inspection of the
+   * product, not of the mesh (ADR-0015 addendum 2). `null` for an STL: the
+   * file is its mesh, and the app must answer "unknown" rather than "planar".
+   * Absent means the file was not judged.
+   */
+  curvedKinds?: Readonly<Record<string, boolean | null>>
 }
 
 export const CUBE_STL: GoldenPart = {
@@ -35,14 +42,16 @@ export const CUBE_STL: GoldenPart = {
   partCount: 1,
   triangleCount: 12, // 2 per face × 6
   sizeMm: [10, 10, 10],
-  volumeMm3: 1000
+  volumeMm3: 1000,
+  curvedKinds: { 'cube-10x10': null } // an STL is its mesh — unknown, not planar
 }
 
 export const CUBE_STEP: GoldenPart = {
   file: 'cube-10x10.stp',
   partCount: 1,
   sizeMm: [10, 10, 10],
-  volumeMm3: 1000
+  volumeMm3: 1000,
+  curvedKinds: { 'Cube 10x10': false } // six planar faces: the volume is exact
 }
 
 /**
@@ -67,7 +76,12 @@ export const OPEN_CUBE_STL: GoldenPart = {
 export const AS1_ASSEMBLY: GoldenPart = {
   file: 'as1-oc-214.stp',
   partCount: 18, // instance-disambiguated (ADR-0002 addendum)
-  triangleCount: 5040
+  triangleCount: 5040,
+  // By inspection of the product: the rod and bolts are cylinders, the nuts
+  // are threaded, and the plate and brackets — planar to the eye, and called
+  // planar by the 16th dogfood's reader — carry cylindrical bolt holes. Every
+  // kind's mesh volume is a tessellation's, and none is exact.
+  curvedKinds: { plate: true, 'l-bracket': true, rod: true, bolt: true, nut: true }
 }
 
 /** One end-to-end packing scenario with a hand-computed answer. */

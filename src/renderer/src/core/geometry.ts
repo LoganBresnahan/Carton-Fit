@@ -134,3 +134,56 @@ function bumpEdge(edgeCount: Map<string, number>, a: number, b: number): void {
   const key = a < b ? `${a}_${b}` : `${b}_${a}`
   edgeCount.set(key, (edgeCount.get(key) ?? 0) + 1)
 }
+
+/**
+ * A triangle whose vertex normals turn by less than this is on a surface that
+ * does not turn there. Named for the one question it answers (wire rule 6):
+ * float32 unit normals on a planar face agree to ~1e-6 rad, so 0.1° is far
+ * above the noise and far below any tessellation step a modeller would choose.
+ */
+export const PLANAR_TURN_DEG = 0.1
+
+/**
+ * The largest angle, in degrees, by which the three vertex normals of any one
+ * triangle disagree — 0 for a mesh whose every triangle lies flat on its
+ * surface (ADR-0015 addendum 2).
+ *
+ * Only meaningful for SURFACE normals (`ImportedPart.origin === 'brep'`): the
+ * importer evaluates the B-rep face's normal at each node, so on a cylinder
+ * the normals across one triangle turn by exactly the facet's subtended
+ * angle, and on a planar face they do not turn at all. Facet normals (an
+ * STL's) are constant per triangle by construction and return 0 whatever
+ * the shape — the caller has to know which it holds.
+ */
+export function facetTurnDeg(normals: Float32Array, indices: Uint32Array): number {
+  assertTriangles(indices)
+  let minDot = 1
+  for (let t = 0; t < indices.length; t += 3) {
+    const a = indices[t] * 3
+    const b = indices[t + 1] * 3
+    const c = indices[t + 2] * 3
+    const ab = normals[a] * normals[b] + normals[a + 1] * normals[b + 1] + normals[a + 2] * normals[b + 2]
+    const ac = normals[a] * normals[c] + normals[a + 1] * normals[c + 1] + normals[a + 2] * normals[c + 2]
+    const bc = normals[b] * normals[c] + normals[b + 1] * normals[c + 1] + normals[b + 2] * normals[c + 2]
+    const d = Math.min(ab, ac, bc)
+    if (d < minDot) minDot = d
+  }
+  if (minDot >= 1) return 0
+  return (Math.acos(Math.max(-1, minDot)) * 180) / Math.PI
+}
+
+/**
+ * How far, as a fraction either way, a tessellation whose facets turn by at
+ * most `turnDeg` at a step can misstate the volume it encloses.
+ *
+ * A chord across an arc of θ radians loses 1 − sin θ/θ of the sector it
+ * spans (segment over sector: (θ − sin θ)/θ); a doubly curved surface — a
+ * fillet, a sphere — loses it in both directions, hence the 2. About 1.06%
+ * per direction at 14.5°, the reference bolt's step. EITHER WAY: an inscribed
+ * polygon understates a convex surface and overstates a hole. 0 when planar.
+ */
+export function tessellationTolerance(turnDeg: number): number {
+  if (turnDeg <= PLANAR_TURN_DEG) return 0
+  const theta = (turnDeg * Math.PI) / 180
+  return 2 * (1 - Math.sin(theta) / theta)
+}

@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   aabbSize,
   computeAabb,
+  facetTurnDeg,
   isClosedMesh,
-  meshVolume
+  meshVolume,
+  PLANAR_TURN_DEG,
+  tessellationTolerance
 } from '../src/renderer/src/core/geometry'
 
 // ---- cube fixtures -------------------------------------------------------
@@ -119,5 +122,59 @@ describe('isClosedMesh', () => {
     const idx = duplicatedCube(10).indices.subarray(0, CUBE_TRIS.length - 6)
     withHole.set(idx)
     expect(isClosedMesh(positions, withHole)).toBe(false)
+  })
+})
+
+describe('facetTurnDeg (ADR-0015 addendum 2)', () => {
+  it('is 0 on a planar solid: every triangle’s three surface normals agree', () => {
+    // A duplicated-vertex cube with per-face normals, the way occt emits one.
+    const { positions, indices } = duplicatedCube(10)
+    const normals = new Float32Array(positions.length)
+    for (let t = 0; t < indices.length; t += 3) {
+      const [a, b, c] = [indices[t] * 3, indices[t + 1] * 3, indices[t + 2] * 3]
+      const ux = positions[b] - positions[a], uy = positions[b + 1] - positions[a + 1], uz = positions[b + 2] - positions[a + 2]
+      const vx = positions[c] - positions[a], vy = positions[c + 1] - positions[a + 1], vz = positions[c + 2] - positions[a + 2]
+      const n = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx]
+      const len = Math.hypot(...n)
+      for (const i of [a, b, c]) normals.set(n.map((x) => x / len), i)
+    }
+    expect(facetTurnDeg(normals, indices)).toBe(0)
+  })
+
+  it('reports the facet’s own subtended angle where the surface normals turn across a triangle', () => {
+    // One triangle on a cylinder faceted 24 times around: its normals at the
+    // two generator lines are 15° apart, by construction.
+    const theta = (15 * Math.PI) / 180
+    const normals = new Float32Array([
+      1, 0, 0,
+      Math.cos(theta), Math.sin(theta), 0,
+      1, 0, 0
+    ])
+    expect(facetTurnDeg(normals, new Uint32Array([0, 1, 2]))).toBeCloseTo(15, 4)
+  })
+
+  it('takes the LARGEST turn over the mesh, not the first', () => {
+    const t1 = (5 * Math.PI) / 180
+    const t2 = (20 * Math.PI) / 180
+    const normals = new Float32Array([
+      1, 0, 0, Math.cos(t1), Math.sin(t1), 0, 1, 0, 0,
+      1, 0, 0, Math.cos(t2), Math.sin(t2), 0, 1, 0, 0
+    ])
+    expect(facetTurnDeg(normals, new Uint32Array([0, 1, 2, 3, 4, 5]))).toBeCloseTo(20, 4)
+  })
+})
+
+describe('tessellationTolerance', () => {
+  it('is 0 at or below the planar threshold', () => {
+    expect(tessellationTolerance(0)).toBe(0)
+    expect(tessellationTolerance(PLANAR_TURN_DEG)).toBe(0)
+  })
+
+  it('is 2·(1 − sin θ/θ): about 2.1% at the reference bolt’s 14.5° step', () => {
+    // By hand: θ = 0.2531 rad, sin θ = 0.2504, 1 − 0.2504/0.2531 = 0.01065, ×2.
+    expect(tessellationTolerance(14.5)).toBeCloseTo(0.0213, 3)
+    // And 1.6% cross-section at twenty facets (18°) — the addendum's own
+    // figure — doubled for a doubly curved surface.
+    expect(tessellationTolerance(18) / 2).toBeCloseTo(0.0164, 3)
   })
 })

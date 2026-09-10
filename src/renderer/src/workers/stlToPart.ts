@@ -30,5 +30,7 @@ export function bufferGeometryToPart(geometry: BufferGeometry, name: string): Im
     ? new Uint32Array(existingIndex.array)
     : sequentialIndices(position.count)
 
-  return { name, positions, normals, indices }
+  // An STL is its mesh: one normal per facet, no surface behind it. Marked so
+  // nothing downstream reads its flat normals as "planar and exact".
+  return { name, positions, normals, indices, origin: 'mesh' }
 }

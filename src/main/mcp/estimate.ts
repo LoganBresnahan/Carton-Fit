@@ -7,7 +7,12 @@ import {
   type PackResult,
   type QualityTier
 } from '../../renderer/src/core/packing/types'
-import { buildPackRequest, openMeshParts, partsForRequest } from '../../renderer/src/packing/request'
+import {
+  approximateVolumeKinds,
+  buildPackRequest,
+  openMeshParts,
+  partsForRequest
+} from '../../renderer/src/packing/request'
 import { mixedInstanceKinds } from '../../renderer/src/packing/kinds'
 import { overrideForPart, type PartWeightOverrides } from '../../renderer/src/packing/kinds'
 import type { PackingSettings } from '../../renderer/src/packing/settings'
@@ -15,6 +20,8 @@ import { DEFAULT_MAX_WEIGHT_G } from '../../renderer/src/core/units'
 import {
   bindingReport,
   freeSpaceReport,
+  meshVolumeReport,
+  meshVolumeWarning,
   openMeshWarning,
   packedWeightG,
   truncatedLayoutNote,
@@ -207,6 +214,16 @@ export interface EstimateQualifications {
          *  `override` when every counted part was priced by hand, `mixed` when
          *  some were, otherwise the mode that derived them. */
         countedWeightFrom: 'direct' | 'density' | 'override' | 'mixed'
+        /** Which counted kinds were priced from a tessellation of curved
+         *  faces, how approximate that is, and whether the cap is close
+         *  enough for it to move the count (ADR-0015 addendum 2, amendment
+         *  22). `note` carries the sentence only when `couldChangeCount`. */
+        meshVolumes: {
+          approximateKinds: string[]
+          volumeTolerance: number
+          couldChangeCount: boolean
+          note: string | null
+        }
       }
     | { supplied: false; note: string }
   /** Clearances as honored. Negative and non-finite gaps clamp to zero
@@ -416,6 +433,11 @@ function qualificationsOf(context: LiveEstimateContext): EstimateQualifications 
   // not bind" note beside a weight-bound count would be a qualification that
   // lies (found writing the v2 drive spec; the v1 path had the same hole).
   const supplied = context.weightSupplied || Object.keys(overrides).length > 0
+  const meshVolumes = meshVolumeReport(
+    result,
+    request,
+    approximateVolumeKinds(parts, settings, context.unitPart, overrides)
+  )
 
   return {
     heuristic: {
@@ -433,7 +455,8 @@ function qualificationsOf(context: LiveEstimateContext): EstimateQualifications 
           supplied: true,
           mode: settings.weightMode,
           overriddenKinds: Object.keys(overrides),
-          countedWeightFrom: countedWeightFrom(context)
+          countedWeightFrom: countedWeightFrom(context),
+          meshVolumes: { ...meshVolumes, note: meshVolumeWarning(meshVolumes) }
         }
       : {
           supplied: false,

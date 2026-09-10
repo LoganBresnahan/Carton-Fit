@@ -22,7 +22,10 @@ function occtMeshToPart(mesh: OcctMesh, name: string): ImportedPart {
     name,
     positions: new Float32Array(mesh.attributes.position.array),
     normals: mesh.attributes.normal ? new Float32Array(mesh.attributes.normal.array) : null,
-    indices: new Uint32Array(mesh.index.array)
+    indices: new Uint32Array(mesh.index.array),
+    // A B-rep the importer tessellated: its normals come from the face, not
+    // the triangle, which is what lets `facetTurnDeg` tell a curve from a crease.
+    origin: 'brep'
   }
 }
 

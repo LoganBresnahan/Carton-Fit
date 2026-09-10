@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  meshVolumeClause,
+  meshVolumeReport,
+  meshVolumeWarning,
   bindingHeading,
   bindingLabel,
   freeSpaceNote,
@@ -513,5 +516,93 @@ describe('weightlessWarning', () => {
     expect(weightlessWarning(req(0))).toMatch(/space only/)
     expect(weightlessWarning(req(5))).toBeNull()
     expect(weightlessWarning(req(0, 0))).toBeNull()
+  })
+})
+
+describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
+  // The reference plate, by the wire's own numbers: 530 624 mm³ × 7.85 g/cm³
+  // = 4165.4 g, tolerance 1.9% → a band of 79 g per plate. Three plates spend
+  // 12 496 g; four would spend 16 662 g.
+  const plateG = 4165.4
+  const approx = { kinds: ['plate'], tolerance: 0.019 }
+  const base = (maxWeightG: number, mode: 'max-quantity' | 'fit-check'): PackRequest => ({
+    mode,
+    tier: 'fast',
+    carton: [300, 300, 300],
+    clearances: { betweenParts: 0, wall: 0 },
+    maxWeightG,
+    parts: []
+  })
+  const unit = (maxWeightG: number): PackRequest => ({
+    ...base(maxWeightG, 'max-quantity'),
+    parts: [{ name: 'plate', positions: new Float32Array(3), weightG: plateG }]
+  })
+  const three = (patch: Partial<MaxQuantityResult> = {}) => qty({ count: 3, binding: 'weight', ...patch })
+
+  it('says false at a cap the count is robust against (station 4 at 35 lb = 15 876 g)', () => {
+    const report = meshVolumeReport(three(), unit(15876), approx)
+    expect(report).toEqual({ approximateKinds: ['plate'], volumeTolerance: 0.019, couldChangeCount: false })
+    expect(meshVolumeWarning(report)).toBeNull()
+  })
+
+  it('says true when four plates LIGHTER by the band would fit under a cap that stopped the fourth', () => {
+    // 4 × (4165.4 − 79.1) = 16 345 g ≤ 16 556 g (36.5 lb) < 4 × 4165.4.
+    expect(meshVolumeReport(three(), unit(16556), approx).couldChangeCount).toBe(true)
+  })
+
+  it('says true when three plates HEAVIER by the band would exceed the cap', () => {
+    // 3 × (4165.4 + 79.1) = 12 734 g > 12 701 g (28 lb) ≥ 3 × 4165.4.
+    expect(meshVolumeReport(three(), unit(12701), approx).couldChangeCount).toBe(true)
+  })
+
+  it('does not fire on a lighter unit when the CARTON was what stopped the fourth', () => {
+    // Cap 100 lb: (count+1)·unit is under the cap, so the cap stopped nothing.
+    expect(meshVolumeReport(three({ binding: 'geometry' }), unit(45359), approx).couldChangeCount).toBe(false)
+  })
+
+  it('still finds the band when the unit is a suffixed instance packed alone', () => {
+    // A max-quantity run over `plate (2)` carries no `plate` in its request
+    // to strip the ordinal against; the kind list resolved it as `plate`.
+    const alone = {
+      ...unit(16556),
+      parts: [{ name: 'plate (2)', positions: new Float32Array(3), weightG: plateG }]
+    }
+    expect(meshVolumeReport(three(), alone, approx).couldChangeCount).toBe(true)
+  })
+
+  it('is empty, with no band, when nothing was approximate or there is no cap', () => {
+    expect(meshVolumeReport(three(), unit(16556), { kinds: [], tolerance: 0 })).toEqual({
+      approximateKinds: [],
+      volumeTolerance: 0,
+      couldChangeCount: false
+    })
+    expect(meshVolumeReport(three(), unit(Infinity), approx).couldChangeCount).toBe(false)
+  })
+
+  it('widens the band only by the approximate kinds’ grams, not a hand-priced neighbour', () => {
+    // Fit-check: a 4165 g plate (approximate) beside a 10 000 g hand-priced
+    // bracket, total 14 165 g. Band = 1.9% × 4165 = 79 g, NOT 1.9% × 14 165.
+    const both: PackRequest = {
+      ...base(14200, 'fit-check'),
+      parts: [
+        { name: 'plate', positions: new Float32Array(3), weightG: plateG },
+        { name: 'bracket', positions: new Float32Array(3), weightG: 10000 }
+      ]
+    }
+    expect(meshVolumeReport(fit(), both, approx).couldChangeCount).toBe(true) // 14 165 + 79 > 14 200
+    expect(meshVolumeReport(fit(), { ...both, maxWeightG: 14300 }, approx).couldChangeCount).toBe(false)
+  })
+
+  it('the warning names the kinds, the tolerance and the fix; the clause names the kinds always', () => {
+    const report = meshVolumeReport(three(), unit(16556), approx)
+    const warning = meshVolumeWarning(report)
+    expect(warning).toContain('“plate”')
+    expect(warning).toContain('1.9%')
+    expect(warning).toMatch(/change the count/)
+    expect(warning).toMatch(/enter it directly/i)
+    expect(meshVolumeClause(report)).toBe(
+      'mesh volumes of curved faces, approximate to about 1.9% either way: plate'
+    )
+    expect(meshVolumeClause({ approximateKinds: [], volumeTolerance: 0, couldChangeCount: false })).toBeNull()
   })
 })

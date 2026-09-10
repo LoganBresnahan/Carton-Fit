@@ -149,6 +149,26 @@ describe('the schema rejects a reply with a hedge missing', () => {
     expect(estimateSchema.safeParse(mutated).success).toBe(false)
   })
 
+  it('rejects an estimate whose weightInput lost its meshVolumes (amendment 22)', async () => {
+    const report = await estimate({
+      mode: 'max-quantity',
+      carton: carton(100),
+      weight: { densityGPerCm3: 7.85 }
+    })
+    const mutated = structuredClone(report) as EstimateReport
+    delete (mutated.qualifications.weightInput as unknown as Record<string, unknown>).meshVolumes
+    expect(estimateSchema.safeParse(mutated).success).toBe(false)
+  })
+
+  it('rejects an inspect kind whose tessellation is unknown for no reason', async () => {
+    const report = await call<InspectReport>('inspect_model', { path: OPEN_CUBE })
+    const mutated = structuredClone(report) as InspectReport
+    mutated.kinds[0].tessellation = { known: false } as never
+    expect(inspectSchema.safeParse(mutated).success).toBe(false)
+    delete (mutated.kinds[0] as unknown as Record<string, unknown>).tessellation
+    expect(inspectSchema.safeParse(mutated).success).toBe(false)
+  })
+
   it('rejects an inspect reply with its open-mesh finding deleted', async () => {
     const report = await call<InspectReport>('inspect_model', { path: CUBE })
     const mutated = structuredClone(report) as InspectReport
@@ -518,7 +538,10 @@ describe('every answer arrives qualified', () => {
       overriddenKinds: [],
       // With nothing overridden the two agree — which is why the disagreement
       // below went unnoticed for as long as it did.
-      countedWeightFrom: 'direct'
+      countedWeightFrom: 'direct',
+      // Direct mode integrates no volume, so nothing is approximate and the
+      // band is empty (ADR-0015 addendum 2) — a varying field, not a constant.
+      meshVolumes: { approximateKinds: [], volumeTolerance: 0, couldChangeCount: false, note: null }
     })
     expect(report.binding.constraint).toBe('weight')
   })
@@ -570,6 +593,84 @@ describe('every answer arrives qualified', () => {
       weight: { densityGPerCm3: 7.85 }
     })
     expect(report.qualifications.openMesh.affected).toBe(true)
+  })
+
+  // ADR-0015 addendum 2: the field is on every density answer, the sentence
+  // only where the band reaches the cap. Station 4's setup, three caps.
+  describe('a density weight over curved faces says so, and says when it matters', () => {
+    const station4 = (capLb: number) =>
+      estimate({
+        path: AS1,
+        mode: 'max-quantity',
+        tier: 'thorough',
+        carton: {
+          measured: 'outer',
+          dimensions: { x: 11, y: 6, z: 10, unit: 'in' },
+          wallThickness: { value: 1, unit: 'in' }
+        },
+        clearances: { betweenParts: { value: 0.25, unit: 'in' }, wall: { value: 0.25, unit: 'in' } },
+        weight: { densityGPerCm3: 7.85 },
+        maxWeight: { value: capLb, unit: 'lb' },
+        unitPart: 'plate'
+      })
+
+    it('names the plate as approximate at the brief’s 35 lb, and says the count is safe there', async () => {
+      const report = await station4(35)
+      expect(report.outcome).toMatchObject({ mode: 'max-quantity', count: 3 })
+      const { weightInput } = report.qualifications
+      expect(weightInput.supplied).toBe(true)
+      if (!weightInput.supplied) return
+      // The plate has bolt holes — cylinders — so its mesh volume is a
+      // tessellation's, whatever the eye says. By hand: 3 plates at 9.18 lb
+      // sit at 27.6 lb; a 1.9% band is 0.17 lb a plate; neither 3 heavier
+      // (28.1) nor 4 lighter (36.0) crosses 35.
+      expect(weightInput.meshVolumes.approximateKinds).toEqual(['plate'])
+      expect(weightInput.meshVolumes.volumeTolerance).toBeGreaterThan(0.015)
+      expect(weightInput.meshVolumes.volumeTolerance).toBeLessThan(0.025)
+      expect(weightInput.meshVolumes.couldChangeCount).toBe(false)
+      expect(weightInput.meshVolumes.note).toBeNull()
+    })
+
+    it('fires at 36.5 lb, where a fourth plate lighter by the band would slip under the cap', async () => {
+      // 4 × 9.18 = 36.7 lb > 36.5 ≥ 4 × (9.18 − 0.17) = 36.0.
+      const report = await station4(36.5)
+      expect(report.outcome).toMatchObject({ count: 3 })
+      const { weightInput } = report.qualifications
+      if (!weightInput.supplied) throw new Error('weight was supplied')
+      expect(weightInput.meshVolumes.couldChangeCount).toBe(true)
+      expect(weightInput.meshVolumes.note).toMatch(/“plate”/)
+      expect(weightInput.meshVolumes.note).toMatch(/change the count/)
+    })
+
+    it('fires at 28 lb, where three plates heavier by the band would exceed it', async () => {
+      // 3 × (9.18 + 0.17) = 28.07 lb > 28 ≥ 27.6.
+      const report = await station4(28)
+      expect(report.outcome).toMatchObject({ count: 3 })
+      const { weightInput } = report.qualifications
+      if (!weightInput.supplied) throw new Error('weight was supplied')
+      expect(weightInput.meshVolumes.couldChangeCount).toBe(true)
+    })
+
+    it('is empty under a hand-entered plate weight — the fix the sentence names', async () => {
+      const report = await estimate({
+        path: AS1,
+        mode: 'max-quantity',
+        tier: 'fast',
+        carton: carton(24, 'in'),
+        weight: { densityGPerCm3: 7.85 },
+        maxWeight: { value: 36.5, unit: 'lb' },
+        unitPart: 'plate',
+        overrides: [{ kind: 'plate', weight: { value: 9.18, unit: 'lb' } }]
+      })
+      const { weightInput } = report.qualifications
+      if (!weightInput.supplied) throw new Error('weight was supplied')
+      expect(weightInput.meshVolumes).toEqual({
+        approximateKinds: [],
+        volumeTolerance: 0,
+        couldChangeCount: false,
+        note: null
+      })
+    })
   })
 
   it('repeats inspect_model’s mixed-instance qualification on the estimate itself', async () => {

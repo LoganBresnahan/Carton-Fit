@@ -1,5 +1,14 @@
 import { basename } from 'node:path'
-import { aabbSize, computeAabb, isClosedMesh, meshVolume } from '../../renderer/src/core/geometry'
+import {
+  aabbSize,
+  computeAabb,
+  isClosedMesh,
+  meshVolume,
+  PLANAR_TURN_DEG,
+  tessellationTolerance
+} from '../../renderer/src/core/geometry'
+import { facetTurnOf } from '../../renderer/src/packing/request'
+import type { Known } from './estimate'
 import { groupByKind, instanceAgreement } from '../../renderer/src/packing/kinds'
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
 import type { Vec3 } from '../../renderer/src/core/packing/types'
@@ -49,6 +58,11 @@ export interface KindReport {
   /** False when the mesh is not watertight, which makes `volume` — and any
    *  weight derived from it — wrong rather than approximate (ADR-0015). */
   closedMesh: boolean
+  /** Whether this kind's mesh is a tessellation of curved faces, how coarse,
+   *  and how far the enclosed volume can be off either way (ADR-0015
+   *  addendum 2). `known: false` for an STL: the file IS its mesh, and there
+   *  is no surface behind it to compare a tessellation against. */
+  tessellation: Known<{ curvedFaces: boolean; facetTurnDeg: number; volumeTolerance: number }>
   /** True when every instance has the same bounding box. STEP geometry arrives
    *  with its assembly placement baked in (ADR-0002 addendum), so instances of
    *  one product sitting at different orientations have different boxes; when
@@ -83,6 +97,29 @@ export interface InspectQualifications {
   mixedInstances: { affected: false } | { affected: true; kinds: string[]; note: string }
 }
 
+
+/** The per-kind tessellation facts, from the one memoized measurement the
+ *  renderer's warning also reads. Rotation-invariant, so one instance speaks
+ *  for the kind. */
+function tessellationOf(
+  part: ImportedPart
+): Known<{ curvedFaces: boolean; facetTurnDeg: number; volumeTolerance: number }> {
+  const turn = facetTurnOf(part)
+  if (turn === null) {
+    return {
+      known: false,
+      reason:
+        'this part came from a mesh file (STL): the mesh is the model, so there is no ' +
+        'surface behind it for the app to compare a tessellation against'
+    }
+  }
+  return {
+    known: true,
+    curvedFaces: turn > PLANAR_TURN_DEG,
+    facetTurnDeg: turn,
+    volumeTolerance: tessellationTolerance(turn)
+  }
+}
 
 /** Extents largest-first, so instances that differ only by orientation agree. */
 function descendingExtents(size: Vec3): Vec3 {
@@ -138,6 +175,7 @@ export function inspectParts(
         units.length
       ),
       closedMesh: closed,
+      tessellation: tessellationOf(sample),
       instancesAlike: alike
     })
   }

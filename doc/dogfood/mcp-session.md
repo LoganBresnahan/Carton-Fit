@@ -134,6 +134,10 @@ Check and report:
   bare numbers you had to guess about?
 - Are the part kinds and counts plausible against the file's own name?
 - Is there an open-mesh warning, and if so does it say what it means for weight?
+- Each kind says whether its faces curve and how coarse the facets are. Before
+  you read those fields, write down which kinds *you* expect to be planar from
+  the product's description — then compare. If one surprises you, say why the
+  app might be right, and what a curved face does to a mesh volume.
 - Is anything in the reply a number you could not act on without asking a
   follow-up question?
 
@@ -160,6 +164,9 @@ Report:
 - Is the qualification structural (a field you can read) or only prose?
 - Do the two runs — no weight, then steel — disagree in any way you cannot
   explain from the inputs?
+- The steel run's weights came from mesh volumes. Does the reply say how exact
+  those volumes are, per kind, and does it say whether that matters *here* —
+  as a field, not a sentence — or does it warn on every answer regardless?
 
 ### Station 4 — where both limits land on the same number
 
@@ -193,6 +200,13 @@ Then raise the cap to **100 lb** and rerun. The answer should change hands: the
 carton now stops it well before the weight does. Check that the sentence changes
 with it, and that the claim about the cap having room to spare is one the numbers
 support.
+
+Then one more cap, **36.5 lb**, and look at what the reply says about the
+plate's weight. Work out for yourself: the plate's weight is density × a mesh
+volume, and the reply tells you how far that volume can be off. Does that band
+reach the cap at 36.5 lb? At 35? Does the reply's own field agree with your
+arithmetic each time, and is the sentence there exactly when the field says
+it should be?
 
 ### Station 5 — driving the live app
 

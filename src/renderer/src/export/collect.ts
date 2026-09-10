@@ -1,8 +1,10 @@
 import { lengthUnitLabel, mmToLength } from '../core/units'
-import { openMeshParts, partsForRequest } from '../packing/request'
+import { approximateVolumeKinds, openMeshParts, partsForRequest } from '../packing/request'
 import { meshVolume } from '../core/geometry'
 import { mixedInstanceKinds } from '../packing/kinds'
 import {
+  meshVolumeReport,
+  meshVolumeWarning,
   mixedInstancesWarning,
   openMeshWarning,
   truncatedLayoutNote,
@@ -35,8 +37,16 @@ export function collectExport(): EstimateExport | null {
   // Both qualifiers come from verdict.ts, so the export and the panel say the
   // same sentence (ADR-0017 §2) — and adding a third warning to the panel
   // means adding it here, in one obvious place.
+  // One report for the density line AND the warning (ADR-0015 addendum 2),
+  // computed once here so the two cannot disagree about which kinds.
+  const meshVolumes = meshVolumeReport(
+    packResult,
+    packRequest,
+    approximateVolumeKinds(parts, settings, unitPartName, state.partWeightsG)
+  )
   const warnings = [
     openMeshWarning(openMeshParts(parts, settings, unitPartName, state.partWeightsG)),
+    meshVolumeWarning(meshVolumes),
     // Scoped to the parts the PACK used, like the open-mesh warning above it:
     // a max-quantity run over one kind is not qualified by kinds it never
     // counted. Added on the 8th dogfood — the comment above was written before
@@ -61,7 +71,8 @@ export function collectExport(): EstimateExport | null {
     unitPartName,
     warnings,
     overrides: state.partWeightsG,
-    enclosedVolumeMm3
+    enclosedVolumeMm3,
+    meshVolumes
   }
 }
 
