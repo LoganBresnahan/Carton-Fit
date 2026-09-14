@@ -193,6 +193,33 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [x] 46. Dogfood follow-ups, 22nd run — one Claude Opus 5 pass (Cowork, over
+      the remote-devices bridge) on `1.2.0+4d8891b`, 2026-09-14, the first
+      run against items 44 and 45. **Seventeenth straight run of matching
+      counts**, both paths byte-identical, and every fix from the last two
+      runs held on first contact: the reader derived the 36.5 lb band before
+      calling, predicted `couldChangeCount: false, couldChangeBinding: true`,
+      and got it with the note saying the count holds; `withheldByLimit: 12`
+      was read correctly beside `withheldByCustomer`; the fill printed 1.4%
+      and 34.3% with the same spelling in field, note and export. Nothing to
+      build. Two proposals, both recurrences.
+      - [x] **`request.packedWeight` should be `known: false` on a space-only
+        answer** — refuted, the THIRD reader on the 0 lb sentinel and the
+        first from the output side (item 41 recorded the second and said the
+        third would be recognised). The value is not unknown: it is the sum
+        of the weights as given, and the app gives 0 lb for a part nobody
+        weighed. The claim that it is not a measurement is
+        `weightInput.supplied: false` in the same object, which every
+        rendered surface reads — the summary prints *none*, the CSV leaves
+        the cell blank (15th run). Making the field a `Known` union is a
+        shape change to a value scripts read, a major under ADR-0020 §3
+        (rule 7), for a misreading the surfaces already refuse. Now a
+        standing refutation in `doc/wire-rules.md`.
+      - [x] **`volumeTolerance` is a bare number** — third reader; standing
+        refutation since item 44 (rule 7; the percent sibling is the answer,
+        and this reader resolved it by reading the sibling).
+      - [x] Recurrences: tools arriving deferred in this client (fifth time);
+        the bridge's folder grant not gating the app's file reads (fourth).
 - [x] 45. Dogfood follow-ups, 21st run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+698e296`, 2026-09-14, the first
       run against item 43's fixes. **Sixteenth straight run of matching
@@ -287,8 +314,10 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         forbids the fourth; that is what a tie is. The weight clause leads
         because `constraint` names the closest limit (a fourth is 4.7% over
         the cap and 11% over the stack), which is amendment 1's rule. The
-        reader's alternative — carton first — is equally true; **user's call**
-        whether the tie leads with the closer limit or the carton. The
+        reader's alternative — carton first — is equally true. *Decided
+        2026-09-14: weight stays first, but the note states the fact each
+        limit establishes — "one more would exceed the weight cap" — with no
+        agent verb to misread* (ADR-0029 amendment 25). The
         caption's "(weight-limited)" the reader also saw is item 43's second
         finding, fixed in the same uncommitted tree.
       - [x] **Drop or rename `volumeTolerance`** — refuted, second reader,
@@ -304,7 +333,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       - [x] Recurrences: all 17 tools arrived deferred in this client (item
         39's aside, third time); the bridge's folder grant not gating the
         app's own file reads (items 37/38, third time).
-- [ ] 43. Dogfood follow-ups, 19th run — one Claude Opus 5 pass (Cowork, over
+- [x] 43. Dogfood follow-ups, 19th run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+0db9004`, 2026-09-10, the first
       run against item 42. **Fourteenth straight run of matching counts**,
       both paths byte-identical. The reader built the carton the band test
@@ -339,7 +368,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         cannot be inherited, so its provenance is `cleared` on `load_model`,
         which the same report quoted as accurate twice at station 0. The
         proposed `perFile: { unitPart: "set" }` sibling is that field again.
-      - [ ] **"Closest limit: space" on a space-only fit** (recorded, user's
+      - [x] **"Closest limit: space" on a space-only fit** (recorded, user's
         call, the wording cousin of item 41's first open sub-item). The
         summary's heading is a superlative printed where
         `otherConstraint.known: false` says there was one candidate; the next
@@ -347,7 +376,8 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         misled, but the label is what a spreadsheet column inherits. If it
         moves: `bindingHeading` reads the weightless case and says *Only
         limit*. Decide with item 41's sentence, since both answer what
-        "closest" means when only one limit was given.
+        "closest" means when only one limit was given. *Decided 2026-09-14:
+        "Only limit"* (ADR-0029 amendment 25).
       - [x] Recurrences, recorded: a reply field announcing that `set_inputs`
         persisted (standing refutation, seventh reader); the bridge's folder
         grant not gating the app's own file reads (items 37/38's aside, the
@@ -415,7 +445,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       - [x] Aside: the remote-devices bridge again reported the server as
         connected-not-announced with no tools listed until a refresh — item
         39's aside, second occurrence, the client's and not ours.
-- [ ] 41. Dogfood follow-ups, 17th run — the closing run of this loop: one
+- [x] 41. Dogfood follow-ups, 17th run — the closing run of this loop: one
       Claude Opus 5 pass (Cowork, over the remote-devices bridge) on
       `1.2.0+a537f70`, 2026-09-09. **Every packing number matched the
       reader's independent arithmetic** for the twelfth run in a row, both
@@ -449,7 +479,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         and the description says *every customer's*; the list's
         `withheldByCustomer` gives the split. A sibling `forCustomer` count
         is the field if a reader ever needs the other reading.
-      - [ ] **"Weight is the closer limit" compares a weight ratio to a
+      - [x] **"Weight is the closer limit" compares a weight ratio to a
         bounding-box fill** (recorded for the user; the wording cousin of
         item 33's open sub-item). The engine's least-headroom rule
         (`shelfFit.ts`, `extremePointFit.ts`) is documented and ADR-0029's
@@ -460,14 +490,15 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         against 3.1%; not necessarily true near a crossover nobody can place.
         Options: keep it (the two numbers are in the sentence, a reader can
         judge); or drop the last sentence in fit-check when nothing bound and
-        let the two numbers stand. **User's call**, with item 33.
+        let the two numbers stand. *Decided 2026-09-14: dropped* (ADR-0029
+        amendment 25).
       - [x] **`inputs.weight` reports a 0 lb part weight where the report
         says none was supplied** — refuted as proposed, second reader on the
         sentinel. `inputs.weight` is the input (rule 4) and 0 lb IS the input
         the app documents for a space-only answer; `weightInput.supplied` is
         the claim, and a `spaceOnly: true` beside a value of 0 is a function
         of the value (rule 2). Recorded so the third proposal is recognised.
-      - [ ] **Three surfaces name one carton three ways** (recorded, cosmetic,
+      - [x] **Three surfaces name one carton three ways** (recorded, cosmetic,
         user's call): the export body says both (*Carton (inner): 9 × 4 × 8
         in / entered as outer 11 × 6 × 10 in with 1 in walls*), the
         suggested filename uses the inner dims (`-9x4x8in`, from the
@@ -476,7 +507,8 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         line prints what the person typed so they recognise it; the filename
         is the one that could go either way. If it moves, it moves to the
         entered dims, since a file name is a label for a person. *Raised
-        again by the 18th run's reader (item 42), same direction.*
+        again by the 18th run's reader (item 42), same direction. Decided
+        2026-09-14: entered dims* (ADR-0017 addendum 9).
 - [x] 40. Curved faces run a little light — **ADR-0015 addendum 2, built
       2026-09-09.** Per kind on `inspect_model`: `tessellation` (`curvedFaces`,
       `facetTurnDeg`, `volumeTolerance` = 2·(1 − sin θ/θ), or `known: false`

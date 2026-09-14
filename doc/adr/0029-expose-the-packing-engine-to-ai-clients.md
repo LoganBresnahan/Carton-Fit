@@ -1603,6 +1603,38 @@ carton instead and a fourth still exceeds the cap; each limit alone forbids
 it, which is what a tie is; the ordering is the user's call). Sixteen
 straight runs of matching counts.
 
+### Amendment 25 (2026-09-14, after the twenty-second dogfood) — the wording calls, decided
+
+Three sentences that were true as written, each with a reader's equally true
+alternative on record, and no field to settle them. The user delegated the
+choice with one criterion: as close to absolute clarity as a sentence gets.
+Applied as "a sentence that cannot be read wrong beats one that is merely
+true."
+
+- **The fit-check ranking sentence is dropped.** *Weight is the closer
+  limit* compared a weight share to a bounding-box fill — two scales, one of
+  which cannot reach 100% — and drew a conclusion across them (readers on
+  the 17th and 20th runs; roadmap item 41). The note now ends at the two
+  shares. `binding.constraint` still names the closest limit on the wire,
+  as amendment 1 decided, and a reader who wants the ranking has both
+  numbers in the sentence.
+- **The heading on a space-only fit reads *Only limit*.** *Closest limit* is
+  a superlative, and with no weight given (or no cap applied) there is one
+  candidate (19th run; item 43). `bindingHeading` now reads the request and
+  says, in the note's own words, that only space could have limited it.
+  *Closest limit* stays where two limits were in play.
+- **The tie note states the fact each limit establishes.** *Both limits land
+  on 3: the weight cap stopped it, and no arrangement fits another one in
+  the carton either* was read by two readers (20th, 21st runs; item 44) as
+  causal-exclusive — *so a bigger cap ships more?* — though the counterfactual
+  denies both clauses equally in a tie. It now reads *one more would exceed
+  the weight cap, and no arrangement fits another one in the carton either*:
+  weight still first, because `constraint` names the closest limit, but no
+  agent verb to misread.
+
+The fourth call, the export filename, is ADR-0017 addendum 9. Twenty-two
+runs and seventeen straight matches; the loop on this surface rests again.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

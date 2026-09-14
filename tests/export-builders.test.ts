@@ -722,14 +722,29 @@ describe('suggestedFileName', () => {
     // 9 × 5.5 × 8 in was filed as `-9x6x8in` while the CSV printed 5.5: the
     // 0.5 in was on the axis that decides how many plates stack.
     const name = suggestedFileName(
-      input({ request: request({ carton: [inToMm(9), inToMm(5.5), inToMm(8)] }) }),
+      input({ settings: settings({ boxDimsMm: [inToMm(9), inToMm(5.5), inToMm(8)] }) }),
       'csv'
     )
     expect(name).toBe('bracket-9x5.5x8in.csv')
     // Same formatter as the body: 11.75 keeps its digits, float dust does not.
     expect(
-      suggestedFileName(input({ request: request({ carton: [inToMm(11.75), inToMm(12), inToMm(12)] }) }), 'txt')
+      suggestedFileName(input({ settings: settings({ boxDimsMm: [inToMm(11.75), inToMm(12), inToMm(12)] }) }), 'txt')
     ).toBe('bracket-11.75x12x12in.txt')
+  })
+
+  it('names the carton as ENTERED, outer when outer was typed (ADR-0017 addendum 9)', () => {
+    // Station 4's carton: typed as outer 11 × 6 × 10 with 1 in walls, packed
+    // against inner 9 × 4 × 8. A file name is a label for a person, and the
+    // purchase order says 11 × 6 × 10; the body prints both, the receipt row
+    // the entered one. Two readers asked; the third surface now agrees.
+    const name = suggestedFileName(
+      input({
+        settings: settings({ enterOuter: true, wallMm: inToMm(1), boxDimsMm: [inToMm(11), inToMm(6), inToMm(10)] }),
+        request: request({ carton: [inToMm(9), inToMm(4), inToMm(8)] })
+      }),
+      'csv'
+    )
+    expect(name).toBe('bracket-11x6x10in.csv')
   })
 })
 

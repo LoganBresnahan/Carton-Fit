@@ -167,7 +167,7 @@ export default function ResultsPanel() {
 
       <dl className="results-facts">
         <div>
-          <dt data-testid="results-binding-heading">{bindingHeading(result)}</dt>
+          <dt data-testid="results-binding-heading">{bindingHeading(result, request)}</dt>
           <dd data-testid="results-binding">{bindingLabel(result.binding)}</dd>
         </div>
         <div>

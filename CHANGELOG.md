@@ -10,6 +10,20 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ## [Unreleased]
 
+### Changed
+
+- **Four sentences said plainly.** On a fit where nothing bound, the estimate
+  no longer ranks "weight is the closer limit" against the carton fill, two
+  shares on different scales; both numbers stand. On a space-only fit the
+  summary heading reads *Only limit* rather than *Closest limit*, since only
+  one limit was given. Where both limits land on the same count, the note
+  says *one more would exceed the weight cap* instead of *the weight cap
+  stopped it*, which readers took as a promise that a bigger cap would ship
+  more. And an export's suggested filename carries the carton as you entered
+  it, outer when you typed outer, matching the receipt row and your purchase
+  order. ([ADR-0029 amendment 25](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md),
+  [ADR-0017 addendum 9](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+
 ### Fixed
 
 - **The fill percentage reads to one decimal everywhere.** The panel's Fill

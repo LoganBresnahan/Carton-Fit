@@ -220,8 +220,16 @@ export function verdictHeadline(result: PackResult): string {
  * the constraint shown is the one with the least headroom (extremePointFit's
  * convention). Caught by an AI client on first contact (ADR-0029, 2026-09-02).
  */
-export function bindingHeading(result: PackResult): string {
-  return result.mode === 'fit-check' && result.fits ? 'Closest limit' : 'Limited by'
+export function bindingHeading(result: PackResult, request?: PackRequest | null): string {
+  if (result.mode !== 'fit-check' || !result.fits) return 'Limited by'
+  // "Closest limit" is a superlative, and on a space-only fit there is one
+  // candidate (19th dogfood): no weight was given, or no cap applied, so only
+  // space could have limited it. Say that, in the words the note beside it
+  // uses. Without the request the heading cannot tell, and keeps the general form.
+  if (request && (weightless(request) || !(Number.isFinite(request.maxWeightG) && request.maxWeightG > 0))) {
+    return 'Only limit'
+  }
+  return 'Closest limit'
 }
 
 /**
@@ -393,9 +401,15 @@ export function bindingReport(result: PackResult, request: PackRequest): Binding
     let note: string
     if (result.binding === 'weight') {
       if (other.known && other.atLimit && other.evidence === 'bound') {
+        // Weight first, because `constraint` names the closest limit
+        // (amendment 1); but as the FACT each limit establishes, not "the
+        // weight cap stopped it" — two readers (20th, 21st runs) read that
+        // verb as causal-exclusive and asked whether a bigger cap would ship
+        // more. A fourth would exceed the cap AND would not fit; each limit
+        // alone forbids it, which is what a tie is (amendment 25).
         note =
           `Both limits land on ${count !== null ? count.toLocaleString() : 'this answer'}: ` +
-          'the weight cap stopped it, and no arrangement fits another one in the carton either.'
+          'one more would exceed the weight cap, and no arrangement fits another one in the carton either.'
       } else if (other.known && other.atLimit) {
         // 'search': evidence, labelled as such, never dressed as the proof above.
         note =
@@ -442,10 +456,15 @@ export function bindingReport(result: PackResult, request: PackRequest): Binding
       `Nothing bound — all ${placed} parts placed, filling ${fill} of the carton. ` +
       'No part weight was given, so only space could have limited this.'
   } else {
+    // No ranking sentence (decided 2026-09-14, ADR-0029 amendment 25, after
+    // readers on the 17th and 20th runs): "Weight is the closer limit"
+    // compared a weight share to a bounding-box fill — two scales, one of
+    // which cannot reach 100% — and drew a conclusion across them. The two
+    // shares stand; `constraint` still names the closest limit on the wire,
+    // and a reader who wants the ranking has both numbers in this sentence.
     note =
       `Nothing bound — all ${placed} parts placed at ${pct(packedWeightG(result, request) / request.maxWeightG)} ` +
-      `of the weight cap and ${fill} of the carton. ` +
-      `${result.binding === 'weight' ? 'Weight' : 'Space'} is the closer limit.`
+      `of the weight cap and ${fill} of the carton.`
   }
   // Nothing stopped the pack, so neither limit is at its limit — and that IS
   // knowable here. The evidence names the side it is about (2026-09-04, a

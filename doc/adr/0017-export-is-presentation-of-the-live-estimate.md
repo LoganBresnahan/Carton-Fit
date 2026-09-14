@@ -296,6 +296,22 @@ differ keeps each instance's own extents — the difference the wire's
 to one decimal in the same commit (ADR-0029 amendment 24), the formatter
 being shared.
 
+## Addendum 9, 2026-09-14: the filename carries the carton as entered
+
+Three surfaces named one carton three ways (readers on the 17th and 19th
+runs, roadmap item 41): the summary body printed both — *Carton (inner):
+9 × 4 × 8 in, entered as outer 11 × 6 × 10 in with 1 in walls* — the
+receipt row the entered dimensions, and the suggested filename the inner
+ones. ADR-0004 makes inner the physical truth, and the engine packs
+against it; but a file name is a label for a person, and the person's
+purchase order says 11 × 6 × 10. The filename now reads
+`settings.boxDimsMm` — outer when outer was typed, otherwise the inner
+dimensions as typed — so it agrees with the receipt row, and the body goes
+on printing both with the wall thickness that relates them. Decided by the
+user on 2026-09-14 with the other three wording calls (ADR-0029 amendment
+25); addendum 7's rule that the dimensions are unrounded holds whichever
+set the name carries.
+
 ## Revisit triggers
 
 - A real request to hand a formatted document to a customer → PDF, seeded from

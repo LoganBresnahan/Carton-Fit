@@ -89,13 +89,16 @@ export function suggestedFileName(input: EstimateExport, extension: string): str
   const base = (input.fileName ?? 'estimate').replace(/\.[^.]+$/, '')
   const unitSystem = input.settings.unitSystem
   const units = lengthUnitLabel(unitSystem)
-  // The body's own formatter, not an integer round (19th dogfood): a
-  // 9 × 5.5 × 8 in carton was filed as `-9x6x8in` while the CSV two lines in
-  // printed 5.5. Integer cartons hid it for the whole loop; corrugated sizing
-  // is rarely integer, and the name is what survives a folder six months on.
-  // `decimal` trims trailing zeros, so 12 stays `12` and 5.5 stays `5.5`; the
+  // The dimensions AS ENTERED — outer, when the person typed outer — not the
+  // inner ones the engine packed against (decided 2026-09-14, ADR-0017
+  // addendum 9, after readers on the 17th and 19th runs): a file name is a
+  // label for a person, and the person's purchase order says 11 × 6 × 10, not
+  // 9 × 4 × 8. The receipt row already names the entered carton; the body
+  // prints both. And the body's own formatter, not an integer round (19th
+  // dogfood): 9 × 5.5 × 8 was filed as `-9x6x8in` while the CSV two lines in
+  // printed 5.5. `decimal` trims trailing zeros, so 12 stays `12`; the
   // sanitizer below keeps the dot.
-  const carton = input.request.carton.map((mm) => lengthText(mm, unitSystem)).join('x')
+  const carton = input.settings.boxDimsMm.map((mm) => lengthText(mm, unitSystem)).join('x')
   const safe = `${base}-${carton}${units}`
     // Windows forbids \ / : * ? " < > | ; the rest is house style so the name
     // survives a shell, a URL and an email attachment without quoting.

@@ -1,9 +1,9 @@
-# Wire rules — what twenty-one dogfood runs taught about the MCP surface
+# Wire rules — what twenty-two dogfood runs taught about the MCP surface
 
 The rules a new tool, a new field, or a new sentence on the MCP surface has
 to pass before it ships. Each one was learned by a reader with a calculator
 finding a sentence no test asserted; the run and the amendment that taught it
-are named so the reasoning can be read in full. **Twenty-one runs found one
+are named so the reasoning can be read in full. **Twenty-two runs found one
 wrong number** (rule 6). Everything else was a sentence.
 
 Read this before writing the output schema of a tool. Read it again before
@@ -144,6 +144,13 @@ in a minute:
   beside every unit-carrying value. Rule 7; `volumeTolerancePercent` is the
   sibling that answers it (ADR-0029 amendment 23), and two readers have now
   proposed the rename after reading the sibling.
+- **A `known: false` `packedWeight` (or a null `inputs.weight`) on a
+  space-only answer.** Three readers, from both sides of the wire. The value
+  is the sum of the weights as given — 0 lb for a part nobody weighed — and
+  `weightInput.supplied: false` beside it is the claim that it is not a
+  measurement; every rendered surface reads that and prints *none* or a
+  blank. Changing the shape of a value scripts read is a major under
+  ADR-0020 §3 (rule 7). *(Roadmap items 41, 46.)*
 - **A `presetSavedWithOverrides` comparison.** A preset does not record
   overrides at all (ADR-0034 §2); the seam is the preset-vs-receipt mental
   model, pinned under roadmap item 33.
@@ -151,7 +158,7 @@ in a minute:
 ## Where the full record is
 
 - `doc/adr/0029-expose-the-packing-engine-to-ai-clients.md` — the surface
-  and its twenty-four amendments, one per run that changed it.
+  and its twenty-five amendments, one per run that changed it.
 - `doc/adr/0032-the-assistant-is-a-test-tier.md` — why a reader is a test
   tier and how the loop runs.
 - `doc/roadmap.md` items 24, 25, 33–37 — every finding, confirmed or refuted,

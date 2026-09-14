@@ -322,7 +322,9 @@ describe('every answer arrives qualified', () => {
     expect(report.binding.bound).toBe(false)
     expect(report.binding.note).toMatch(/^Nothing bound/)
     expect(report.binding.note).toMatch(/50% of the weight cap/)
-    expect(report.binding.note).toMatch(/Weight is the closer limit/)
+    // The ranking sentence is gone (amendment 25): it compared a weight share
+    // to a bounding-box fill. The two shares stand; `constraint` still ranks.
+    expect(report.binding.note).not.toMatch(/closer limit/)
     expect(report.binding.note).not.toMatch(/stopped/)
   })
 

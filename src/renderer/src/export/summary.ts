@@ -171,7 +171,7 @@ export function buildSummary(input: EstimateExport): string {
     // "Limited by: weight" on its own was flat exactly where the wire refused
     // to be (2026-09-03, both clients): a quote carried a claim the app itself
     // would not make.
-    `${bindingHeading(result)}: ${bindingLabel(result.binding)}`,
+    `${bindingHeading(result, request)}: ${bindingLabel(result.binding)}`,
     bindingReport(result, request).note,
     // Prose, so the basis rides along in words rather than as its own row —
     // the summary is what gets pasted into an email, and "23%" of what was the

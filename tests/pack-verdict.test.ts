@@ -280,6 +280,7 @@ describe('bindingReport', () => {
     // One decimal since the 21st dogfood: a whole percent printed 1.66% as
     // 2%, a fifth over. Still one formatter, which is what the 17th asked.
     expect(r.note).toContain('37.8% of the weight cap and 3.1% of the carton')
+    expect(r.note).not.toMatch(/closer limit/) // amendment 25: the two shares stand, unranked
     expect(utilizationPercent(0.0309)).toBe('3.1%')
   })
 
@@ -316,8 +317,27 @@ describe('verdictHeadline', () => {
 })
 
 describe('bindingHeading', () => {
-  it('says "Closest limit" on a fit, because nothing bound', () => {
+  const weighed: PackRequest = {
+    mode: 'fit-check',
+    tier: 'fast',
+    carton: [300, 300, 300],
+    clearances: { betweenParts: 0, wall: 0 },
+    maxWeightG: 1000,
+    parts: [{ name: 'p', positions: new Float32Array(0), weightG: 100 }]
+  }
+  it('says "Closest limit" on a fit with two limits in play, because nothing bound', () => {
+    expect(bindingHeading(fit({ fits: true, binding: 'weight' }), weighed)).toBe('Closest limit')
+    // Without the request it cannot tell, and keeps the general form.
     expect(bindingHeading(fit({ fits: true, binding: 'weight' }))).toBe('Closest limit')
+  })
+  it('says "Only limit" where only space could have limited a fit (19th dogfood)', () => {
+    // A superlative needs two candidates: no weight given, or no cap applied,
+    // leaves one, and the note beside it says "only space could have limited this".
+    const weightless = { ...weighed, parts: [{ ...weighed.parts[0], weightG: 0 }] }
+    expect(bindingHeading(fit({ fits: true, binding: 'geometry' }), weightless)).toBe('Only limit')
+    expect(bindingHeading(fit({ fits: true, binding: 'geometry' }), { ...weighed, maxWeightG: Infinity })).toBe('Only limit')
+    // Still "Limited by" when something bound, whatever the weight.
+    expect(bindingHeading(fit({ fits: false, unplaced: ['plate'] }), weightless)).toBe('Limited by')
   })
   it('says "Limited by" wherever a constraint actually stopped something', () => {
     expect(bindingHeading(fit({ fits: false, unplaced: ['plate'] }))).toBe('Limited by')
