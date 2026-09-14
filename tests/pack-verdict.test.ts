@@ -277,9 +277,10 @@ describe('bindingReport', () => {
       fit({ fits: true, placements: [placement], utilization: 0.0309 }),
       request(1000, 378)
     )
-    expect(r.note).toContain('38% of the weight cap and 3% of the carton')
-    expect(r.note).not.toContain('3.1%')
-    expect(utilizationPercent(0.0309)).toBe('3%')
+    // One decimal since the 21st dogfood: a whole percent printed 1.66% as
+    // 2%, a fifth over. Still one formatter, which is what the 17th asked.
+    expect(r.note).toContain('37.8% of the weight cap and 3.1% of the carton')
+    expect(utilizationPercent(0.0309)).toBe('3.1%')
   })
 
   it('drops the closer-limit ranking when every part is weightless', () => {
@@ -334,9 +335,11 @@ describe('bindingLabel', () => {
 describe('utilizationPercent', () => {
   it('rounds, and never rounds a non-empty carton down to 0%', () => {
     expect(utilizationPercent(0)).toBe('0%')
-    expect(utilizationPercent(0.6423)).toBe('64%')
+    expect(utilizationPercent(0.6423)).toBe('64.2%')
+    expect(utilizationPercent(0.64)).toBe('64%') // trailing zero trimmed
     expect(utilizationPercent(1)).toBe('100%')
-    expect(utilizationPercent(0.0001)).toBe('<1%')
+    expect(utilizationPercent(0.0166)).toBe('1.7%') // the 21st reader's 2%
+    expect(utilizationPercent(0.0001)).toBe('<0.1%')
   })
 })
 
@@ -568,7 +571,8 @@ describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
       approximateKinds: ['plate'],
       volumeTolerance: 0.019,
       perKind: [{ kind: 'plate', volumeTolerance: 0.019 }],
-      couldChangeCount: false
+      couldChangeCount: false,
+      couldChangeBinding: false
     })
     expect(meshVolumeWarning(report)).toBeNull()
   })
@@ -584,6 +588,34 @@ describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
     // so no lighter plate makes a fourth. The reply used to say "close enough
     // to change the count" beside the field that proves it cannot.
     expect(meshVolumeReport(three({ spaceOnlyCount: 3 }), unit(16556), approx).couldChangeCount).toBe(false)
+  })
+
+  it('flags the ATTRIBUTION at 36.5 lb in the full carton, where the count is safe (21st dogfood)', () => {
+    // Four plates lighter by the band are 36.04 lb, under the cap: at that end
+    // the cap stops nothing and only the carton does. The count cannot move —
+    // spaceOnlyCount 3 — so couldChangeCount stays false; "the weight cap
+    // stopped it" is inside the band, so couldChangeBinding is true and the
+    // note says which of the two it is talking about.
+    const report = meshVolumeReport(three({ spaceOnlyCount: 3 }), unit(16556), approx)
+    expect(report.couldChangeCount).toBe(false)
+    expect(report.couldChangeBinding).toBe(true)
+    const warning = meshVolumeWarning(report)
+    expect(warning).toMatch(/the count holds, but which limit stopped it is inside that band/)
+    expect(warning).toMatch(/only the carton would stop it/)
+    expect(warning).not.toMatch(/change the count/)
+    // With room in the carton the count moves too, and the count sentence leads.
+    const room = meshVolumeReport(three(), unit(16556), approx)
+    expect(room).toMatchObject({ couldChangeCount: true, couldChangeBinding: true })
+    expect(meshVolumeWarning(room)).toMatch(/change the count/)
+    // At 35 lb neither: 36.04 > 35, the cap stops a fourth at every point of the band.
+    expect(meshVolumeReport(three({ spaceOnlyCount: 3 }), unit(15876), approx)).toMatchObject({
+      couldChangeCount: false,
+      couldChangeBinding: false
+    })
+    // A geometry-bound count's label flips only when the heavier end would exceed
+    // the cap — which also moves the count, so the two flags agree there.
+    const geometry = meshVolumeReport(three({ binding: 'geometry', spaceOnlyCount: 3 }), unit(12701), approx)
+    expect(geometry).toMatchObject({ couldChangeCount: true, couldChangeBinding: true })
   })
 
   it('says true when three plates HEAVIER by the band would exceed the cap — whatever the carton', () => {
@@ -611,7 +643,8 @@ describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
       approximateKinds: [],
       volumeTolerance: 0,
       perKind: [],
-      couldChangeCount: false
+      couldChangeCount: false,
+      couldChangeBinding: false
     })
     expect(meshVolumeReport(three(), unit(Infinity), approx).couldChangeCount).toBe(false)
   })
@@ -670,14 +703,15 @@ describe('meshVolumeReport (ADR-0015 addendum 2) — the band test', () => {
         { kind: 'plate', volumeTolerance: 0.019 },
         { kind: 'bolt', volumeTolerance: 0.021 }
       ],
-      couldChangeCount: true
+      couldChangeCount: true,
+      couldChangeBinding: true
     }
     expect(meshVolumeWarning(mixed)).toContain('up to about 2.1%')
     expect(meshVolumeClause(mixed)).toBe(
       'mesh volumes of curved faces, approximate either way: plate 1.9%, bolt 2.1%'
     )
     expect(
-      meshVolumeClause({ approximateKinds: [], volumeTolerance: 0, perKind: [], couldChangeCount: false })
+      meshVolumeClause({ approximateKinds: [], volumeTolerance: 0, perKind: [], couldChangeCount: false, couldChangeBinding: false })
     ).toBeNull()
   })
 })

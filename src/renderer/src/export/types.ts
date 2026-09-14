@@ -1,4 +1,5 @@
 import { computeAabb, aabbSize } from '../core/geometry'
+import { instanceAgreement, kindOf } from '../packing/kinds'
 import type { MeshVolumeReport } from '../packing/verdict'
 import type { PackRequest, PackResult, Vec3 } from '../core/packing/types'
 import type { PackingSettings } from '../store'
@@ -110,8 +111,20 @@ export function measurementRows(
     }
   }
 
+  // One kind prints one shape (21st dogfood): eight nuts modelled at two
+  // placements printed as 0.118 × 0.591 × 0.787 and 0.787 × 0.591 × 0.118
+  // under one header, and read as two nut variants. STEP geometry arrives with
+  // its placement baked in (ADR-0002 addendum), so a permuted kind's extents
+  // are sorted largest-first — the rule inspect_model already applies
+  // (amendments 14b, 19), from the same function.
+  const agreement = instanceAgreement(request.parts)
+  const names = new Set(request.parts.map((part) => part.name))
   return request.parts.map((part) => {
-    const extentMm = aabbSize(computeAabb(part.positions)) as Vec3
+    const measured = aabbSize(computeAabb(part.positions)) as Vec3
+    const extentMm =
+      agreement.get(kindOf(part.name, names)) === 'permuted'
+        ? ([...measured].sort((a, b) => b - a) as unknown as Vec3)
+        : measured
     const quantity =
       result.mode === 'max-quantity' ? result.count : (placedByName.get(part.name) ?? 0)
     return {

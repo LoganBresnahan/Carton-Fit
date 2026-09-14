@@ -7,7 +7,7 @@ import type {
   Vec3
 } from '../core/packing/types'
 import { lengthUnitLabel, type UnitSystem } from '../core/units'
-import { dimsText } from '../export/format'
+import { decimal, dimsText } from '../export/format'
 import { kindOf } from './kinds'
 import type { ApproximateVolumes } from './request'
 
@@ -551,7 +551,11 @@ export function utilizationBasis(
  *  either once it reached an export. */
 export function utilizationPercent(utilization: number): string {
   const pct = utilization * 100
-  return pct > 0 && pct < 1 ? '<1%' : `${Math.round(pct)}%`
+  // One decimal, trailing zero trimmed (21st dogfood): a whole percent printed
+  // 1.66% as "2%", a fifth over at exactly the fill a quote reads. The wire's
+  // own `percent` string read this function from the same day (item 44), so
+  // every spelling of the share is one call.
+  return pct > 0 && pct < 0.05 ? '<0.1%' : `${decimal(pct, 1)}%`
 }
 
 /**
@@ -679,6 +683,13 @@ export interface MeshVolumeReport {
   /** The band test: whether the cap sits close enough to the packed weight that
    *  a volume error inside the tolerance could change the count. */
   couldChangeCount: boolean
+  /** The same band applied to the ATTRIBUTION (21st dogfood, ADR-0029
+   *  amendment 24): whether "which limit stopped it" could flip inside the
+   *  band even where the count cannot — a weight-bound count whose next unit,
+   *  lighter by the band, would clear the cap while the carton still forbids
+   *  it. Max-quantity only; a fit-check's label under the band is item 41's
+   *  open sentence. */
+  couldChangeBinding: boolean
 }
 
 /**
@@ -713,7 +724,8 @@ export function meshVolumeReport(
     approximateKinds: approximate.kinds,
     volumeTolerance: approximate.tolerance,
     perKind: approximate.perKind.map(({ kind, tolerance }) => ({ kind, volumeTolerance: tolerance })),
-    couldChangeCount: false
+    couldChangeCount: false,
+    couldChangeBinding: false
   }
   const cap = request.maxWeightG
   if (approximate.kinds.length === 0 || approximate.tolerance <= 0 || !Number.isFinite(cap)) {
@@ -737,8 +749,15 @@ export function meshVolumeReport(
     const tooMany = count * (total + band) > cap + EPS
     const capStoppedNext = (count + 1) * total > cap + EPS
     const cartonHasRoom = result.spaceOnlyCount > count
-    const tooFew = capStoppedNext && cartonHasRoom && (count + 1) * (total - band) <= cap + EPS
+    // The next unit lighter by the band would clear the cap. With room in the
+    // carton that moves the COUNT; without it, it moves only the ATTRIBUTION —
+    // the cap stopped nothing at that end of the band, the carton did, and
+    // `constraint` would read "geometry" (21st dogfood).
+    const lighterClearsCap = capStoppedNext && (count + 1) * (total - band) <= cap + EPS
+    const tooFew = lighterClearsCap && cartonHasRoom
     report.couldChangeCount = tooMany || tooFew
+    report.couldChangeBinding =
+      result.binding === 'weight' ? lighterClearsCap || tooMany : tooMany
     return report
   }
   report.couldChangeCount =
@@ -764,19 +783,24 @@ function kindList(kinds: readonly string[]): string {
  * teach readers to skip it.
  */
 export function meshVolumeWarning(report: MeshVolumeReport): string | null {
-  if (!report.couldChangeCount) return null
+  if (!report.couldChangeCount && !report.couldChangeBinding) return null
   const list = kindList(report.approximateKinds)
   const subject =
     report.approximateKinds.length === 1
       ? `The weight of ${list} comes from`
       : `The weights of ${list} come from`
   const spread = report.approximateKinds.length === 1 ? 'about' : 'up to about'
-  return (
+  const opening =
     `${subject} the mesh volume of curved faces, which can run ${spread} ` +
-    `${toleranceText(report.volumeTolerance)} light or heavy at this facet size — and this pack ` +
-    `sits close enough to the weight cap for that to change the count. Weigh one and enter it ` +
-    `directly to settle it.`
-  )
+    `${toleranceText(report.volumeTolerance)} light or heavy at this facet size — and `
+  // Count first when it can move; the attribution alone only when it cannot
+  // (21st dogfood): "the cap stopped it" at the heavy end of the band and
+  // "only the carton did" at the light end are both inside the tolerance.
+  const reach = report.couldChangeCount
+    ? 'this pack sits close enough to the weight cap for that to change the count.'
+    : 'the count holds, but which limit stopped it is inside that band: a lighter unit ' +
+      'would put the next one under the cap, and only the carton would stop it.'
+  return `${opening}${reach} Weigh one and enter it directly to settle it.`
 }
 
 /**

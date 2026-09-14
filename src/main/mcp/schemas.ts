@@ -357,7 +357,9 @@ export const estimateOutput = {
   }),
   utilization: z.object({
     fraction: z.number(),
-    percent: z.string(),
+    percent: z
+      .string()
+      .describe('`fraction` as the panel and both exports print it — one decimal, the same formatter.'),
     // Named because a reader could not act on the number without asking
     // (2026-09-03): it is placed BOUNDING BOXES over the inner carton, not
     // material volume — air inside a part's box is not usable by another part.
@@ -428,7 +430,15 @@ export const estimateOutput = {
               .describe(
                 'Whether the weight cap sits inside the band those tolerances put around the packed ' +
                   'weight AND the carton has room for the count to move, so a volume error inside ' +
-                  'the band could change the count. The note fires on this alone.'
+                  'the band could change the count.'
+              ),
+            couldChangeBinding: z
+              .boolean()
+              .describe(
+                'Whether WHICH LIMIT stopped the count is inside that band, even where the count ' +
+                  'is not: a weight-bound count whose next unit, lighter by the band, would clear ' +
+                  'the cap — then at that end only the carton stops it and `constraint` would read ' +
+                  'geometry. Max-quantity only. The note fires on this or couldChangeCount.'
               ),
             note: z.string().nullable()
           })
@@ -776,6 +786,14 @@ export const savedEstimatesOutput = {
   ),
   customer: customerFilter.describe('Which customers’ rows: "active" (plus house) or "all".'),
   withheldByCustomer,
+  withheldByLimit: z
+    .number()
+    .int()
+    .nonnegative()
+    .describe(
+      'How many rows `limit` cut off after the scope and customer filters — the rows a larger ' +
+        'limit would show. 0 when the list is complete.'
+    ),
   estimates: z.array(
     z.object({
       id: z.number().describe('Pass this to restore_estimate.'),

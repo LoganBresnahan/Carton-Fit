@@ -102,7 +102,9 @@ export interface GoldenPack {
   fits?: boolean
   /** Which hard constraint bound the answer (ADR-0004: always reported). */
   binding: 'space' | 'weight'
-  /** Carton fill as the UI renders it. */
+  /** Carton fill as the UI renders it — one decimal, trailing zero trimmed,
+   *  `<0.1%` for the floor (ADR-0029 amendment 24; the same formatter on the
+   *  panel, both exports and the wire). */
   fill?: string
   /** How the number was derived, so a failure is diagnosable, not just red. */
   derivation: string
@@ -117,7 +119,7 @@ export const GOLDEN_PACKS: readonly GoldenPack[] = [
     tier: 'fast',
     fits: true,
     binding: 'space',
-    fill: '<1%',
+    fill: '<0.1%',
     derivation: '10 mm cube in a 304.8 mm box: trivially fits; 1000 / 304.8³ = 0.0035%'
   },
   {
@@ -128,7 +130,7 @@ export const GOLDEN_PACKS: readonly GoldenPack[] = [
     tier: 'fast',
     count: 27_000,
     binding: 'space',
-    fill: '95%',
+    fill: '95.3%',
     derivation: 'floor(304.8 / 10) = 30 per axis → 30³ = 27,000; 27e6 / 304.8³ = 95.3%'
   },
   {
@@ -139,7 +141,7 @@ export const GOLDEN_PACKS: readonly GoldenPack[] = [
     tier: 'fast',
     count: 343,
     binding: 'space',
-    fill: '78%',
+    fill: '77.5%',
     derivation: 'floor(76.2 / 10) = 7 per axis → 7³ = 343; 343e3 / 76.2³ = 77.5%'
   },
   {

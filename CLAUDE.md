@@ -61,8 +61,8 @@ when scope changes.
   `package.json`; the rest are on you. What the number promises is ADR-0020 —
   and what an *unreleased* build's number promises is ADR-0027.
 - **Anything on the MCP surface — a tool, a field, a sentence — passes
-  `doc/wire-rules.md` first.** Fourteen rules distilled from eighteen dogfood
-  runs and twenty-three amendments to ADR-0029, plus the standing refutations.
+  `doc/wire-rules.md` first.** Fourteen rules distilled from twenty-one dogfood
+  runs and twenty-four amendments to ADR-0029, plus the standing refutations.
   The one that matters most: write the structured fields before the prose
   that reads them, and build the claims table (every sentence the tool can
   say, and the field behind it) in the ADR before the first line of code.

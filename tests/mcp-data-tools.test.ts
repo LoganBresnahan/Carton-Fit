@@ -378,6 +378,25 @@ describe('reads answer from the database, not the window', () => {
       expect(report.withheldByCustomer).toBe(1)
     })
 
+    it('list_saved_estimates: says how many rows `limit` cut off (21st dogfood, rule 8)', async () => {
+      // Two axes said what they hid; the third returned five of sixteen beside
+      // withheldByCustomer 0, reassuring in the wrong direction.
+      const total = ROWS.length
+      const report = await call<{ withheldByLimit: number; withheldByCustomer: number; estimates: unknown[] }>(
+        'list_saved_estimates',
+        { scope: 'all', customer: 'all', limit: 2 }
+      )
+      expect(report.estimates).toHaveLength(2)
+      expect(report.withheldByLimit).toBe(total - 2)
+      expect(report.withheldByCustomer).toBe(0)
+      const whole = await call<{ withheldByLimit: number; estimates: unknown[] }>('list_saved_estimates', {
+        scope: 'all',
+        customer: 'all'
+      })
+      expect(whole.estimates).toHaveLength(total)
+      expect(whole.withheldByLimit).toBe(0)
+    })
+
     it('list_presets: "all" is every customer’s, and says so', async () => {
       drive.customer = { id: 1, name: 'Acme' }
       const report = await call<{
@@ -522,6 +541,7 @@ describe('reads answer from the database, not the window', () => {
         scope: 'model',
         customer: 'active',
         withheldByCustomer: 0,
+        withheldByLimit: 0,
         estimates: []
       })
     })
@@ -653,12 +673,14 @@ describe('the report builders', () => {
       scope: 'all',
       customer: 'all',
       withheldByCustomer: 0,
+      withheldByLimit: 0,
       estimates: []
     })
     expect(savedEstimatesReport([], 'model', 'active')).toEqual({
       scope: 'model',
       customer: 'active',
       withheldByCustomer: 0,
+      withheldByLimit: 0,
       estimates: []
     })
   })

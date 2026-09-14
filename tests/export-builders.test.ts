@@ -113,7 +113,7 @@ function input(patch: Partial<EstimateExport> = {}): EstimateExport {
     unitPartName: null,
     warnings: [],
     overrides: {},
-    meshVolumes: { approximateKinds: [], volumeTolerance: 0, perKind: [], couldChangeCount: false },
+    meshVolumes: { approximateKinds: [], volumeTolerance: 0, perKind: [], couldChangeCount: false, couldChangeBinding: false },
     ...patch
   }
 }
@@ -220,6 +220,25 @@ describe('buildCsv', () => {
     expect(lines[1]).toBe('bracket,1,25.4,50.8,101.6,131096.51,,0.907,0.907')
     // The estimate-level rows spend against the cap, so they carry ITS unit.
     expect(lines.join('\n')).toContain('Packed weight (g)')
+  })
+
+  it('prints one shape for a kind whose instances are modelled turned (21st dogfood)', () => {
+    // Eight nuts at two placements printed 0.118 × 0.591 × 0.787 and
+    // 0.787 × 0.591 × 0.118 under one header and read as two nut variants.
+    // The wire sorts a permuted kind largest-first; the rows read the same rule.
+    const box = (x: number, y: number, z: number) =>
+      new Float32Array([0, 0, 0, x, y, z, x, 0, 0, 0, y, 0, 0, 0, z, x, y, 0])
+    const parts = [
+      { name: 'nut', positions: box(3, 15, 20), weightG: 1 },
+      { name: 'nut (2)', positions: box(20, 15, 3), weightG: 1 },
+      { name: 'plate', positions: box(180, 150, 20), weightG: 1 }
+    ]
+    const rows = measurementRows(request({ parts }), fitResult())
+    expect(rows.map((row) => row.extentMm)).toEqual([
+      [20, 15, 3],
+      [20, 15, 3],
+      [180, 150, 20] // a lone instance keeps its modelled order
+    ])
   })
 
   it('carries the enclosed volume a density weight came from, beside the box (2026-09-04)', () => {
@@ -522,7 +541,8 @@ describe('buildSummary', () => {
           approximateKinds: ['bolt'],
           volumeTolerance: 0.0212,
           perKind: [{ kind: 'bolt', volumeTolerance: 0.0212 }],
-          couldChangeCount: false
+          couldChangeCount: false,
+          couldChangeBinding: false
         }
       })
     )

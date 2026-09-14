@@ -279,6 +279,23 @@ before. Which dimensions the name carries — inner or as entered — is
 roadmap item 41's open call and untouched here; whichever it is, it is
 unrounded.
 
+## Addendum 8, 2026-09-14 (twenty-first dogfood): one kind, one shape in the parts table
+
+The CSV's Length/Width/Height columns are the part's own bounding box as
+modelled, which `MeasurementRow` has always said. What it did not say is
+that STEP instances of one product arrive modelled at their placements
+(ADR-0002 addendum), so eight nuts printed as 0.118 × 0.591 × 0.787 for two
+and 0.787 × 0.591 × 0.118 for six under one header, and a reader took the
+table for two nut variants. `inspect_model` learned to sort a permuted
+kind's extents largest-first on the eleventh and fifteenth runs (ADR-0029
+amendments 14b and 19); the parts table never did. It reads the same
+`instanceAgreement` now, from the same function, so a kind whose instances
+are one box turned prints one shape, and a kind whose instances genuinely
+differ keeps each instance's own extents — the difference the wire's
+`instancesAlike` already draws. The fill percentage on the same rows moved
+to one decimal in the same commit (ADR-0029 amendment 24), the formatter
+being shared.
+
 ## Revisit triggers
 
 - A real request to hand a formatted document to a customer → PDF, seeded from

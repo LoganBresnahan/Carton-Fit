@@ -1560,6 +1560,49 @@ filename (item 41), the bridge's late tool list (item 39).
 Station 1 and station 4's additions did exactly what they were written to
 do. Thirteenth straight run of matching counts.
 
+### Amendment 24 (2026-09-14, twentieth and twenty-first dogfoods, roadmap items 44 and 45) — the band guards the attribution, the list counts its cut, one fill formatter
+
+Three additive fields and one formatter, from two runs on consecutive
+builds.
+
+**`weightInput.meshVolumes.couldChangeBinding`.** The twenty-first reader
+took station 4 to 36.5 lb, saw `couldChangeCount: false` — correct, the
+carton forbids a fourth plate at any weight — and asked the question the
+band test had not been asked: the count is guarded, is the sentence *which
+limit stopped it*? Four plates 1.9% lighter are 36.04 lb, under the cap; at
+that end the cap stops nothing, `constraint` reads `geometry`, and *Both
+limits land on 3: the weight cap stopped it* is inside the noise with no
+field saying so. The new flag is the lighter-side band test *without* the
+carton gate for a weight-bound count, and the heavier-side test for a
+geometry-bound one; the note fires on either flag and says which — *the
+count holds, but which limit stopped it is inside that band* — where before
+it fired on the count alone. Max-quantity only; a fit-check's closest-limit
+label under the band is roadmap item 41's open sentence. The reader put the
+flag on `binding`; it lives beside the band that computes it (rule 5).
+
+**`withheldByLimit` on `list_saved_estimates`.** Rule 8 said a filtered list
+says what it filtered and how much, and two of the three axes that hide a
+row did; `limit: 5` returned five of sixteen beside `withheldByCustomer: 0`.
+The count storage already keeps for the same scope and customer is the
+total, and the difference is the field. `list_presets` takes no limit.
+
+**`utilization.percent` reads `utilizationPercent`.** Amendment 21 unified
+the binding sentence on the panel's formatter and left the wire's own string
+on a one-decimal formatter of its own; one reply printed *1.9%* in the field
+and *filling 2% of the carton* in the note (twentieth run). And the
+formatter itself is now one decimal, trailing zero trimmed, on the
+twenty-first reader's arithmetic: a whole percent printed 1.66% as *2%*, a
+fifth over at exactly the fill a quote reads. The seventeenth reader asked
+for one formatter and got it; the twenty-first asked what it should print.
+`<0.1%` replaces `<1%` for the floor.
+
+Refuted on the same runs and recorded in `doc/wire-rules.md`: renaming or
+dropping `volumeTolerance` (second reader, rule 7); *the weight cap stopped
+it* on a tie (the counterfactual test denies both clauses equally — lift the
+carton instead and a fourth still exceeds the cap; each limit alone forbids
+it, which is what a tie is; the ordering is the user's call). Sixteen
+straight runs of matching counts.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

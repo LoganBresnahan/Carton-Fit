@@ -193,7 +193,63 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
-- [ ] 44. Dogfood follow-ups, 20th run — one Claude Opus 5 pass (Cowork, over
+- [x] 45. Dogfood follow-ups, 21st run — one Claude Opus 5 pass (Cowork, over
+      the remote-devices bridge) on `1.2.0+698e296`, 2026-09-14, the first
+      run against item 43's fixes. **Sixteenth straight run of matching
+      counts**, both paths byte-identical; the caption said *(both limits)*
+      and the reader audited it as backed. The reader built a 90.5 lb cap in
+      a 24 in cube to prove `couldChangeCount` is computed (it fired, with
+      the note) and then asked the question the band test had not: the count
+      is guarded, is the *attribution*? Four findings, all real; one is item
+      44's pending fix seen again.
+      - [x] **The binding attribution is not tested against the band, only
+        the count is** (confirmed; the reader's field is right, its home is
+        not). At station 4's carton and 36.5 lb the reply says *Both limits
+        land on 3: the weight cap stopped it* with `couldChangeCount: false`
+        and no note — correctly silent about the count, since the carton
+        forbids a fourth at any weight. But four plates 1.9% lighter are
+        36.04 lb, under the cap: at the light end of the band the cap stops
+        nothing, `constraint` reads `geometry`, and the tie is not a tie.
+        The sentence is inside the noise and the field that would say so is
+        scoped to the count. **Derived fix:** a second flag beside the
+        first, `meshVolumes.couldChangeBinding` — the lighter-side band test
+        *without* the carton gate (a weight-bound count whose next unit,
+        lighter by the band, would clear the cap) and the heavier-side test
+        for a geometry-bound one — and the note reads both: when the count
+        is safe and the label is not, *the count holds, but which limit
+        stopped it is inside the band: a plate 1.9% lighter puts four under
+        the cap, and only the carton would stop it.* Max-quantity only; a
+        fit-check's label under the band is item 41's open sentence. The
+        reader proposed the flag on `binding`; it lives with the band that
+        computes it (rule 5). *Built 2026-09-14*, ADR-0029 amendment 24.
+      - [x] **Prose and exports round fill to a whole percent while the
+        field carries a decimal** — item 44's confirmed finding, seen again
+        on the build that predates its fix; pinned there. What is new is the
+        direction: amendment 21 unified on the *whole* percent the panel
+        shows, and this reader wants one decimal everywhere, because 1.66%
+        printed as *2%* is a fifth over at exactly the fill a quote reads.
+        Decided with item 44: one decimal, trailing zero trimmed, one
+        formatter — *built 2026-09-14*, amendment 24.
+      - [x] **`limit` truncates `list_saved_estimates` silently** (confirmed,
+        rule 8). Two of the three axes that can hide a row say how many they
+        hid; `limit: 5` returned five of sixteen with `withheldByCustomer: 0`
+        beside them, reassuring in the wrong direction. **Derived fix:**
+        `withheldByLimit` beside `withheldByCustomer`, from the count storage
+        already keeps for the same scope and customer (`countEstimates`);
+        `list_presets` takes no limit and needs nothing. *Built 2026-09-14*.
+      - [x] **The CSV prints one nut kind under two dimension orderings**
+        (confirmed as a surface gap; the reader's guess at the cause was
+        wrong). The columns are as-modelled, not as-placed (`MeasurementRow`
+        says so), and the instances ARE modelled turned — placement is baked
+        into STEP geometry (ADR-0002 addendum), which is why `inspect_model`
+        sorts extents largest-first for a permuted kind (amendment 14b, 19).
+        The CSV never learned that rule. **Derived fix (rule 5):** the
+        measurement rows sort extents largest-first when the kind's
+        `instanceAgreement` is `permuted`, the same rule as the wire, so one
+        kind prints one shape. *Built 2026-09-14*, ADR-0017 addendum 8.
+      - [x] Recurrence: all 17 tools arrived deferred in this client (item
+        39's aside, fourth time).
+- [x] 44. Dogfood follow-ups, 20th run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+0db9004`, 2026-09-14 — **the same
       build as the 19th run**, because item 43's fixes sat uncommitted in the
       working tree for four days. Fifteenth straight run of matching counts,
@@ -201,7 +257,7 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       (inner 9 × 4.5 × 8, geometry admits 4) and watched `couldChangeCount`
       flip exactly there. One new confirmed finding, one already fixed and
       not yet shipped, two refuted, one recurrence of a deferral.
-      - [ ] **The wire's `utilization.percent` has its own formatter**
+      - [x] **The wire's `utilization.percent` has its own formatter**
         (confirmed, rule 5). Amendment 21 made the binding sentence read
         `utilizationPercent` — the whole-percent formatter the panel and both
         exports show — and left the wire's own `utilization.percent` string on
@@ -210,6 +266,8 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         export prints *Fill: 31%* against a field of *30.5%*. `fraction`
         carries the precise number. **Derived fix:** the string reads
         `utilizationPercent`, so every spelling of the share is one function.
+        *Built 2026-09-14*, amendment 24, with the formatter moved to one
+        decimal on the 21st run's arithmetic.
         The reader's aside that the note says *of the carton* where the field
         says `of: "parts"` is refuted: `of` names the numerator (parts, the
         unit part, or the whole file); the carton is the denominator in every

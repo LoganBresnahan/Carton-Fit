@@ -68,9 +68,14 @@ export function partKinds(parts: readonly ImportedPart[]): PartKind[] {
  * unlike `partKinds`, which keeps one sample because the panel only needs a
  * representative. The instance-agreement check below needs them all.
  */
-export function groupByKind(parts: readonly ImportedPart[]): Map<string, ImportedPart[]> {
+/** What the kind rules need of a part: its name and its geometry. `PackPart`
+ *  qualifies as well as `ImportedPart`, so the export's measurement rows can
+ *  ask the same agreement question the wire asks (21st dogfood). */
+export type KindPart = Pick<ImportedPart, 'name' | 'positions'>
+
+export function groupByKind<P extends KindPart>(parts: readonly P[]): Map<string, P[]> {
   const names = new Set(parts.map((part) => part.name))
-  const groups = new Map<string, ImportedPart[]>()
+  const groups = new Map<string, P[]>()
   for (const part of parts) {
     const kind = kindOf(part.name, names)
     const existing = groups.get(kind)
@@ -132,7 +137,7 @@ export function mixedInstanceKinds(parts: readonly ImportedPart[]): string[] {
  */
 export type InstanceAgreement = 'identical' | 'permuted' | 'different'
 
-export function instanceAgreement(parts: readonly ImportedPart[]): Map<string, InstanceAgreement> {
+export function instanceAgreement(parts: readonly KindPart[]): Map<string, InstanceAgreement> {
   const out = new Map<string, InstanceAgreement>()
   for (const [kind, instances] of groupByKind(parts)) {
     const [sample] = instances

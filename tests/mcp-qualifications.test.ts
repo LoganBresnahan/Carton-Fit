@@ -159,7 +159,7 @@ describe('the schema rejects a reply with a hedge missing', () => {
     delete (mutated.qualifications.weightInput as unknown as Record<string, unknown>).meshVolumes
     expect(estimateSchema.safeParse(mutated).success).toBe(false)
     // And its per-kind list and percent sibling (amendment 23), each on its own.
-    for (const key of ['perKind', 'volumeTolerancePercent']) {
+    for (const key of ['perKind', 'volumeTolerancePercent', 'couldChangeBinding']) {
       const again = structuredClone(report) as EstimateReport
       if (!again.qualifications.weightInput.supplied) throw new Error('weight was supplied')
       delete (again.qualifications.weightInput.meshVolumes as unknown as Record<string, unknown>)[key]
@@ -557,6 +557,7 @@ describe('every answer arrives qualified', () => {
         volumeTolerancePercent: 0,
         perKind: [],
         couldChangeCount: false,
+        couldChangeBinding: false,
         note: null
       }
     })
@@ -673,7 +674,20 @@ describe('every answer arrives qualified', () => {
       const { weightInput } = report.qualifications
       if (!weightInput.supplied) throw new Error('weight was supplied')
       expect(weightInput.meshVolumes.couldChangeCount).toBe(false)
-      expect(weightInput.meshVolumes.note).toBeNull()
+      // But the ATTRIBUTION is inside the band (21st dogfood, amendment 24):
+      // four plates 1.9% lighter are 36.04 lb, under the cap, and at that end
+      // "the weight cap stopped it" is false — only the carton did. The note
+      // says so, and says the count holds.
+      expect(weightInput.meshVolumes.couldChangeBinding).toBe(true)
+      expect(weightInput.meshVolumes.note).toMatch(/the count holds, but which limit stopped it/)
+      expect(weightInput.meshVolumes.note).not.toMatch(/change the count/)
+    })
+
+    it('flags neither at 35 lb, where the cap stops a fourth at every point of the band', async () => {
+      const report = await station4(35)
+      const { weightInput } = report.qualifications
+      if (!weightInput.supplied) throw new Error('weight was supplied')
+      expect(weightInput.meshVolumes).toMatchObject({ couldChangeCount: false, couldChangeBinding: false, note: null })
     })
 
     it('fires at 36.5 lb in a carton with room, where a fourth plate lighter by the band would slip under', async () => {
@@ -687,8 +701,25 @@ describe('every answer arrives qualified', () => {
       const { weightInput } = report.qualifications
       if (!weightInput.supplied) throw new Error('weight was supplied')
       expect(weightInput.meshVolumes.couldChangeCount).toBe(true)
+      expect(weightInput.meshVolumes.couldChangeBinding).toBe(true)
       expect(weightInput.meshVolumes.note).toMatch(/“plate”/)
       expect(weightInput.meshVolumes.note).toMatch(/change the count/)
+    })
+
+    it('spells the fill the same in the field and in the note (item 44)', async () => {
+      // A comfortable fit-check, whose note prints the fill: the field had
+      // its own one-decimal formatter while the note read the panel's, and
+      // one reply printed 1.9% and 2%. One function now.
+      const report = await estimate({
+        path: AS1,
+        mode: 'fit-check',
+        tier: 'fast',
+        carton: carton(24, 'in'),
+        weight: { densityGPerCm3: 7.85 },
+        maxWeight: { value: 35, unit: 'lb' }
+      })
+      expect(report.utilization.percent).toMatch(/^\d+(\.\d)?%$/)
+      expect(report.binding.note).toContain(`${report.utilization.percent} of the carton`)
     })
 
     it('names each counted kind with its own tolerance on a mixed pack, and the headline is the largest', async () => {
@@ -749,6 +780,7 @@ describe('every answer arrives qualified', () => {
         volumeTolerancePercent: 0,
         perKind: [],
         couldChangeCount: false,
+        couldChangeBinding: false,
         note: null
       })
     })

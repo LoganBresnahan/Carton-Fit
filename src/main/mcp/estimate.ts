@@ -31,7 +31,8 @@ import {
   mixedInstancesWarning,
   verdictCaption,
   type BindingReport,
-  weightlessWarning
+  weightlessWarning,
+  utilizationPercent
 } from '../../renderer/src/packing/verdict'
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
 import {
@@ -227,6 +228,9 @@ export interface EstimateQualifications {
           volumeTolerancePercent: number
           perKind: Array<{ kind: string; volumeTolerance: number; volumeTolerancePercent: number }>
           couldChangeCount: boolean
+          /** Whether "which limit stopped it" is inside the band even where
+           *  the count is not (amendment 24). The note fires on either. */
+          couldChangeBinding: boolean
           note: string | null
         }
       }
@@ -552,7 +556,10 @@ export function buildEstimateReport(
     binding: bindingReport(result, request),
     utilization: {
       fraction: result.utilization,
-      percent: `${Math.round(result.utilization * 1000) / 10}%`,
+      // The one formatter every surface reads (item 44, rule 5): this string
+      // had its own for a month, and one reply printed 1.9% here and 2% in
+      // the note beside it.
+      percent: utilizationPercent(result.utilization),
       basis: UTILIZATION_BASIS.token,
       of: utilizationBasis(request.mode, request.mode === 'max-quantity' ? context.unitPart : null)
         .of

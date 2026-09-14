@@ -1,9 +1,9 @@
-# Wire rules — what eighteen dogfood runs taught about the MCP surface
+# Wire rules — what twenty-one dogfood runs taught about the MCP surface
 
 The rules a new tool, a new field, or a new sentence on the MCP surface has
 to pass before it ships. Each one was learned by a reader with a calculator
 finding a sentence no test asserted; the run and the amendment that taught it
-are named so the reasoning can be read in full. **Eighteen runs found one
+are named so the reasoning can be read in full. **Twenty-one runs found one
 wrong number** (rule 6). Everything else was a sentence.
 
 Read this before writing the output schema of a tool. Read it again before
@@ -151,7 +151,7 @@ in a minute:
 ## Where the full record is
 
 - `doc/adr/0029-expose-the-packing-engine-to-ai-clients.md` — the surface
-  and its twenty-three amendments, one per run that changed it.
+  and its twenty-four amendments, one per run that changed it.
 - `doc/adr/0032-the-assistant-is-a-test-tier.md` — why a reader is a test
   tier and how the loop runs.
 - `doc/roadmap.md` items 24, 25, 33–37 — every finding, confirmed or refuted,

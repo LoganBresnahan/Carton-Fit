@@ -105,6 +105,9 @@ export interface SavedEstimatesReport {
   customer: CustomerFilter
   /** How many rows in this scope the customer filter hid (ADR-0035 amendment 1); 0 under `'all'`. */
   withheldByCustomer: number
+  /** How many rows `limit` cut off after both filters (21st dogfood, rule 8):
+   *  the third axis that can hide a row, and the one that said nothing. */
+  withheldByLimit: number
   estimates: Array<{
     id: number
     file: string
@@ -119,12 +122,14 @@ export function savedEstimatesReport(
   scope: EstimatesScope = 'all',
   customer: CustomerFilter = 'all',
   names: CustomerNames = new Map(),
-  withheldByCustomer = 0
+  withheldByCustomer = 0,
+  withheldByLimit = 0
 ): SavedEstimatesReport {
   return {
     scope,
     customer,
     withheldByCustomer,
+    withheldByLimit,
     estimates: rows.map((row) => ({
       id: row.id,
       file: row.fileName,

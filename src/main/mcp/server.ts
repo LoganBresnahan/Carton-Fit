@@ -474,7 +474,20 @@ async function scopedEstimates(
     filter === undefined
       ? 0
       : storage.countEstimates(hash) - storage.countEstimates(hash, filter)
-  return savedEstimatesReport(rows, scope, customer, customerNames(storage), withheld)
+  // And the rows `limit` cut off after both filters (21st dogfood): five of
+  // sixteen came back beside `withheldByCustomer: 0`, reassuring in the wrong
+  // direction. The count storage keeps for this scope and customer is the
+  // total; the difference is what the caller did not see.
+  const matching = storage.countEstimates(hash, filter)
+  const withheldByLimit = Math.max(0, matching - rows.length)
+  return savedEstimatesReport(
+    rows,
+    scope,
+    customer,
+    customerNames(storage),
+    withheld,
+    withheldByLimit
+  )
 }
 
 /** What the window knows that a database query needs: the loaded document

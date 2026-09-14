@@ -12,6 +12,23 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **The fill percentage reads to one decimal everywhere.** The panel's Fill
+  row, both exports and the assistant reply print the same share the same
+  way; a whole percent had printed a 1.7% fill as 2%, a fifth over at exactly
+  the fill a quote reads, and the assistant's field had a formatter of its
+  own. ([ADR-0029 amendment 24](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+- **The curved-face warning now also covers *which limit* stopped a count.**
+  Where the carton is full but a part lighter by the volume tolerance would
+  put the next one under the weight cap, the count is safe and the
+  attribution is not; the estimate says so instead of staying silent.
+  ([ADR-0029 amendment 24](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+- **A limited list of saved estimates says how many rows it cut off**, the way
+  it already says how many the customer filter hid. ([ADR-0029 amendment 24](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+- **The CSV prints one shape per part kind.** Instances of one product
+  modelled at different placements printed under two dimension orderings and
+  read as two variants; a kind whose instances are one box turned now lists
+  its extents largest-first, as the assistant's inspect already did.
+  ([ADR-0017 addendum 8](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
 - **Export filenames keep a carton's decimals.** A 9 × 5.5 × 8 in carton was
   suggested as `-9x6x8in` while the file's own body said 5.5; the name now
   uses the same formatter as the body. ([ADR-0017 addendum 7](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
