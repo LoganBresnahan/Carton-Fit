@@ -264,6 +264,21 @@ blank, as it already leaves the max-weight cell when the cap is infinite
 shows, from the one function in `verdict.ts` the wire's note reads too
 (ADR-0029 amendment 19). Pinned in the export builders and the collector.
 
+## Addendum 7, 2026-09-10 (nineteenth dogfood): the filename rounded the carton
+
+`suggestedFileName` rounded each inner dimension to an integer, so a
+9 × 5.5 × 8 in carton was offered as `-9x6x8in.csv` while the body two
+lines in printed 9 × 5.5 × 8 — content right, label wrong, which is the
+worst way round for the artifact that outlives the session. Every carton
+in the goldens and the brief is integer, which is why fourteen runs never
+saw it; the reader who widened station 4's carton to 5.5 in to probe the
+band test found it on the way past. The name now uses the body's own
+`decimal` formatter (rule 5 of `doc/wire-rules.md`, one formatter for one
+number): `9x5.5x8in`, trailing zeros trimmed so integer cartons read as
+before. Which dimensions the name carries — inner or as entered — is
+roadmap item 41's open call and untouched here; whichever it is, it is
+unrounded.
+
 ## Revisit triggers
 
 - A real request to hand a formatted document to a customer → PDF, seeded from

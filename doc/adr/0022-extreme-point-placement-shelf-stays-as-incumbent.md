@@ -327,3 +327,19 @@ the Result line's job is one count and one bound.
 - If dogfooding shows quantity-mode refinement rarely beating the grid on real
   parts, drop quantity mode back out (§4) rather than paying its compute for
   nothing — the grid incumbent makes that a one-line retreat.
+
+## Amendment, 2026-09-10 (nineteenth dogfood): the caption reads the tie the note already knew
+
+The 2026-09-04 amendment's consequences made the binding note say *Both
+limits land on 3* when the geometry bound meets a weight-bound count. The caption under the headline —
+`verdictCaption`, also the CSV's *Result note* and the summary's second line
+— kept saying *3 fit (weight-limited)* from `binding` alone, and the reader
+named the cost: it is the line most likely to be lifted into a quote by
+itself, and "weight-limited" invites a lighter alloy that buys nothing
+against 3.5 in of stack. The receipt row (`packing/summary.ts`) had derived
+the same tie independently since the eleventh dogfood, so one claim had
+three implementations and one of them disagreed. One predicate now,
+`bothLimitsProven` in `packing/verdict.ts`, read by the note, the caption
+and the row: the caption says *(both limits)* exactly when the note says
+both land, and keeps *(weight-limited)* where the bound is loose and the
+note hedges.

@@ -697,6 +697,20 @@ describe('suggestedFileName', () => {
   it('falls back rather than producing a nameless file', () => {
     expect(suggestedFileName(input({ fileName: null }), 'csv')).toBe('estimate-12x12x12in.csv')
   })
+
+  it('carries a non-integer carton unrounded — the name must match the body (19th dogfood)', () => {
+    // 9 × 5.5 × 8 in was filed as `-9x6x8in` while the CSV printed 5.5: the
+    // 0.5 in was on the axis that decides how many plates stack.
+    const name = suggestedFileName(
+      input({ request: request({ carton: [inToMm(9), inToMm(5.5), inToMm(8)] }) }),
+      'csv'
+    )
+    expect(name).toBe('bracket-9x5.5x8in.csv')
+    // Same formatter as the body: 11.75 keeps its digits, float dust does not.
+    expect(
+      suggestedFileName(input({ request: request({ carton: [inToMm(11.75), inToMm(12), inToMm(12)] }) }), 'txt')
+    ).toBe('bracket-11.75x12x12in.txt')
+  })
 })
 
 /** Minimal RFC-4180 split, so column-count assertions test the CSV as a parser

@@ -1,4 +1,5 @@
-import { lengthUnitLabel, mmToLength } from '../core/units'
+import { lengthUnitLabel } from '../core/units'
+import { lengthText } from './format'
 import { approximateVolumeKinds, openMeshParts, partsForRequest } from '../packing/request'
 import { meshVolume } from '../core/geometry'
 import { mixedInstanceKinds } from '../packing/kinds'
@@ -88,9 +89,13 @@ export function suggestedFileName(input: EstimateExport, extension: string): str
   const base = (input.fileName ?? 'estimate').replace(/\.[^.]+$/, '')
   const unitSystem = input.settings.unitSystem
   const units = lengthUnitLabel(unitSystem)
-  const carton = input.request.carton
-    .map((mm) => Math.round(mmToLength(mm, unitSystem)))
-    .join('x')
+  // The body's own formatter, not an integer round (19th dogfood): a
+  // 9 × 5.5 × 8 in carton was filed as `-9x6x8in` while the CSV two lines in
+  // printed 5.5. Integer cartons hid it for the whole loop; corrugated sizing
+  // is rarely integer, and the name is what survives a folder six months on.
+  // `decimal` trims trailing zeros, so 12 stays `12` and 5.5 stays `5.5`; the
+  // sanitizer below keeps the dot.
+  const carton = input.request.carton.map((mm) => lengthText(mm, unitSystem)).join('x')
   const safe = `${base}-${carton}${units}`
     // Windows forbids \ / : * ? " < > | ; the rest is house style so the name
     // survives a shell, a URL and an email attachment without quoting.

@@ -410,6 +410,9 @@ describe('every answer arrives qualified', () => {
     expect(report.outcome.spaceOnlyCount).toEqual({ known: true, count: 3 })
     expect(report.binding.otherConstraint).toEqual({ known: true, atLimit: true, evidence: 'bound' })
     expect(report.binding.note).toMatch(/Both limits land on 3/)
+    // The caption agrees with the note it sits above (19th dogfood): it said
+    // "(weight-limited)" here for a month, and it is the CSV's Result note.
+    expect(report.qualifications.heuristic.note).toMatch(/^3 fit \(both limits\)/)
     // The hedges that were honest while this was a search must not survive
     // into a proof — an over-cautious claim is as wrong as an over-strong one.
     expect(report.binding.note).not.toMatch(/as far as this search can tell/)

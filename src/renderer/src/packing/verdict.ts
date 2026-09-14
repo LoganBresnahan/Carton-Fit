@@ -49,7 +49,13 @@ export function verdictCaption(result: PackResult, unitPartName?: string | null)
       `did not fit. Heuristic placement — not a proof the rest cannot fit.`
     )
   }
-  const limit = result.binding === 'weight' ? 'weight-limited' : 'space-limited'
+  // "both limits" exactly when the binding note says both land (19th dogfood):
+  // the caption and the note are read together, and were disagreeing.
+  const limit = bothLimitsProven(result.binding, result.count, result.geometryBound)
+    ? 'both limits'
+    : result.binding === 'weight'
+      ? 'weight-limited'
+      : 'space-limited'
   // The noun, when the unit is the whole file: "1 fit" of what? A chosen part
   // is named beside the count everywhere else (the picker, the receipt); the
   // whole file as one unit was named nowhere.
@@ -218,6 +224,34 @@ export function bindingHeading(result: PackResult): string {
   return result.mode === 'fit-check' && result.fits ? 'Closest limit' : 'Limited by'
 }
 
+/**
+ * The tie, from the three facts that prove it: a weight-bound count that the
+ * geometry bound MEETS is full over every arrangement, so both limits landed.
+ *
+ * One predicate for the caption, the binding note and the receipt row (19th
+ * dogfood, rule 5): the note said "Both limits land on 3" two lines under a
+ * caption that said "(weight-limited)", and the caption is the CSV's *Result
+ * note* — the line an engineer lifts into a quote alone, where "weight-limited"
+ * invites a lighter alloy that buys nothing against 3.5 in of stack. The
+ * receipt row had derived the same tie on its own since the 11th dogfood;
+ * three copies of one claim is how the third drifts. Primitive arguments
+ * because the receipt row reads untyped JSON from whatever build saved it.
+ */
+export function bothLimitsProven(
+  binding: unknown,
+  count: number | null | undefined,
+  geometryBound: number | null | undefined
+): boolean {
+  return (
+    binding === 'weight' &&
+    count !== null &&
+    count !== undefined &&
+    geometryBound !== null &&
+    geometryBound !== undefined &&
+    geometryBound <= count
+  )
+}
+
 /** Which hard constraint bound the result — ADR-0004 requires stating it. */
 export function bindingLabel(binding: BindingConstraint): string {
   return binding === 'weight' ? 'weight' : 'space'
@@ -296,7 +330,7 @@ function otherConstraintOf(
       }
     }
     // Proof first: a rigorous bound meeting the count needs no search.
-    if (result.geometryBound !== undefined && result.geometryBound <= result.count) {
+    if (bothLimitsProven(result.binding, result.count, result.geometryBound)) {
       return { known: true, atLimit: true, evidence: 'bound' }
     }
     // Then the arrangement (ADR-0033): the same search with the cap lifted.

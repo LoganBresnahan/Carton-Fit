@@ -140,6 +140,10 @@ in a minute:
   with `evidence: "arrangement"` (ADR-0033).
 - **`scope: "all"` widening the customer axis.** The axes stay independent
   (rule 8); the count is the disclosure.
+- **Renaming or dropping `volumeTolerance`** because it is a bare fraction
+  beside every unit-carrying value. Rule 7; `volumeTolerancePercent` is the
+  sibling that answers it (ADR-0029 amendment 23), and two readers have now
+  proposed the rename after reading the sibling.
 - **A `presetSavedWithOverrides` comparison.** A preset does not record
   overrides at all (ADR-0034 §2); the seam is the preset-vs-receipt mental
   model, pinned under roadmap item 33.

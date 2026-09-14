@@ -12,6 +12,14 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Fixed
 
+- **Export filenames keep a carton's decimals.** A 9 × 5.5 × 8 in carton was
+  suggested as `-9x6x8in` while the file's own body said 5.5; the name now
+  uses the same formatter as the body. ([ADR-0017 addendum 7](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+- **A count that both limits stop says so on its caption.** Where the weight
+  cap and the carton land on the same count, the line under the headline read
+  "(weight-limited)" while the note beneath it said both limits land; the
+  caption, the note and the saved-estimate row now read one rule and say
+  "(both limits)" together. ([ADR-0022 amendment](doc/adr/0022-extreme-point-placement-shelf-stays-as-incumbent.md))
 - **The curved-face warning no longer sends you to weigh a part when the
   carton is already full.** It fired whenever the weight cap sat inside the
   volume tolerance's band, even when the carton could not take another part

@@ -193,6 +193,110 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [ ] 44. Dogfood follow-ups, 20th run — one Claude Opus 5 pass (Cowork, over
+      the remote-devices bridge) on `1.2.0+0db9004`, 2026-09-14 — **the same
+      build as the 19th run**, because item 43's fixes sat uncommitted in the
+      working tree for four days. Fifteenth straight run of matching counts,
+      both paths byte-identical; the reader built their own control carton
+      (inner 9 × 4.5 × 8, geometry admits 4) and watched `couldChangeCount`
+      flip exactly there. One new confirmed finding, one already fixed and
+      not yet shipped, two refuted, one recurrence of a deferral.
+      - [ ] **The wire's `utilization.percent` has its own formatter**
+        (confirmed, rule 5). Amendment 21 made the binding sentence read
+        `utilizationPercent` — the whole-percent formatter the panel and both
+        exports show — and left the wire's own `utilization.percent` string on
+        a one-decimal formatter of its own (`estimate.ts`). One reply prints
+        *1.9%* in the field and *filling 2% of the carton* in the note; the
+        export prints *Fill: 31%* against a field of *30.5%*. `fraction`
+        carries the precise number. **Derived fix:** the string reads
+        `utilizationPercent`, so every spelling of the share is one function.
+        The reader's aside that the note says *of the carton* where the field
+        says `of: "parts"` is refuted: `of` names the numerator (parts, the
+        unit part, or the whole file); the carton is the denominator in every
+        case.
+      - [x] **The export filename rounds 4.5 in to 5** — item 43's first
+        finding, fixed 2026-09-10 in the working tree and not yet committed or
+        deployed; a second reader hit it on the same build with a different
+        carton. Pinned there; the lesson here is about the four days.
+      - [x] **"The weight cap stopped it" on a tie** — refuted as a
+        contradiction, with the ordering left as a wording call. The reader's
+        test — *if lifting the cap changes nothing, the cap stopped nothing*
+        — is the right test for the non-tie case and the note already applies
+        it there (`evidence: "arrangement"`). In a tie it denies both clauses
+        equally: lift the carton instead and a fourth still exceeds the cap,
+        so by the same test the carton stopped nothing either, and *Both
+        limits land on 3* would name no stopper at all. Each limit alone
+        forbids the fourth; that is what a tie is. The weight clause leads
+        because `constraint` names the closest limit (a fourth is 4.7% over
+        the cap and 11% over the stack), which is amendment 1's rule. The
+        reader's alternative — carton first — is equally true; **user's call**
+        whether the tie leads with the closer limit or the carton. The
+        caption's "(weight-limited)" the reader also saw is item 43's second
+        finding, fixed in the same uncommitted tree.
+      - [x] **Drop or rename `volumeTolerance`** — refuted, second reader,
+        now a standing refutation in `doc/wire-rules.md`. Rule 7: nothing is
+        renamed or removed; the percent sibling the reader read beside it IS
+        the fix (item 42), chosen over a rename for that reason. The
+        misreading the reader describes — the fraction taken for cubic
+        inches — is the reason the sibling exists.
+      - [x] **The sign of the bias per kind** — the third reader to derive
+        boss-light, hole-heavy from the geometry and call the symmetric band
+        conservative. ADR-0015 addendum 2's deferral, unchanged; recorded as
+        the third independent endorsement.
+      - [x] Recurrences: all 17 tools arrived deferred in this client (item
+        39's aside, third time); the bridge's folder grant not gating the
+        app's own file reads (items 37/38, third time).
+- [ ] 43. Dogfood follow-ups, 19th run — one Claude Opus 5 pass (Cowork, over
+      the remote-devices bridge) on `1.2.0+0db9004`, 2026-09-10, the first
+      run against item 42. **Fourteenth straight run of matching counts**,
+      both paths byte-identical. The reader built the carton the band test
+      needed (inner 9 × 5.5 × 8, geometry admits 5) to prove
+      `couldChangeCount` is live, and it flipped exactly there; the plate
+      prior was wrong again and the reader said so. One contradicted claim,
+      one incomplete caption, one standing refutation, one wording call.
+      - [x] **The export filename rounds a non-integer carton to the wrong
+        carton** (confirmed, the run's only contradiction). `suggestedFileName`
+        (`export/collect.ts`) rounds each inner dimension to an integer, so a
+        9 × 5.5 × 8 in carton is filed as `-9x6x8in` while the body two lines
+        in prints 9 × 5.5 × 8. Integer cartons hid it for the whole loop;
+        corrugated sizing is rarely integer, and the name is what survives a
+        folder six months on. **Derived fix (rule 5):** the filename uses the
+        body's own `decimal` formatter — `9x5.5x8in` — one formatter for one
+        number. Independent of item 41's inner-vs-entered call, which stays
+        the user's: whichever dims the name carries, it must carry them
+        unrounded. *Built 2026-09-10*, ADR-0017 addendum 7.
+      - [x] **The caption says "(weight-limited)" on a tie the binding note
+        calls both limits** (confirmed, incomplete not false). `verdictCaption`
+        reads `binding` alone; `bindingReport` knows the tie
+        (`otherConstraint.atLimit: true, evidence: "bound"`). The caption is
+        the line under the headline and the CSV's *Result note*, the one most
+        likely to be lifted into a quote alone — and "weight-limited" invites
+        a lighter alloy that buys nothing against 3.5 in of stack. **Derived
+        fix (rule 5):** one predicate for the tie, read by both — the caption
+        says "(both limits)" exactly when the note says both land. *Built
+        2026-09-10* as `bothLimitsProven`, read by the note, the caption and
+        the receipt row (ADR-0022 amendment, 2026-09-10).
+      - [x] **`setThisSession` omits `unitPart`** — refuted, the standing
+        refutation's fifth reader (rule 9; `doc/wire-rules.md`). The unit part
+        cannot be inherited, so its provenance is `cleared` on `load_model`,
+        which the same report quoted as accurate twice at station 0. The
+        proposed `perFile: { unitPart: "set" }` sibling is that field again.
+      - [ ] **"Closest limit: space" on a space-only fit** (recorded, user's
+        call, the wording cousin of item 41's first open sub-item). The
+        summary's heading is a superlative printed where
+        `otherConstraint.known: false` says there was one candidate; the next
+        line repairs it and the CSV carries *Limit bound: no*, so no reader is
+        misled, but the label is what a spreadsheet column inherits. If it
+        moves: `bindingHeading` reads the weightless case and says *Only
+        limit*. Decide with item 41's sentence, since both answer what
+        "closest" means when only one limit was given.
+      - [x] Recurrences, recorded: a reply field announcing that `set_inputs`
+        persisted (standing refutation, seventh reader); the bridge's folder
+        grant not gating the app's own file reads (items 37/38's aside, the
+        reader's own note that it is not an app defect). And the reader
+        derived the sign of the bias per kind — boss light, hole heavy — and
+        endorsed the symmetric band as the conservative choice, which is
+        ADR-0015 addendum 2's deferral, confirmed from outside.
 - [x] 42. Dogfood follow-ups, 18th run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+0a46ed3`, 2026-09-10, the first
       run against item 40. **Every count matched the reader's own derivation**

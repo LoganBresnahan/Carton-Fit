@@ -1,4 +1,5 @@
 import { lengthUnitLabel, mmToLength, type UnitSystem } from '../core/units'
+import { bothLimitsProven } from './verdict'
 import type { EstimateRow } from '../../../shared/storage'
 
 // One-line descriptions of a SAVED estimate (ADR-0016).
@@ -78,13 +79,11 @@ function bindingPhrase(result: Record<string, unknown> | null): string | null {
   if (binding !== 'weight' && binding !== 'geometry') return null
   // Nothing STOPPED a fit-check that fits, whatever the closest limit was.
   if (result.mode === 'fit-check' && result.fits === true) return null
-  const count = num(result.count)
-  const geometryBound = num(result.geometryBound)
-  const tie =
-    binding === 'weight' && count !== null && geometryBound !== null && geometryBound <= count
+  // The same predicate the caption and the binding note read (19th dogfood):
+  // this row derived the tie on its own for a month while the caption did not.
   // "both limits" and not a fuller sentence: the row is scanned, and the note
   // it opens onto already says "Both limits land on 3" in the same words.
-  if (tie) return 'both limits'
+  if (bothLimitsProven(binding, num(result.count), num(result.geometryBound))) return 'both limits'
   return binding === 'weight' ? 'weight-limited' : 'space-limited'
 }
 

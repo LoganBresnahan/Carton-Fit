@@ -106,6 +106,25 @@ describe('verdictCaption', () => {
     expect(caption).not.toMatch(/At least/)
   })
 
+  it('says both limits when the geometry bound MEETS a weight-bound count (19th dogfood)', () => {
+    // The binding note said "Both limits land on 3" two lines under a caption
+    // that said "(weight-limited)"; the caption is the CSV's Result note, the
+    // line lifted into a quote alone. One predicate now, read by both.
+    const caption = verdictCaption(
+      qty({ count: 3, binding: 'weight', upperBound: 3, geometryBound: 3 })
+    )
+    expect(caption).toMatch(/^3 fit \(both limits\)/)
+    expect(caption).toMatch(/no arrangement beats this under these limits/)
+    // A loose bound is not a tie — the note hedges there, and so must this.
+    expect(verdictCaption(qty({ count: 3, binding: 'weight', upperBound: 5, geometryBound: 5 }))).toMatch(
+      /\(weight-limited\)/
+    )
+    // And a geometry-bound count never claims the cap landed too.
+    expect(verdictCaption(qty({ count: 3, binding: 'geometry', geometryBound: 3 }))).toMatch(
+      /\(space-limited\)/
+    )
+  })
+
   it('keeps the hedge whenever the bound leaves room, or does not exist', () => {
     // The hedge is the DEFAULT and must survive: a bound above the count is the
     // ordinary case, and a bound that does not exist establishes nothing.
