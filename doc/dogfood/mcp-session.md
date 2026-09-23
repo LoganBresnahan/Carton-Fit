@@ -57,6 +57,14 @@ open details).
 
    Paste the output. One directory means there is nothing to disagree about.
 
+6. **Two things on the machine before the session, every time** (not
+   one-time): a **copy of the reference file under another name** in the same
+   folder — `as1-oc-214 copy.stp` is fine — and **at least one customer**
+   created in the app. Station 6 reads both. The assistant cannot make either
+   (no tool creates a customer, and the brief never asks the person to press
+   keys), so without them that station's document and customer checks compare
+   one thing with itself and prove nothing.
+
 Skip any of these that a previous pass already answered — say "already
 answered" rather than redoing them.
 
@@ -251,11 +259,23 @@ Check and report:
   claim. Then call `get_app_state` and check `file.savedEstimates` against what
   you saved. A list that shows another part's receipts under this one, or a
   count that disagrees with the list, is the failure mode here.
+- Same bytes, another name. If a copy of the reference file under a
+  different name is in the same folder, `load_model` it after your
+  `save_estimate`. A document is its content, not its name (ADR-0034): the
+  same kinds and counts as station 1, `file.savedEstimates` exactly what the
+  original showed after your save, and the receipts you saved listed under
+  the copy with no question asked. It is still a load, so `cleared` reports
+  the unit part and overrides it threw away like any other — that is not the
+  finding. Say whether the rows named the file you loaded or the one they
+  were saved under; both are honest, and which one you saw is the finding.
+  If there is no copy, say so and skip this; do not make one yourself unless
+  you already have a way to copy a file on that machine.
 - Call `list_customers` and say who the app is working for. If there is more
   than one customer, `set_customer` to another one and back, and say what
   changed in both lists and what did not change in the estimate — nothing in
-  a count depends on the customer. Do not try to create one; you should find
-  no way to, and the reply should say why.
+  a count depends on the customer. Do not try to create, rename or delete
+  one; you should find no way to do any of the three, and the reply should
+  say why and where a person does them.
 - Receipts and presets also carry a customer, and every list has a second
   axis for it (`customer: "active"`, the default, is the app's current
   customer plus house; `"all"` is everyone). `scope: "all"` widens the

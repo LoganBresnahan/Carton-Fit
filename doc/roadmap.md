@@ -1028,13 +1028,21 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
         "vanished"; but the moment after a load is exactly when a reader
         wants the document's count, and one more query on one call is cheap.
         Minor.
-      - [ ] **Stations 6's scope and customer checks were vacuous** (reader 1,
+      - [x] **Stations 6's scope and customer checks were vacuous** (reader 1,
         a limitation, not a defect): one document, no customers, so `model`
         and `all` had to agree. The client cannot create a customer by
         decision, and the brief must never ask the person to press keys — so
         the fix is the *pre-paste* checklist, which is for the human: have a
         second file loaded once and one customer created before the session.
-        A brief change (ADR-0032: the brief is the artifact).
+        A brief change (ADR-0032: the brief is the artifact). *Done
+        2026-09-23:* pre-paste item 6 asks for a copy of the reference file
+        under another name and one customer, every session; station 6 loads
+        the copy and expects the original's count and receipts under it
+        (ADR-0034 §3: the document is its content, the name is a label), and
+        its customer bullet now covers rename and delete alongside create
+        (item 47). The copy, not a second part, is the check the user asked
+        for on 2026-09-23: the same file uploaded twice under two names must
+        merge without a prompt.
       - [x] **Nothing on screen said a row was house** (the user's own first
         pass on item 27, same day). Under Acme the scoped list showed house
         rows and Acme's with only Acme's labelled, and the picker's *Other
