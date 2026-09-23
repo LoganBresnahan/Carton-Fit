@@ -62,6 +62,14 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Added
 
+- **Customers can be renamed and deleted.** *Manage customers…* in the
+  *Working for* selector lists them: rename one and the new name shows
+  everywhere it appeared; delete one and the dialog says how many presets and
+  saved estimates carry it and asks where they go — House, or another
+  customer — so a duplicate merges into the right one and a customer who left
+  folds into House. Nothing is thrown away. A name is now unique in any case,
+  so "Acme" and "ACME" can no longer both exist. An AI assistant can do
+  neither; both are yours. ([ADR-0035 amendment 2](doc/adr/0035-customers-are-a-label-on-presets-and-receipts.md))
 - **A density weight says how exact its volume was.** A curved face arrives
   faceted, so the mesh volume behind a density weight runs a little low on a
   cylinder and a little high in a hole — about 2% either way at the facet

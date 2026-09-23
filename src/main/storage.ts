@@ -119,6 +119,18 @@ export function registerStorageIpc(): void {
     require_().customers.create(name)
   )
 
+  // Rename and delete-by-moving (ADR-0035 amendment 2): the person's acts,
+  // like create, so they are IPC for the window and nothing on the wire.
+  ipcMain.handle(STORAGE_CHANNELS.customersRename, (_event, id: number, name: string) =>
+    require_().customers.rename(id, name)
+  )
+  ipcMain.handle(STORAGE_CHANNELS.customersUsage, (_event, id: number) =>
+    require_().customers.usage(id)
+  )
+  ipcMain.handle(STORAGE_CHANNELS.customersRemove, (_event, id: number, moveTo: number | null) =>
+    require_().customers.remove(id, moveTo)
+  )
+
   ipcMain.handle(STORAGE_CHANNELS.configurationsRemove, (_event, name: string) =>
     require_().configurations.remove(name)
   )

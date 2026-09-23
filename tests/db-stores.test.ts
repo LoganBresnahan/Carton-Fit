@@ -416,7 +416,94 @@ describe('CustomersStore', () => {
       expect(customers.byId(acme.id)?.name).toBe('acme')
       expect(customers.byId(999)).toBeNull()
       expect(() => customers.create('   ')).toThrow(/needs a name/)
-      expect(() => customers.create('Beta')).toThrow(/UNIQUE/)
+      // A sentence for the banner, not a constraint name — and in ANY case:
+      // "Acme" beside "ACME" is the duplicate amendment 2 exists to fix.
+      expect(() => customers.create('Beta')).toThrow(/a customer named “Beta” already exists/)
+      expect(() => customers.create('BETA')).toThrow(/already exists/)
+    } finally {
+      db.close()
+    }
+  })
+})
+
+describe('CustomersStore — rename and delete-by-moving (ADR-0035 amendment 2)', () => {
+  const receipt = (customerId: number | null) => ({
+    fileName: 'a.stp',
+    contentHash: 'h1',
+    settings: SETTINGS,
+    result: {},
+    customerId
+  })
+
+  it('renames by id, so every row follows; refuses a blank, a duplicate in any case, an unknown id', () => {
+    const db = freshDb()
+    try {
+      const customers = new CustomersStore(db)
+      const acme = customers.create('Acmee').id
+      customers.create('Beta')
+      const presets = new ConfigurationsStore(db)
+      presets.save('Acme box', SETTINGS, acme)
+
+      expect(customers.rename(acme, '  Acme  ').name).toBe('Acme')
+      // The preset still carries the id; only the label it resolves to moved.
+      expect(presets.get('Acme box')?.customerId).toBe(acme)
+      // Changing only the case of its OWN name is a rename like any other.
+      expect(customers.rename(acme, 'ACME').name).toBe('ACME')
+      expect(() => customers.rename(acme, 'beta')).toThrow(/a customer named “beta” already exists/)
+      expect(() => customers.rename(acme, '  ')).toThrow(/needs a name/)
+      expect(() => customers.rename(999, 'Nobody')).toThrow(/no such customer/)
+      expect(customers.byId(acme)?.name).toBe('ACME')
+    } finally {
+      db.close()
+    }
+  })
+
+  it('delete moves every preset and receipt to the chosen customer, in one step, and destroys nothing', () => {
+    const db = freshDb()
+    try {
+      const customers = new CustomersStore(db)
+      const dupe = customers.create('Acme Inc').id
+      const acme = customers.create('Acme').id
+      const presets = new ConfigurationsStore(db)
+      const estimates = new EstimatesStore(db)
+      presets.save('Double wall', SETTINGS, dupe)
+      presets.save('Acme box', SETTINGS, acme)
+      presets.save('House box', SETTINGS)
+      estimates.record(receipt(dupe))
+      estimates.record(receipt(dupe))
+      estimates.record(receipt(null))
+
+      expect(customers.usage(dupe)).toEqual({ presets: 1, estimates: 2 })
+      // The duplicate merges into the right customer…
+      expect(customers.remove(dupe, acme)).toEqual({ presets: 1, estimates: 2 })
+      expect(customers.byId(dupe)).toBeNull()
+      expect(customers.usage(acme)).toEqual({ presets: 2, estimates: 2 })
+      expect(presets.get('Double wall')?.customerId).toBe(acme)
+      expect(presets.count()).toBe(3)
+      expect(estimates.count()).toBe(3)
+      // …and a customer who left folds into house.
+      expect(customers.remove(acme, null)).toEqual({ presets: 2, estimates: 2 })
+      expect(presets.get('Acme box')?.customerId).toBeNull()
+      expect(presets.count({ activeId: null })).toBe(3)
+      expect(estimates.count({ activeId: null })).toBe(3)
+      expect(customers.list()).toEqual([])
+    } finally {
+      db.close()
+    }
+  })
+
+  it('refuses a delete that would leave rows naming nobody', () => {
+    const db = freshDb()
+    try {
+      const customers = new CustomersStore(db)
+      const acme = customers.create('Acme').id
+      new ConfigurationsStore(db).save('Acme box', SETTINGS, acme)
+      expect(() => customers.remove(acme, acme)).toThrow(/cannot move to the customer being deleted/)
+      expect(() => customers.remove(acme, 999)).toThrow(/does not exist/)
+      expect(() => customers.remove(999, null)).toThrow(/no such customer/)
+      // Nothing moved and nothing was deleted by the refused calls.
+      expect(customers.usage(acme)).toEqual({ presets: 1, estimates: 0 })
+      expect(customers.byId(acme)?.name).toBe('Acme')
     } finally {
       db.close()
     }

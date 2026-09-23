@@ -5,6 +5,7 @@ import {
   type ConfigurationSummary,
   type CustomerRow,
   type CustomerScope,
+  type CustomerUsage,
   type EstimateInput,
   type EstimateRow,
   type LinkOffer,
@@ -76,6 +77,15 @@ const storage: StorageApi = {
 
   createCustomer: (name: string) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.customersCreate, name) as Promise<CustomerRow>,
+
+  renameCustomer: (id: number, name: string) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.customersRename, id, name) as Promise<CustomerRow>,
+
+  customerUsage: (id: number) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.customersUsage, id) as Promise<CustomerUsage>,
+
+  removeCustomer: (id: number, moveTo: number | null) =>
+    ipcRenderer.invoke(STORAGE_CHANNELS.customersRemove, id, moveTo) as Promise<CustomerUsage>,
 
   removeConfiguration: (name: string) =>
     ipcRenderer.invoke(STORAGE_CHANNELS.configurationsRemove, name) as Promise<boolean>,

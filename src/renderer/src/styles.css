@@ -200,6 +200,35 @@ body {
 .customer-dialog .connect-dialog-actions {
   gap: 0.4rem;
 }
+/* Manage customers (ADR-0035 amendment 2): one row per customer — the name
+   takes the room, the two acts sit at its end. */
+.customer-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+.customer-row {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+.customer-row input {
+  flex: 1;
+  min-width: 0;
+}
+.customer-form select {
+  width: 100%;
+}
+.customer-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--error);
+}
 
 /* The connect surface's trigger (ADR-0034 §5): as quiet as the theme select
    beside it, and like it never shrinks — a setup control the header must not

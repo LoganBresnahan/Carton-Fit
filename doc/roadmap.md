@@ -193,6 +193,18 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [x] 47. Customers can be renamed and deleted — **ADR-0035 amendment 2,
+      built 2026-09-18**, the user's ask on reading the ADR for its verdict:
+      create was the only act, so "Acme" beside "ACME" was permanent. *Manage
+      customers…* in the header selector: rename per row (the id is what rows
+      carry, so nothing else moves), and a delete that MOVES — the step says
+      how many presets and saved estimates carry the customer and asks where
+      they go, House or another customer, in one transaction. Chosen over
+      *only an empty customer* and *delete the rows too*. Names are unique in
+      any case now. The one place a receipt's customer changes, by §2's own
+      revisit trigger; still no foreign key (the repository is the only
+      writer); nothing on the wire (rules 10, 11). A refused act shows inside
+      the dialog, not only on the header chip behind it.
 - [x] 46. Dogfood follow-ups, 22nd run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+4d8891b`, 2026-09-14, the first
       run against items 44 and 45. **Seventeenth straight run of matching

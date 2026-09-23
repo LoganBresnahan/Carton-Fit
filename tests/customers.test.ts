@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { activeCustomerFromStored, useAppStore } from '../src/renderer/src/store'
-import { createCustomer, refreshCustomers } from '../src/renderer/src/storage/customers'
+import {
+  createCustomer,
+  deleteCustomer,
+  refreshCustomers,
+  renameCustomer
+} from '../src/renderer/src/storage/customers'
+import { usagePhrase } from '../src/renderer/src/components/CustomerSelect'
 import { buildPackRequest } from '../src/renderer/src/packing/request'
 import { canUndo, resetUndoHistory, startUndoHistory } from '../src/renderer/src/history/undo'
 import type { CustomerRow, StorageApi } from '../src/shared/storage'
@@ -17,6 +23,24 @@ function fakeApi(customers: CustomerRow[] = []): StorageApi {
       const own = (target as unknown as Record<PropertyKey, unknown>)[key]
       if (own !== undefined) return own
       if (key === 'listCustomers') return async () => rows
+      // The lists re-read after a rename or a delete; empty is enough here.
+      if (key === 'listConfigurations' || key === 'recentEstimates' || key === 'estimatesForDocument')
+        return async () => []
+      if (key === 'renameCustomer')
+        return async (id: number, name: string) => {
+          const row = rows.find((r) => r.id === id)
+          if (row === undefined) throw new Error('no such customer')
+          const renamed = { ...row, name }
+          rows.splice(rows.indexOf(row), 1, renamed)
+          return renamed
+        }
+      if (key === 'removeCustomer')
+        return async (id: number) => {
+          const at = rows.findIndex((r) => r.id === id)
+          if (at < 0) throw new Error('no such customer')
+          rows.splice(at, 1)
+          return { presets: 2, estimates: 1 }
+        }
       if (key === 'createCustomer')
         return async (name: string) => {
           const row = { id: rows.length + 1, name, createdAt: 1 }
@@ -82,6 +106,55 @@ describe('createCustomer', () => {
     expect(await createCustomer('Acme', api)).toBeNull()
     expect(useAppStore.getState().storageError).toMatch(/UNIQUE|storage/)
     expect(useAppStore.getState().activeCustomerId).toBeNull()
+  })
+})
+
+describe('renameCustomer and deleteCustomer (ADR-0035 amendment 2)', () => {
+  const ACME: CustomerRow = { id: 1, name: 'Acmee', createdAt: 1 }
+  const BETA: CustomerRow = { id: 2, name: 'Beta', createdAt: 1 }
+
+  it('a rename re-lists, and the active customer stays active under its new name', async () => {
+    const api = fakeApi([ACME, BETA])
+    await refreshCustomers(api)
+    useAppStore.getState().setActiveCustomer(1)
+    expect(await renameCustomer(1, 'Acme', api)).toBe(true)
+    const state = useAppStore.getState()
+    expect(state.customers.map((c) => c.name)).toEqual(['Acme', 'Beta'])
+    expect(state.activeCustomerId).toBe(1)
+    expect(state.storageError).toBeNull()
+  })
+
+  it('deleting the active customer falls the app back to house', async () => {
+    const api = fakeApi([ACME, BETA])
+    await refreshCustomers(api)
+    useAppStore.getState().setActiveCustomer(1)
+    expect(await deleteCustomer(1, 2, api)).toBe(true)
+    const state = useAppStore.getState()
+    expect(state.customers.map((c) => c.id)).toEqual([2])
+    expect(state.activeCustomerId).toBeNull()
+  })
+
+  it('deleting another customer leaves the active one alone', async () => {
+    const api = fakeApi([ACME, BETA])
+    await refreshCustomers(api)
+    useAppStore.getState().setActiveCustomer(2)
+    expect(await deleteCustomer(1, null, api)).toBe(true)
+    expect(useAppStore.getState().activeCustomerId).toBe(2)
+  })
+
+  it('a refused rename is reported and changes nothing', async () => {
+    const api = fakeApi([ACME])
+    await refreshCustomers(api)
+    expect(await renameCustomer(99, 'Nobody', api)).toBe(false)
+    expect(useAppStore.getState().storageError).toMatch(/no such customer/)
+    expect(useAppStore.getState().customers.map((c) => c.name)).toEqual(['Acmee'])
+  })
+
+  it('the delete step says what is tagged, in words that agree in number', () => {
+    expect(usagePhrase({ presets: 3, estimates: 1 })).toBe('3 presets and 1 saved estimate')
+    expect(usagePhrase({ presets: 1, estimates: 0 })).toBe('1 preset')
+    expect(usagePhrase({ presets: 0, estimates: 2 })).toBe('2 saved estimates')
+    expect(usagePhrase({ presets: 0, estimates: 0 })).toBeNull()
   })
 })
 

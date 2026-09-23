@@ -119,8 +119,11 @@ export const MIGRATIONS: readonly Migration[] = [
       // A preset and a receipt each carry an optional customer (§2). NULL is
       // HOUSE — the carton everyone gets — and is the common case, so every
       // existing row is a house row by definition and needs no backfill. Not
-      // a foreign key: a customer is never deleted in this version, and a
-      // constraint that cannot fire is a promise the schema cannot keep.
+      // a foreign key: when this shipped nothing could delete a customer.
+      // Since ADR-0035 amendment 2 one thing can, and `CustomersStore.remove`
+      // retags every referencing row in the same transaction first — SQLite
+      // cannot add the constraint without rebuilding both tables, and that
+      // class is the only writer, so the invariant lives there and in its tests.
       db.exec('ALTER TABLE configurations ADD COLUMN customer_id INTEGER')
       db.exec('ALTER TABLE estimates ADD COLUMN customer_id INTEGER')
     }

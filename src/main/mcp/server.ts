@@ -561,8 +561,9 @@ function registerDataTools(
         'The customers this app knows (ADR-0035) and which one it is working for. A customer ' +
         'is a name and an id: a label on presets and saved estimates, never an input — the ' +
         'same part in the same carton packs identically whoever the app is working for. ' +
-        'Switch with set_customer. Creating one is the person’s act at the app; there is no ' +
-        'tool for it.',
+        'Switch with set_customer. Creating, renaming and deleting one are the person’s acts ' +
+        'at the app; there is no tool for any of them. A deleted customer’s presets and saved ' +
+        'estimates are kept and retagged to the customer the person chose, or to house.',
       inputSchema: wire(listCustomersInput),
       outputSchema: wire(customersOutput)
     },

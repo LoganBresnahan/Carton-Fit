@@ -117,7 +117,10 @@ product decisions:
   Presets and saved estimates are tagged with it when saved, both lists show
   house plus that customer's rows with *All* one click away, and a customer is
   a name and nothing else — never an input, never a CRM field. Nothing an
-  estimate computes depends on it.
+  estimate computes depends on it. A customer can be renamed, and deleted by
+  moving its presets and saved estimates to House or another customer — a
+  delete never discards them, and like create, both are the person's acts,
+  never an assistant's.
 - **Undo/redo over the inputs** (Ctrl+Z / Ctrl+Shift+Z): session-scoped and
   in-memory; under auto-run, undoing an input is undoing the estimate
   (ADR-0016).

@@ -26,7 +26,10 @@ export const STORAGE_CHANNELS = {
   documentsLink: 'storage:documents:link',
   configurationsSetCustomer: 'storage:configurations:set-customer',
   customersList: 'storage:customers:list',
-  customersCreate: 'storage:customers:create'
+  customersCreate: 'storage:customers:create',
+  customersRename: 'storage:customers:rename',
+  customersUsage: 'storage:customers:usage',
+  customersRemove: 'storage:customers:remove'
 } as const
 
 /**
@@ -44,6 +47,13 @@ export interface CustomerRow {
   readonly id: number
   readonly name: string
   readonly createdAt: number
+}
+
+/** How many rows carry a customer — what the delete dialog says before it
+ *  asks where they go (ADR-0035 amendment 2). */
+export interface CustomerUsage {
+  readonly presets: number
+  readonly estimates: number
 }
 
 /** A preset as the picker lists it — no settings blob, because a list does not need one. */
@@ -128,6 +138,13 @@ export interface StorageApi {
   listCustomers(): Promise<CustomerRow[]>
   /** The person's act (ADR-0035 §4): never reached by an assistant. */
   createCustomer(name: string): Promise<CustomerRow>
+  /** Rename (amendment 2). The id is what rows carry, so nothing else moves. */
+  renameCustomer(id: number, name: string): Promise<CustomerRow>
+  customerUsage(id: number): Promise<CustomerUsage>
+  /** Delete by MOVING (amendment 2): every preset and receipt tagged `id` is
+   *  retagged to `moveTo` (null = house) in one transaction, then the customer
+   *  goes. The one place a receipt's customer changes. @returns what moved. */
+  removeCustomer(id: number, moveTo: number | null): Promise<CustomerUsage>
   recordEstimate(entry: EstimateInput): Promise<number>
   recentEstimates(limit?: number, customer?: CustomerScope): Promise<EstimateRow[]>
   /** Discard one receipt (ADR-0034 §4). Not undoable; not on the MCP wire. */

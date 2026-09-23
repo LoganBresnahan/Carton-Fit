@@ -123,6 +123,55 @@ Not a `hiddenCustomers: [names]`: the names are the other customers' business,
 and a reader working for one customer does not need to know who else the shop
 works for to know its list is short.
 
+## Amendment 2 (2026-09-18) — a customer can be renamed, and deleted by moving what it tagged
+
+§1 shipped create and nothing else, and the migration said why in a comment:
+*a customer is never deleted in this version*. Reading the ADR for its
+verdict, that was the one real gap: a shop that types "Acme" and later
+"ACME" had both forever, and every receipt saved under the wrong one was
+immutably tagged with it. The user asked for edit and delete the same day.
+
+**Rename** changes the name and nothing else. The id is what presets and
+receipts carry, so every row follows without being touched. Names are now
+unique **case-insensitively** on create and on rename — "Acme" beside "ACME"
+is the duplicate this amendment exists to fix, and a constraint that lets it
+back in the next morning is not a fix. Changing only the case of a
+customer's own name is allowed.
+
+**Delete moves, it never destroys.** The dialog says how many presets and
+saved estimates carry the customer and asks where they go — House, or another
+customer — and one transaction retags both tables and removes the customer.
+Chosen by the user over two alternatives: *only an empty customer can be
+deleted* (safest, but a receipt's customer cannot be changed by hand, so
+deleting a customer would have meant deleting its receipts first) and
+*delete the rows with it* (simple, and destroys records ADR-0016 says only
+the person decides to discard). Moving covers both real cases with one
+control: a duplicate merges into the right customer, a customer who left
+folds into House.
+
+**This is the one place a receipt's customer changes**, and §2 said it never
+would. §2's own revisit trigger anticipated it — *revisit immutability for
+the customer column alone, and say why it differs from the rest of the row*
+— and the reason is the one §1 gave: a customer is a label, and nothing an
+estimate computed depends on it. The count, the weights and the inputs on a
+moved receipt are exactly as saved. What changes is who it is filed under,
+by the person's explicit act, with the counts in front of them. There is
+still no way to retag one receipt by hand.
+
+**Still not a foreign key.** Migration 3 left `customer_id` unconstrained
+because nothing could delete a customer; now one thing can, and it retags
+every referencing row in the same transaction before the delete. SQLite
+cannot add a constraint without rebuilding both tables, and the repository
+is the only writer, so the invariant lives in `CustomersStore.remove` and
+its tests rather than in a migration whose only effect would be to restate
+it.
+
+**Nothing new on the wire** (wire rules 10 and 11). Creating, renaming and
+deleting a customer are the person's acts at the window; `list_customers`
+says so. A client holding a stale name gets the same "no such customer"
+it always did. If the active customer is the one deleted, the app falls
+back to House, as it already does for a customer missing from the list.
+
 ## Consequences
 
 - The "why does this part have two receipts?" question gets a one-word answer

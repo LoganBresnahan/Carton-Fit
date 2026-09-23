@@ -1,6 +1,8 @@
 import { useAppStore } from '../store'
 import { storageMessage } from './message'
-import type { StorageApi } from '../../../shared/storage'
+import { refreshConfigurations } from './configurations'
+import { refreshSavedEstimates } from './estimates'
+import type { CustomerUsage, StorageApi } from '../../../shared/storage'
 
 // Customers (ADR-0035). The list is main's; creating one is the person's act
 // from the header, and no assistant reaches `createCustomer`. Same shape as
@@ -48,5 +50,57 @@ export async function createCustomer(
   } catch (error) {
     fail(error)
     return null
+  }
+}
+
+/** Rename a customer (ADR-0035 amendment 2). Both lists print the name beside
+ *  a row, so they re-read it. @returns whether it took. */
+export async function renameCustomer(
+  id: number,
+  name: string,
+  injected?: StorageApi
+): Promise<boolean> {
+  try {
+    await api(injected).renameCustomer(id, name)
+    await refreshCustomers(injected)
+    await Promise.all([refreshConfigurations(injected), refreshSavedEstimates(injected)])
+    return true
+  } catch (error) {
+    fail(error)
+    return false
+  }
+}
+
+/** What the delete dialog says before it asks where the rows go. */
+export async function customerUsage(
+  id: number,
+  injected?: StorageApi
+): Promise<CustomerUsage | null> {
+  try {
+    return await api(injected).customerUsage(id)
+  } catch (error) {
+    fail(error)
+    return null
+  }
+}
+
+/**
+ * Delete a customer by moving what it tagged to `moveTo` (null = house). If
+ * it was the active customer, `refreshCustomers` falls the app back to house,
+ * the same path a customer missing from the list has always taken.
+ */
+export async function deleteCustomer(
+  id: number,
+  moveTo: number | null,
+  injected?: StorageApi
+): Promise<boolean> {
+  try {
+    await api(injected).removeCustomer(id, moveTo)
+    await refreshCustomers(injected)
+    await Promise.all([refreshConfigurations(injected), refreshSavedEstimates(injected)])
+    return true
+  } catch (error) {
+    fail(error)
+    return false
   }
 }

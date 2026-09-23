@@ -520,6 +520,70 @@ test.describe('saved configurations UI', () => {
     }
   })
 
+  test('a customer is renamed everywhere, and deleted by moving what it tagged (ADR-0035 amendment 2)', async () => {
+    const { app, page } = await launchApp([
+      `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
+    ])
+    const customer = page.locator('[data-testid="customer-select"]')
+    const items = page.locator('[data-testid="estimate-item"]')
+    const create = async (name: string): Promise<void> => {
+      await customer.selectOption('__new__')
+      await page.fill('[data-testid="customer-name"]', name)
+      await page.click('[data-testid="customer-create"]')
+      await expect(page.locator('[data-testid="customer-dialog"]')).not.toBeVisible()
+    }
+    try {
+      await importSample(page, 'cube-10x10.stl')
+      await waitForEstimate(page)
+      // A misspelt customer with one preset and one receipt, and the right one.
+      await create('Acmee')
+      await page.fill('[data-testid="config-name"]', 'Double wall')
+      await page.click('[data-testid="config-save"]')
+      await page.click('[data-testid="save-estimate"]')
+      await expect(items).toHaveCount(1)
+      await create('Beta')
+
+      // Manage is offered only once there is something to manage.
+      await customer.selectOption('__manage__')
+      await expect(page.locator('[data-testid="customer-row"]')).toHaveCount(2)
+
+      // Rename: a duplicate in ANY case is refused with a sentence…
+      await page.fill('[data-testid="customer-rename-input-1"]', 'BETA')
+      await page.click('[data-testid="customer-rename-1"]')
+      await expect(page.locator('[data-testid="customer-error"]')).toContainText('already exists')
+      // …and a real rename takes, and shows wherever the name shows.
+      await page.fill('[data-testid="customer-rename-input-1"]', 'Acme')
+      await page.click('[data-testid="customer-rename-1"]')
+      await expect(customer.locator('option[data-testid="customer-option"]')).toHaveText(['Acme', 'Beta'])
+      await expect(page.locator('[data-testid="customer-error"]')).toHaveCount(0)
+
+      // Delete: the step says what is tagged, and asks where it goes.
+      await page.click('[data-testid="customer-delete-1"]')
+      await expect(page.locator('[data-testid="customer-delete-usage"]')).toContainText(
+        '1 preset and 1 saved estimate'
+      )
+      await page.selectOption('[data-testid="customer-move-to"]', { label: 'Beta' })
+      await page.click('[data-testid="customer-delete-confirm"]')
+      await expect(page.locator('[data-testid="customer-row"]')).toHaveCount(1)
+      await page.click('[data-testid="customer-manage-done"]')
+
+      // Nothing was destroyed: both rows are Beta's now, in the database.
+      const rows = await page.evaluate(async () => ({
+        customers: (await window.api.storage.listCustomers()).map((c) => c.name),
+        receipts: (await window.api.storage.recentEstimates()).map((r) => r.customerId),
+        presets: (await window.api.storage.listConfigurations()).map((p) => [p.name, p.customerId])
+      }))
+      expect(rows.customers).toEqual(['Beta'])
+      expect(rows.receipts).toEqual([2])
+      expect(rows.presets).toEqual([['Double wall', 2]])
+      // Beta was active when Acme went, and stays so.
+      await expect(customer.locator('option:checked')).toHaveText('Beta')
+      await expect(page.locator('[data-testid="estimate-customer"]')).toHaveText(['Beta'])
+    } finally {
+      await app.close()
+    }
+  })
+
   test('every saved estimate is listed, not the first twelve', async () => {
     const { app, page } = await launchApp([
       `--user-data-dir=${mkdtempSync(join(tmpdir(), 'pe-e2e-profile-'))}`
