@@ -1,6 +1,8 @@
 import { documentHash, useAppStore, type PackingSettings } from '../store'
 import { pruneOverrides, prunedUnitPart, type PartWeightOverrides } from '../packing/kinds'
 import { storageMessage } from './message'
+import { collectExport } from '../export/collect'
+import type { MeshVolumeReport } from '../packing/verdict'
 import type { EstimateRow, StorageApi } from '../../../shared/storage'
 
 // Saved estimates (ADR-0016). Replaces the auto-recording subscription this
@@ -23,6 +25,21 @@ function api(injected?: StorageApi): StorageApi {
 
 function fail(error: unknown): void {
   useAppStore.getState().setStorageError(storageMessage(error))
+}
+
+/**
+ * The band flags to write into a receipt (ADR-0017 addendum 10): the same
+ * report the panel and the exports read, or null when it cannot be built.
+ * Null rather than a throw on purpose — the mark is a qualification ON the
+ * record, not the record, and a save the person pressed must not fail for
+ * want of it. A null reads as "no claim" in the row, never as "settled".
+ */
+function bandFlags(): MeshVolumeReport | null {
+  try {
+    return collectExport()?.meshVolumes ?? null
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -63,7 +80,13 @@ export async function saveEstimate(injected?: StorageApi): Promise<boolean> {
         partWeightsG: state.partWeightsG,
         unitPartName: state.unitPartName
       },
-      result: state.packResult,
+      // The band flags ride inside the result blob (ADR-0017 addendum 10):
+      // two receipts that differed only in "weigh one to settle it" read the
+      // same line (23rd dogfood), and the row cannot recompute the band — it
+      // needs the parts, which a receipt does not hold. An additive key in
+      // opaque JSON, like the overrides beside it: no migration, and rows
+      // from before it simply carry no mark.
+      result: { ...state.packResult, meshVolumes: bandFlags() },
       // Tagged for whoever the app is working for, once, at save (ADR-0035 §2).
       customerId: state.activeCustomerId
     })

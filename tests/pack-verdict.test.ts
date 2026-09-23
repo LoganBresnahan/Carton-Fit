@@ -5,6 +5,8 @@ import {
   meshVolumeWarning,
   bindingHeading,
   bindingLabel,
+  limitLabel,
+  weighOneToSettle,
   freeSpaceNote,
   freeSpaceReport,
   openMeshWarning,
@@ -349,6 +351,28 @@ describe('bindingLabel', () => {
   it('names the constraint in user words', () => {
     expect(bindingLabel('weight')).toBe('weight')
     expect(bindingLabel('geometry')).toBe('space')
+  })
+})
+
+describe('limitLabel', () => {
+  // 23rd dogfood: "Limited by: weight" one line above "Both limits land on 3".
+  it('names both limits on a proven tie, and the one otherwise', () => {
+    expect(limitLabel(qty({ count: 3, binding: 'weight', geometryBound: 3 }))).toBe(
+      'weight and space'
+    )
+    expect(limitLabel(qty({ count: 3, binding: 'weight', geometryBound: 5 }))).toBe('weight')
+    expect(limitLabel(qty({ count: 3, binding: 'geometry', geometryBound: 3 }))).toBe('space')
+    expect(limitLabel(fit({ fits: false, unplaced: ['plate'] }))).toBe('space')
+  })
+})
+
+describe('weighOneToSettle', () => {
+  it('is the OR of the two band flags, and false for a receipt without them', () => {
+    expect(weighOneToSettle({ couldChangeCount: true, couldChangeBinding: false })).toBe(true)
+    expect(weighOneToSettle({ couldChangeCount: false, couldChangeBinding: true })).toBe(true)
+    expect(weighOneToSettle({ couldChangeCount: false, couldChangeBinding: false })).toBe(false)
+    expect(weighOneToSettle(undefined)).toBe(false)
+    expect(weighOneToSettle({ couldChangeCount: 'yes' })).toBe(false)
   })
 })
 

@@ -231,7 +231,11 @@ app.
    **If your client cannot display the image at all, that is the finding —
    report it.**
 3. `set_part_weight` on one kind by hand, and check the estimate that comes back
-   used your number rather than the density it had been deriving.
+   used your number rather than the density it had been deriving. Then clear
+   it: `weight: null`, or `clear: true` if your client cannot send a null —
+   say which one you needed, because the first client that could not send
+   one ended its session with an override it could only remove by
+   reloading the file.
 
 **Do not ask the person to press Ctrl+Z**, or anything else at the keyboard.
 An earlier version of this station did, and both first-run sessions stalled on
@@ -273,9 +277,11 @@ Check and report:
 - Call `list_customers` and say who the app is working for. If there is more
   than one customer, `set_customer` to another one and back, and say what
   changed in both lists and what did not change in the estimate — nothing in
-  a count depends on the customer. Do not try to create, rename or delete
-  one; you should find no way to do any of the three, and the reply should
-  say why and where a person does them.
+  a count depends on the customer. Coming back is `id: null`, or
+  `house: true` if your client cannot send a null — do not leave the app
+  working for a customer you switched to. Do not try to create, rename or
+  delete one; you should find no way to do any of the three, and the reply
+  should say why and where a person does them.
 - Receipts and presets also carry a customer, and every list has a second
   axis for it (`customer: "active"`, the default, is the app's current
   customer plus house; `"all"` is everyone). `scope: "all"` widens the

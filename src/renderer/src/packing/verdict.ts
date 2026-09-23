@@ -266,6 +266,26 @@ export function bindingLabel(binding: BindingConstraint): string {
 }
 
 /**
+ * The label beside the "Limited by" heading, on the panel and in the summary:
+ * `bindingLabel`, except on a proven tie, where it names both. The 23rd
+ * dogfood read "Limited by: weight" one line above "Both limits land on 3" —
+ * the tie predicate reached the caption, the note and the receipt row (19th
+ * run) and not the label between them. The CSV keeps `bindingLabel` in its
+ * *Limited by* cell, a value scripts read, and carries the tie as its own row.
+ */
+export function limitLabel(result: PackResult): string {
+  return tieProven(result) ? 'weight and space' : bindingLabel(result.binding)
+}
+
+/** `bothLimitsProven` from a typed result: only a count can tie. */
+export function tieProven(result: PackResult): boolean {
+  return (
+    result.mode === 'max-quantity' &&
+    bothLimitsProven(result.binding, result.count, result.geometryBound)
+  )
+}
+
+/**
  * What the constraint that did NOT get named was doing, with the KIND of
  * evidence behind the claim — because two of the four answers below are
  * proofs and one is a search, and a reader who cannot tell them apart will
@@ -786,7 +806,13 @@ export function meshVolumeReport(
 
 /** One formatter for the tolerance, wherever it is printed. */
 export function toleranceText(fraction: number): string {
-  return `${(fraction * 100).toFixed(1)}%`
+  const percent = fraction * 100
+  // One decimal, like every other percent on these surfaces — except that a
+  // deflection bound (ADR-0015 addendum 3) on a block with holes is a few
+  // hundredths of a percent, and "0.0%" would say exact about a figure that
+  // is not. Below a tenth, one significant figure: 0.02%, 0.003%.
+  if (percent > 0 && percent < 0.1) return `${Number(percent.toPrecision(1))}%`
+  return `${percent.toFixed(1)}%`
 }
 
 function kindList(kinds: readonly string[]): string {
@@ -796,13 +822,27 @@ function kindList(kinds: readonly string[]): string {
 }
 
 /**
+ * Whether the band reached anything — the count or the attribution — so the
+ * warning fires and the answer carries "weigh one to settle it". One
+ * predicate for the warning, the CSV's row and the receipt row (23rd
+ * dogfood, rule 5): two receipts that differed only in this read the same
+ * line. Primitive-shaped because the receipt row reads JSON a past build
+ * saved, where either flag may be missing.
+ */
+export function weighOneToSettle(
+  report: { couldChangeCount?: unknown; couldChangeBinding?: unknown } | null | undefined
+): boolean {
+  return report?.couldChangeCount === true || report?.couldChangeBinding === true
+}
+
+/**
  * The sentence for a count the tessellation could move — null otherwise.
  * Fires on `couldChangeCount` alone (wire rule 14): a 2% band around a weight
  * at 38% of the cap reaches nothing, and saying so on every answer would
  * teach readers to skip it.
  */
 export function meshVolumeWarning(report: MeshVolumeReport): string | null {
-  if (!report.couldChangeCount && !report.couldChangeBinding) return null
+  if (!weighOneToSettle(report)) return null
   const list = kindList(report.approximateKinds)
   const subject =
     report.approximateKinds.length === 1

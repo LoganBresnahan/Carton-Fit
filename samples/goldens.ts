@@ -35,6 +35,14 @@ export interface GoldenPart {
    * Absent means the file was not judged.
    */
   curvedKinds?: Readonly<Record<string, boolean | null>>
+  /**
+   * Per kind, a by-hand bracket for the deflection bound on its mesh volume
+   * (ADR-0015 addendum 3): curved area × sagitta over volume, for the facet
+   * counts occt plausibly chose. A bracket rather than a number because the
+   * facet count is occt's own; the test pins that the app's figure lands
+   * inside what the product's geometry allows.
+   */
+  volumeToleranceBounds?: Readonly<Record<string, readonly [number, number]>>
 }
 
 export const CUBE_STL: GoldenPart = {
@@ -81,7 +89,19 @@ export const AS1_ASSEMBLY: GoldenPart = {
   // are threaded, and the plate and brackets — planar to the eye, and called
   // planar by the 16th dogfood's reader — carry cylindrical bolt holes. Every
   // kind's mesh volume is a tessellation's, and none is exact.
-  curvedKinds: { plate: true, 'l-bracket': true, rod: true, bolt: true, nut: true }
+  curvedKinds: { plate: true, 'l-bracket': true, rod: true, bolt: true, nut: true },
+  // By hand, for 30–40 facets around each cylinder (occt's default deflection
+  // lands in that range on these radii; the app measures the step itself):
+  // sagitta s = r·(1 − cos(180°/n)), bound = curved area × s, over the volume.
+  //   plate: 180 × 150 × 20 mm with six Ø10 through-holes — curved area
+  //     6 × π × 10 × 20 = 3 770 mm², volume 540 000 − 6 × 1 571 = 530 575 mm³;
+  //     n = 40: s = 0.0193, 72.6 mm³ → 1.37e-4; n = 30: s = 0.0342, 129 mm³
+  //     → 2.43e-4. The 23rd dogfood's reader put the whole-volume 1.9% band
+  //     beside the 0.57 in³ of holes and found it wider than every curved
+  //     feature on the part put together; this is what the holes allow.
+  //   rod: Ø10 × 200 mm — curved area 6 283 mm², volume 15 708 mm³;
+  //     n = 40: 121 mm³ → 7.7e-3; n = 30: 215 mm³ → 1.37e-2.
+  volumeToleranceBounds: { plate: [1.3e-4, 2.5e-4], rod: [7e-3, 1.4e-2] }
 }
 
 /** One end-to-end packing scenario with a hand-computed answer. */

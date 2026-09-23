@@ -173,17 +173,88 @@ export function facetTurnDeg(normals: Float32Array, indices: Uint32Array): numbe
 }
 
 /**
- * How far, as a fraction either way, a tessellation whose facets turn by at
- * most `turnDeg` at a step can misstate the volume it encloses.
+ * A bound, in mm³, on how much volume a tessellation of curved faces can
+ * misstate — the deflection bound ADR-0015 addendum 2 deferred and addendum 3
+ * built, after the 23rd dogfood found the whole-volume fraction it shipped
+ * with was wider than every curved feature on the plate put together.
  *
- * A chord across an arc of θ radians loses 1 − sin θ/θ of the sector it
- * spans (segment over sector: (θ − sin θ)/θ); a doubly curved surface — a
- * fillet, a sphere — loses it in both directions, hence the 2. About 1.06%
- * per direction at 14.5°, the reference bolt's step. EITHER WAY: an inscribed
- * polygon understates a convex surface and overstates a hole. 0 when planar.
+ * Per triangle whose surface normals turn: the facet is a chord across an arc,
+ * and the arc sits at most one sagitta off the chord. For an edge of length
+ * `L`, the turn that matters is the normal change RESOLVED ALONG THE EDGE —
+ * `d = (n_q − n_p)·ê`, which is `2·sin(φ_e/2)` for the normal section's own
+ * angle φ_e — and the sagitta of the circular arc through both ends is
+ * `s = (L/2)·tan(φ_e/4)`. Resolving matters: on a cylinder a facet's diagonal
+ * spans the same 15° as its chord but is four times longer, and the chord's
+ * turn taken as the diagonal's would put the arc sixteen times further off
+ * than it is. The volume between the facet and the surface is at most the
+ * facet's area × the largest such sagitta over its edges. Summed over the
+ * mesh, that is a bound on the enclosed volume's error, and it scales with
+ * the CURVED area, which is what the old fraction did not: a plate that is a
+ * block with six holes gets six hole-walls' worth, not 2% of the block.
+ *
+ * A bound by construction on a singly curved face (a cylinder's true error
+ * is two-thirds of it: segment over chord × sagitta). On a doubly curved face
+ * the facet's centre can sit further off than its edges' midpoints, but the
+ * error is an integral and the facet's average deviation stays under the edge
+ * sagitta for any triangle a tessellator produces — a deliberately
+ * sliver-triangulated sphere is the case this does not promise. Either way in
+ * sign: an inscribed polygon understates a convex surface and overstates a
+ * hole. 0 on a planar solid.
  */
-export function tessellationTolerance(turnDeg: number): number {
-  if (turnDeg <= PLANAR_TURN_DEG) return 0
-  const theta = (turnDeg * Math.PI) / 180
-  return 2 * (1 - Math.sin(theta) / theta)
+export function tessellationErrorMm3(
+  positions: Float32Array,
+  normals: Float32Array,
+  indices: Uint32Array
+): number {
+  assertTriangles(indices)
+  // Below the planar threshold the normals agree to float32 noise, and a
+  // sagitta computed from noise is noise: skip the edge.
+  const planarHalfSine = Math.sin((PLANAR_TURN_DEG * Math.PI) / 360)
+  let total = 0
+  for (let t = 0; t < indices.length; t += 3) {
+    const corners = [indices[t] * 3, indices[t + 1] * 3, indices[t + 2] * 3]
+    let sagitta = 0
+    for (let e = 0; e < 3; e++) {
+      const p = corners[e]
+      const q = corners[(e + 1) % 3]
+      const ex = positions[q] - positions[p]
+      const ey = positions[q + 1] - positions[p + 1]
+      const ez = positions[q + 2] - positions[p + 2]
+      const length = Math.hypot(ex, ey, ez)
+      if (length === 0) continue
+      // The normal change along the edge: 2·sin(φ_e/2) for the normal
+      // section's angle. Sign says convex or concave; the bound is either way.
+      const along =
+        ((normals[q] - normals[p]) * ex +
+          (normals[q + 1] - normals[p + 1]) * ey +
+          (normals[q + 2] - normals[p + 2]) * ez) /
+        length
+      const halfSine = Math.min(1, Math.abs(along) / 2)
+      if (halfSine <= planarHalfSine) continue
+      const turn = 2 * Math.asin(halfSine)
+      sagitta = Math.max(sagitta, (length / 2) * Math.tan(turn / 4))
+    }
+    if (sagitta === 0) continue
+    const [a, b, c] = corners
+    const ux = positions[b] - positions[a]
+    const uy = positions[b + 1] - positions[a + 1]
+    const uz = positions[b + 2] - positions[a + 2]
+    const vx = positions[c] - positions[a]
+    const vy = positions[c + 1] - positions[a + 1]
+    const vz = positions[c + 2] - positions[a + 2]
+    const area = Math.hypot(uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx) / 2
+    total += area * sagitta
+  }
+  return total
+}
+
+/**
+ * The bound above as a fraction of the volume it qualifies — what a density
+ * weight is multiplied by for its band. 0 when the volume is 0 (nothing to
+ * be a fraction of) and 0 on a planar solid, where the error is 0.
+ */
+export function tessellationTolerance(errorMm3: number, volumeMm3: number): number {
+  const volume = Math.abs(volumeMm3)
+  if (volume === 0 || errorMm3 <= 0) return 0
+  return errorMm3 / volume
 }

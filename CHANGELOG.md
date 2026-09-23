@@ -12,6 +12,33 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **The curved-face band is the holes' own, not a fraction of the block.**
+  A part's density weight comes from a mesh volume, and the estimate bands
+  it by how far a faceted surface can sit off the true one. That band was a
+  fraction of the whole part; on a plate that is a block with six bolt
+  holes it was wider than all the holes put together, and at a 36.5 lb cap
+  it told you to weigh a plate the holes could not make that light. The
+  band is now summed over the curved faces alone — the plate's drops from
+  1.9% to 0.02%, a bolt's from 2.1% to 0.9% — and the *weigh one* note
+  fires only where a faceted feature really can move the count.
+  ([ADR-0015 addendum 3](doc/adr/0015-flag-open-meshes-dont-refuse.md))
+- **A saved estimate's row carries its weight cap and its hedge.** Two
+  receipts over the same part at different caps read the same line; now
+  the row says *36.5 lb cap*, and *weigh one to settle it* when the estimate
+  said so on screen. Rows saved before this carry no mark.
+  ([ADR-0017 addendum 10](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+- **Where both limits land on the same count, the label says so.** The
+  panel and the summary read *Limited by: weight and space* instead of
+  naming one limit above a note that named two. The CSV keeps its *Limited
+  by* cell for scripts and gains *Both limits* and *Weigh one to settle*
+  yes/no rows, plus *Carton outer* and *Wall* rows when you entered the
+  carton that way. ([ADR-0017 addendum 10](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+- **An assistant can clear an override or return to house without sending
+  null.** `set_part_weight` takes `clear: true` and `set_customer` takes
+  `house: true`, for clients whose tool calls drop a null; null still works.
+  A reader's session had ended stuck on a customer it could not leave.
+  ([ADR-0029 amendment 26](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 - **Four sentences said plainly.** On a fit where nothing bound, the estimate
   no longer ranks "weight is the closer limit" against the carton fill, two
   shares on different scales; both numbers stand. On a space-only fit the

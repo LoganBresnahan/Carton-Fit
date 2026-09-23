@@ -146,18 +146,21 @@ test('a density weight near the cap warns that the mesh volume could move the co
   await page.click('[data-testid="weight-density"]')
   await setField(page, 'density', 7.85)
   await setCarton(page, [24, 24, 24])
-  // The brief's station 4 cap: 3 plates at 9.18 lb sit at 27.6 lb, and a
-  // 1.9% band (0.17 lb a plate) reaches neither 35 from below nor 4 × 9.18
-  // = 36.7 from above. Robust, so silent. (A 24 in cube has room for many
-  // more plates, so the carton gate of amendment 23 is open here; the case
-  // where it closes is pinned on the wire at station 4's own carton.)
+  // The brief's station 4 cap: 3 plates at 9.18 lb sit at 27.55 lb, and the
+  // holes' band (ADR-0015 addendum 3: 1.6e-4, 0.0015 lb a plate) reaches
+  // neither 35 from below nor 4 × 9.18 = 36.73 from above. Robust, so silent.
+  // (A 24 in cube has room for many more plates, so the carton gate of
+  // amendment 23 is open here; the case where it closes is pinned on the
+  // wire at station 4's own carton.)
   await setField(page, 'max-weight', 35)
   await waitForEstimate(page)
   const warning = page.locator('[data-testid="results-mesh-volume"]')
   await expect(warning).toHaveCount(0)
 
-  // At 36.5 lb, four plates lighter by the band (36.0 lb) would slip under.
-  await setField(page, 'max-weight', 36.5)
+  // At 36.73 lb, four plates lighter by the band (36.727 lb) would slip
+  // under. (36.5 lb used to fire, on a band wider than the holes — the 23rd
+  // dogfood's finding.)
+  await setField(page, 'max-weight', 36.73)
   await waitForEstimate(page)
   await expect(warning).toBeVisible()
   await expect(warning).toContainText('“plate”')
@@ -168,7 +171,7 @@ test('a density weight near the cap warns that the mesh volume could move the co
   await page.click('[data-testid="copy-summary"]')
   await expect(page.locator('[data-testid="copy-summary"]')).toHaveText('Copied ✓')
   const text = await page.evaluate(() => navigator.clipboard.readText())
-  expect(text).toContain('approximate either way: plate 1.9%')
+  expect(text).toContain('approximate either way: plate 0.02%')
   expect(text).toContain('change the count')
 
   // Weigh one and enter it: the volume is out of the answer, so is the sentence.

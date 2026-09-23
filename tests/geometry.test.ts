@@ -5,7 +5,7 @@ import {
   facetTurnDeg,
   isClosedMesh,
   meshVolume,
-  PLANAR_TURN_DEG,
+  tessellationErrorMm3,
   tessellationTolerance
 } from '../src/renderer/src/core/geometry'
 
@@ -164,17 +164,101 @@ describe('facetTurnDeg (ADR-0015 addendum 2)', () => {
   })
 })
 
-describe('tessellationTolerance', () => {
-  it('is 0 at or below the planar threshold', () => {
-    expect(tessellationTolerance(0)).toBe(0)
-    expect(tessellationTolerance(PLANAR_TURN_DEG)).toBe(0)
+/** A cylinder faceted `n` times around, with the SURFACE normals occt emits:
+ *  radial at every side vertex, so each side triangle's normals turn by the
+ *  facet's own subtended angle across its chord edges and not at all along
+ *  its generator. Caps are planar fans. Closed, outward-wound. */
+function facetedCylinder(n: number, r: number, h: number): {
+  positions: Float32Array
+  normals: Float32Array
+  indices: Uint32Array
+} {
+  const positions: number[] = []
+  const normals: number[] = []
+  const push = (p: [number, number, number], nrm: [number, number, number]): void => {
+    positions.push(...p)
+    normals.push(...nrm)
+  }
+  const at = (i: number): [number, number] => [Math.cos((2 * Math.PI * i) / n), Math.sin((2 * Math.PI * i) / n)]
+  for (let i = 0; i < n; i++) {
+    const [c0, s0] = at(i)
+    const [c1, s1] = at(i + 1)
+    const b0: [number, number, number] = [r * c0, r * s0, 0]
+    const b1: [number, number, number] = [r * c1, r * s1, 0]
+    const t0: [number, number, number] = [r * c0, r * s0, h]
+    const t1: [number, number, number] = [r * c1, r * s1, h]
+    const n0: [number, number, number] = [c0, s0, 0]
+    const n1: [number, number, number] = [c1, s1, 0]
+    push(b0, n0); push(b1, n1); push(t1, n1)
+    push(b0, n0); push(t1, n1); push(t0, n0)
+    push([0, 0, 0], [0, 0, -1]); push(b1, [0, 0, -1]); push(b0, [0, 0, -1])
+    push([0, 0, h], [0, 0, 1]); push(t0, [0, 0, 1]); push(t1, [0, 0, 1])
+  }
+  return {
+    positions: new Float32Array(positions),
+    normals: new Float32Array(normals),
+    indices: new Uint32Array(positions.length / 3).map((_, i) => i)
+  }
+}
+
+describe('tessellationErrorMm3 (ADR-0015 addendum 3)', () => {
+  it('is 0 on a planar solid', () => {
+    const { positions, indices } = duplicatedCube(10)
+    const normals = new Float32Array(positions.length)
+    for (let t = 0; t < indices.length; t += 3) {
+      const [a, b, c] = [indices[t] * 3, indices[t + 1] * 3, indices[t + 2] * 3]
+      const ux = positions[b] - positions[a], uy = positions[b + 1] - positions[a + 1], uz = positions[b + 2] - positions[a + 2]
+      const vx = positions[c] - positions[a], vy = positions[c + 1] - positions[a + 1], vz = positions[c + 2] - positions[a + 2]
+      const nrm = [uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx]
+      const len = Math.hypot(...nrm)
+      for (const i of [a, b, c]) normals.set(nrm.map((x) => x / len), i)
+    }
+    expect(tessellationErrorMm3(positions, normals, indices)).toBe(0)
   })
 
-  it('is 2·(1 − sin θ/θ): about 2.1% at the reference bolt’s 14.5° step', () => {
-    // By hand: θ = 0.2531 rad, sin θ = 0.2504, 1 − 0.2504/0.2531 = 0.01065, ×2.
-    expect(tessellationTolerance(14.5)).toBeCloseTo(0.0213, 3)
-    // And 1.6% cross-section at twenty facets (18°) — the addendum's own
-    // figure — doubled for a doubly curved surface.
-    expect(tessellationTolerance(18) / 2).toBeCloseTo(0.0164, 3)
+  it('is the curved area × the chord sagitta: a bound the true error sits inside', () => {
+    // 24 facets around r = 10, h = 10. Chord c = 2r·sin(π/24) = 2.6105 mm,
+    // sagitta s = r(1 − cos(π/24)) = 0.085552 mm, side area per facet c·h.
+    // Bound = 24 · c·h·s = 53.60 mm³. The prism's volume is (n/2)r²sin(2π/n)h
+    // = 3105.83 mm³, and the true deficit against the cylinder (πr²h =
+    // 3141.59) is 35.76 mm³ — two-thirds of the bound, segment over
+    // chord × sagitta. The caps are planar and add nothing.
+    const { positions, normals, indices } = facetedCylinder(24, 10, 10)
+    const error = tessellationErrorMm3(positions, normals, indices)
+    expect(error).toBeCloseTo(53.6, 0)
+    const volume = meshVolume(positions, indices)
+    expect(volume).toBeCloseTo(3105.83, 1)
+    const trueDeficit = Math.PI * 100 * 10 - volume
+    expect(error).toBeGreaterThan(trueDeficit)
+    expect(error).toBeLessThan(2 * trueDeficit)
+    // As a fraction: 1.73%, against the old whole-volume 2·(1 − sin θ/θ) =
+    // 2.28% at this 15° step — and, unlike it, zero on a block that happens
+    // to have a hole in it (the 23rd dogfood's plate).
+    expect(tessellationTolerance(error, volume)).toBeCloseTo(0.01726, 4)
+  })
+
+  it('scales with the curved area, not the enclosed volume', () => {
+    // The same cylinder twice as tall: twice the side area, twice the bound,
+    // and the same fraction — a longer tube is no more faceted.
+    const short = facetedCylinder(24, 10, 10)
+    const tall = facetedCylinder(24, 10, 20)
+    const eShort = tessellationErrorMm3(short.positions, short.normals, short.indices)
+    const eTall = tessellationErrorMm3(tall.positions, tall.normals, tall.indices)
+    expect(eTall).toBeCloseTo(2 * eShort, 6)
+    expect(tessellationTolerance(eTall, meshVolume(tall.positions, tall.indices))).toBeCloseTo(
+      tessellationTolerance(eShort, meshVolume(short.positions, short.indices)),
+      9
+    )
+  })
+})
+
+describe('tessellationTolerance', () => {
+  it('is the bound over the volume, and 0 when either is nothing', () => {
+    expect(tessellationTolerance(53.6, 3105.83)).toBeCloseTo(0.01726, 4)
+    expect(tessellationTolerance(0, 3105.83)).toBe(0)
+    expect(tessellationTolerance(53.6, 0)).toBe(0)
+    // An inward-wound mesh has a negative signed volume; the fraction is of
+    // its size.
+    expect(tessellationTolerance(53.6, -3105.83)).toBeCloseTo(0.01726, 4)
   })
 })

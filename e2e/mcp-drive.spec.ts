@@ -233,6 +233,28 @@ test('set_part_weight drives the ADR-0018 overrides, and refuses unknown kinds h
     expect(report.outcome).toMatchObject({ count: capped.count })
     expect(report.binding.constraint).toBe('weight')
     expect(report.qualifications.weightInput).toMatchObject({ overriddenKinds: ['cube-10x10'] })
+
+    // Clearing, both spellings (ADR-0029 amendment 26): null for a client that
+    // can send it, `clear: true` for one that cannot — the 23rd dogfood's
+    // client could not, and reloaded the file to get rid of an override.
+    // The override was the only weight this cube had, so once it is gone the
+    // estimate's weightInput says nothing was supplied; the state's own
+    // override list is the field that proves the clear.
+    const clearedByFlag = await callStructured<Outcome>(client, 'set_part_weight', {
+      kind: 'cube-10x10',
+      clear: true
+    })
+    expect(clearedByFlag.state.inputs.overrides).toEqual([])
+    const again = await callStructured<Outcome>(client, 'set_part_weight', {
+      kind: 'cube-10x10',
+      weight: { value: capped.partWeightLb ?? 0, unit: 'lb' }
+    })
+    expect(again.state.inputs.overrides).toHaveLength(1)
+    const clearedByNull = await callStructured<Outcome>(client, 'set_part_weight', {
+      kind: 'cube-10x10',
+      weight: null
+    })
+    expect(clearedByNull.state.inputs.overrides).toEqual([])
   } finally {
     await client.close()
     await stopSpawnedApp(shim.profile)

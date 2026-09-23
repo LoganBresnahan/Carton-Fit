@@ -312,6 +312,43 @@ user on 2026-09-14 with the other three wording calls (ADR-0029 amendment
 25); addendum 7's rule that the dimensions are unrounded holds whichever
 set the name carries.
 
+## Addendum 10, 2026-09-23 (twenty-third dogfood): the receipt row carries the cap and the hedge, and the label names a tie
+
+Two findings from one reader, both the §2 rule — an answer qualified on
+screen stays qualified once it leaves the app — reaching a surface it had
+not.
+
+**The receipt row.** Two saved estimates over the same plate, one at a 35 lb
+cap and one at 36.5 lb, read identically — *3 fit · of plate · 11×6×10 in ·
+both limits* — and the second had carried *weigh one and enter it directly
+to settle it* on screen. The reader told them apart only by restoring one.
+The row now reads the cap from the receipt's own settings, in the unit it
+was typed in (*· 36.5 lb cap*), and carries *· weigh one to settle it* when
+the band reached the count or the attribution. The band flags are not in a
+receipt's settings and cannot be recomputed from one — the bound needs the
+parts — so `saveEstimate` writes the estimate's mesh-volume report beside
+the result, an additive key in the opaque blob like the overrides
+(ADR-0018 §3): no migration, and rows from before the key carry no mark,
+which reads as no claim rather than as settled. A save never fails over the
+mark; if the report cannot be built the key is null. One predicate for the
+warning, the CSV row and the receipt row (`weighOneToSettle`, rule 5).
+
+**The label.** At 36.5 lb both exports printed *Limited by: weight* one
+line above *Both limits land on 3*. The tie predicate (`bothLimitsProven`,
+addendum 7's run) reached the caption, the note and the receipt row and
+not the label between them. The panel and the summary now read
+`limitLabel`, which says *weight and space* on a proven tie and the one
+limit otherwise. The CSV's *Limited by* cell keeps its value — a script
+reads it — and the tie is its own row, *Both limits* yes/no, beside *Limit
+bound*; a *Weigh one to settle* yes/no row sits beside it for the band, so
+the hedge is a cell a script can test and not only the Warning prose at
+the foot. Two smaller rows from the same reader: *Carton outer* and *Wall*
+when the carton was entered as outer with a wall, which the summary body
+has printed since §1 and the CSV never had. Not changed: the CSV's *Limited
+by, space* over *Limit bound, no* on a fit where nothing bound — addendum 2
+kept the cell's name for scripts and put the qualification in the row
+beside it, and the summary's *Only limit* is prose the CSV cannot carry.
+
 ## Revisit triggers
 
 - A real request to hand a formatted document to a customer → PDF, seeded from

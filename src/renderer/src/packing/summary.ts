@@ -1,5 +1,12 @@
-import { lengthUnitLabel, mmToLength, type UnitSystem } from '../core/units'
-import { bothLimitsProven } from './verdict'
+import {
+  gToWeight,
+  lengthUnitLabel,
+  mmToLength,
+  WEIGHT_UNITS,
+  type UnitSystem,
+  type WeightUnit
+} from '../core/units'
+import { bothLimitsProven, weighOneToSettle } from './verdict'
 import type { EstimateRow } from '../../../shared/storage'
 
 // One-line descriptions of a SAVED estimate (ADR-0016).
@@ -88,6 +95,33 @@ function bindingPhrase(result: Record<string, unknown> | null): string | null {
 }
 
 /**
+ * The weight cap the answer was computed under (23rd dogfood, ADR-0017
+ * addendum 10): receipts at 35 lb and 36.5 lb read identically, and the only
+ * way to tell them apart was to restore one. The cap is in the row's own
+ * settings, in the unit the person typed it in. An infinite cap saved as JSON
+ * is null, and a row from before the unit was stored keeps its line.
+ */
+function capPhrase(settings: Record<string, unknown> | null): string | null {
+  const grams = num(settings?.maxWeightG)
+  if (grams === null || !Number.isFinite(grams) || grams <= 0) return null
+  const unit = settings?.maxWeightUnit
+  if (!WEIGHT_UNITS.includes(unit as WeightUnit)) return null
+  const shown = Math.round(gToWeight(grams, unit as WeightUnit) * 100) / 100
+  return `${shown} ${unit} cap`
+}
+
+/**
+ * The hedge the answer carried on screen (same run, same reader): a receipt
+ * whose band reached the cap or the attribution said "weigh one and enter it
+ * directly to settle it" beside its count, and the list said nothing. Reads
+ * the flags the save wrote into the result; a row without them makes no
+ * claim either way.
+ */
+function bandPhrase(result: Record<string, unknown> | null): string | null {
+  return weighOneToSettle(record(result?.meshVolumes)) ? 'weigh one to settle it' : null
+}
+
+/**
  * Weights typed by hand (ADR-0018 §3), which the row carries and the line did
  * not read (11th dogfood, 2026-09-08): "2 fit · of plate · weight-limited" was
  * 2 only because the plate was 12 lb by hand, and read identically to the
@@ -124,11 +158,17 @@ export function estimateSummary(row: EstimateRow): string {
   const carton = cartonPhrase(settings)
   if (carton) parts.push(carton)
 
+  const cap = capPhrase(settings)
+  if (cap) parts.push(cap)
+
   const limit = bindingPhrase(result)
   if (limit) parts.push(limit)
 
   const byHand = overridePhrase(settings)
   if (byHand) parts.push(byHand)
+
+  const band = bandPhrase(result)
+  if (band) parts.push(band)
 
   // A row we cannot read at all still deserves a row in the list — it is the
   // user's data, and silently hiding it would be worse than saying so.

@@ -158,8 +158,11 @@ export const inspectOutput = {
             volumeTolerance: z
               .number()
               .describe(
-                'How far, as a FRACTION either way, the enclosed volume can be off at that facet ' +
-                  'size: 2·(1 − sin θ/θ). 0 when planar. Multiply a density weight by it for the band.'
+                'How far, as a FRACTION either way, the enclosed volume can be off: a bound from ' +
+                  'the curved faces alone — each facet’s area × how far the surface can sit off it ' +
+                  'at that facet size, summed, over the volume (ADR-0015 addendum 3). 0 when planar; ' +
+                  'a block with holes gets the holes’ worth, not the block’s. Multiply a density ' +
+                  'weight by it for the band.'
               ),
             volumeTolerancePercent: z
               .number()
@@ -659,11 +662,30 @@ export const setInputsInput = {
   outputUnits: outputUnitsInput
 }
 
+// Two ways to say "clear", on purpose (ADR-0029 amendment 26, 23rd dogfood):
+// a client whose serializer drops a null — the first one did, and its session
+// ended with an override it could not remove and a customer it could not
+// leave — has `clear: true`, a plain boolean that every serializer carries.
+// Null stays for clients that can send it. Omission is NOT a third way: on
+// set_inputs an omitted field means "leave it", and one surface keeps one
+// convention, so the handler refuses a call that gives neither and one that
+// gives both.
 export const setPartWeightInput = {
   kind: z.string().describe('A part kind name as get_app_state or inspect_model reports it.'),
   weight: z
     .union([weightValue, z.null()])
-    .describe('The measured weight of one part of this kind, or null to clear the override and return to the computed weight.'),
+    .optional()
+    .describe(
+      'The measured weight of one part of this kind, or null to clear the override and return to the computed weight. ' +
+        'If your client cannot send null, omit this and pass clear: true instead.'
+    ),
+  clear: z
+    .boolean()
+    .optional()
+    .describe(
+      'true clears the override for this kind — the same as weight: null, for clients that cannot send null. ' +
+        'Give weight or clear: true, not both and not neither.'
+    ),
   outputUnits: outputUnitsInput
 }
 
@@ -745,7 +767,18 @@ export const customersOutput = {
 export const setCustomerInput = {
   id: z
     .union([z.number().int(), z.null()])
-    .describe('A customer id as list_customers reports it, or null for house.'),
+    .optional()
+    .describe(
+      'A customer id as list_customers reports it, or null for house. ' +
+        'If your client cannot send null, omit this and pass house: true instead.'
+    ),
+  house: z
+    .boolean()
+    .optional()
+    .describe(
+      'true makes the app work for house — the same as id: null, for clients that cannot send null. ' +
+        'Give id or house: true, not both and not neither.'
+    ),
   outputUnits: outputUnitsInput
 }
 

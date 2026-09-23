@@ -641,12 +641,15 @@ describe('every answer arrives qualified', () => {
       expect(weightInput.supplied).toBe(true)
       if (!weightInput.supplied) return
       // The plate has bolt holes — cylinders — so its mesh volume is a
-      // tessellation's, whatever the eye says. By hand: 3 plates at 9.18 lb
-      // sit at 27.6 lb; a 1.9% band is 0.17 lb a plate; neither 3 heavier
-      // (28.1) nor 4 lighter (36.0) crosses 35.
+      // tessellation's, whatever the eye says. The band is the deflection
+      // bound (ADR-0015 addendum 3): six Ø10 hole-walls' worth of sagitta
+      // over the whole plate, 1.3e-4..2.5e-4 by hand (samples/goldens.ts),
+      // where the whole-volume fraction it replaced said 1.9% — wider than
+      // the holes themselves (23rd dogfood). 3 plates at 9.18 lb sit at
+      // 27.55 lb, and a band of 0.0015 lb a plate reaches nothing near 35.
       expect(weightInput.meshVolumes.approximateKinds).toEqual(['plate'])
-      expect(weightInput.meshVolumes.volumeTolerance).toBeGreaterThan(0.015)
-      expect(weightInput.meshVolumes.volumeTolerance).toBeLessThan(0.025)
+      expect(weightInput.meshVolumes.volumeTolerance).toBeGreaterThan(1.3e-4)
+      expect(weightInput.meshVolumes.volumeTolerance).toBeLessThan(2.5e-4)
       // The percent sibling is the same number ×100 (amendment 23).
       expect(weightInput.meshVolumes.volumeTolerancePercent).toBeCloseTo(
         weightInput.meshVolumes.volumeTolerance * 100,
@@ -663,23 +666,33 @@ describe('every answer arrives qualified', () => {
       expect(weightInput.meshVolumes.note).toBeNull()
     })
 
-    it('stays silent at 36.5 lb in the brief’s carton: the weight band straddles the cap, but the carton is full (18th dogfood)', async () => {
-      // 4 × 9.18 = 36.7 lb > 36.5 ≥ 4 × (9.18 − 0.17) = 36.0 — by weight a
-      // fourth is ambiguous. But 9 × 4 × 8 in inside takes three plates and
-      // no more at any weight (spaceOnlyCount 3), and the 18th reader was
-      // sent to weigh a plate by a note printed beside the field proving no
-      // weight could matter.
+    it('is silent at 36.5 lb: four plates lighter by the holes’ band are still 36.73 lb (23rd dogfood)', async () => {
+      // 4 × 9.1832 = 36.733 lb, and the band is 1.6e-4 of that — 0.006 lb —
+      // so the lightest four plates the tessellation allows are 36.727 lb,
+      // over 36.5. The old 1.9% band put them at 36.04 lb and sent the
+      // reader to weigh a plate the holes could not make that light.
       const report = await station4(36.5)
       expect(report.outcome).toMatchObject({ mode: 'max-quantity', count: 3 })
       if (report.outcome.mode !== 'max-quantity') return
       expect(report.outcome.spaceOnlyCount).toEqual({ known: true, count: 3 })
       const { weightInput } = report.qualifications
       if (!weightInput.supplied) throw new Error('weight was supplied')
+      expect(weightInput.meshVolumes).toMatchObject({ couldChangeCount: false, couldChangeBinding: false, note: null })
+    })
+
+    it('flags the attribution, not the count, when the cap sits inside the band and the carton is full (18th/21st dogfoods)', async () => {
+      // 36.73 lb: four plates nominal (36.733) are over it, four at the light
+      // end of the band (36.727) are under — by weight a fourth is ambiguous.
+      // But 9 × 4 × 8 in inside takes three plates and no more at any weight
+      // (spaceOnlyCount 3), so the count holds and only "the weight cap
+      // stopped it" is inside the band (amendment 24). The note says so.
+      const report = await station4(36.73)
+      expect(report.outcome).toMatchObject({ mode: 'max-quantity', count: 3 })
+      if (report.outcome.mode !== 'max-quantity') return
+      expect(report.outcome.spaceOnlyCount).toEqual({ known: true, count: 3 })
+      const { weightInput } = report.qualifications
+      if (!weightInput.supplied) throw new Error('weight was supplied')
       expect(weightInput.meshVolumes.couldChangeCount).toBe(false)
-      // But the ATTRIBUTION is inside the band (21st dogfood, amendment 24):
-      // four plates 1.9% lighter are 36.04 lb, under the cap, and at that end
-      // "the weight cap stopped it" is false — only the carton did. The note
-      // says so, and says the count holds.
       expect(weightInput.meshVolumes.couldChangeBinding).toBe(true)
       expect(weightInput.meshVolumes.note).toMatch(/the count holds, but which limit stopped it/)
       expect(weightInput.meshVolumes.note).not.toMatch(/change the count/)
@@ -692,11 +705,11 @@ describe('every answer arrives qualified', () => {
       expect(weightInput.meshVolumes).toMatchObject({ couldChangeCount: false, couldChangeBinding: false, note: null })
     })
 
-    it('fires at 36.5 lb in a carton with room, where a fourth plate lighter by the band would slip under', async () => {
+    it('fires at 36.73 lb in a carton with room, where a fourth plate lighter by the band would slip under', async () => {
       // The reader's isolating carton: outer 11 × 10 × 10, inner 9 × 8 × 8,
       // which places nine plates with the cap lifted. Same cap, same band,
       // and now the count genuinely could move.
-      const report = await station4(36.5, [11, 10, 10])
+      const report = await station4(36.73, [11, 10, 10])
       expect(report.outcome).toMatchObject({ count: 3 })
       if (report.outcome.mode !== 'max-quantity') return
       expect(report.outcome.spaceOnlyCount.known && report.outcome.spaceOnlyCount.count).toBeGreaterThan(3)
@@ -744,19 +757,28 @@ describe('every answer arrives qualified', () => {
       expect(Math.max(...perKind.map((entry) => entry.volumeTolerance))).toBe(volumeTolerance)
       const bolt = perKind.find((entry) => entry.kind === 'bolt')!
       const plate = perKind.find((entry) => entry.kind === 'plate')!
+      // A bolt is mostly curved surface; a plate is a block with holes. The
+      // headline is the rod's, the kind whose volume is most nearly all
+      // cylinder (addendum 3: the bound scales with curved area over volume).
+      const rod = perKind.find((entry) => entry.kind === 'rod')!
       expect(bolt.volumeTolerance).toBeGreaterThan(plate.volumeTolerance)
-      expect(bolt.volumeTolerance).toBe(volumeTolerance)
-      // Each kind's figure agrees with inspect_model's, the same function.
+      expect(rod.volumeTolerance).toBe(volumeTolerance)
+      // Each kind's figure agrees with inspect_model's, the same function —
+      // to float32 placement: the estimate takes the largest over a kind's
+      // instances, inspect_model reads one, and a bound summed over a placed
+      // mesh differs from the same mesh elsewhere in the ninth figure.
       const inspect = await call<InspectReport>('inspect_model', { path: AS1 })
       for (const entry of perKind) {
         const kind = inspect.kinds.find((k) => k.kind === entry.kind)!
-        expect(kind.tessellation.known && kind.tessellation.volumeTolerance).toBe(entry.volumeTolerance)
+        expect(kind.tessellation.known && kind.tessellation.volumeTolerance).toBeCloseTo(entry.volumeTolerance, 7)
       }
     })
 
-    it('fires at 28 lb, where three plates heavier by the band would exceed it', async () => {
-      // 3 × (9.18 + 0.17) = 28.07 lb > 28 ≥ 27.6.
-      const report = await station4(28)
+    it('fires at 27.552 lb, where three plates heavier by the band would exceed it', async () => {
+      // 3 × 9.1832 = 27.5495 lb ≤ 27.552 < 3 × 9.1832 × (1 + 1.6e-4) = 27.554.
+      // The old band fired at 28; the holes' band needs the cap within a few
+      // thousandths of a pound, which is how far a faceted hole can move it.
+      const report = await station4(27.552)
       expect(report.outcome).toMatchObject({ count: 3 })
       const { weightInput } = report.qualifications
       if (!weightInput.supplied) throw new Error('weight was supplied')

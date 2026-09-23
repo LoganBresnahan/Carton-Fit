@@ -485,6 +485,45 @@ describe('reads answer from the database, not the window', () => {
       expect(report.state.version).toBe('9.9.9+abc1234')
     })
 
+    // ADR-0029 amendment 26 (23rd dogfood): the first client that could not
+    // send a JSON null ended its session stuck on a customer. Both clearing
+    // tools take a boolean sibling; exactly one spelling per call.
+    it('set_customer takes house: true as the null a client cannot send', async () => {
+      await call('set_customer', { id: 1 })
+      const report = await call<{ state: { customer: unknown } }>('set_customer', { house: true })
+      expect(drive.calls.at(-1)).toEqual({ type: 'set_customer', id: null, units: undefined })
+      expect(report.state.customer).toBeNull()
+    })
+
+    it('set_customer refuses neither spelling and both spellings', async () => {
+      const neither = await callExpectingError('set_customer', {})
+      expect(neither).toMatch(/house: true/)
+      const both = await callExpectingError('set_customer', { id: 1, house: true })
+      expect(both).toMatch(/not both/)
+      // house: false is not a spelling of anything — it says nothing about id.
+      const falseFlag = await callExpectingError('set_customer', { house: false })
+      expect(falseFlag).toMatch(/not neither/)
+      expect(drive.calls.filter((c) => c.type === 'set_customer')).toEqual([])
+    })
+
+    it('set_part_weight takes clear: true as the null a client cannot send', async () => {
+      await call('set_part_weight', { kind: 'plate', clear: true })
+      expect(drive.calls.at(-1)).toEqual({
+        type: 'set_part_weight',
+        partKind: 'plate',
+        grams: null,
+        units: undefined
+      })
+      const neither = await callExpectingError('set_part_weight', { kind: 'plate' })
+      expect(neither).toMatch(/clear: true/)
+      const both = await callExpectingError('set_part_weight', {
+        kind: 'plate',
+        weight: { value: 1, unit: 'g' },
+        clear: true
+      })
+      expect(both).toMatch(/not both/)
+    })
+
     it('publishes no way to create a customer', async () => {
       const { tools } = await client.listTools()
       expect(tools.map((t) => t.name).filter((n) => /create|add|new/.test(n))).toEqual([])

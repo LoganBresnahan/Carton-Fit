@@ -1,4 +1,11 @@
-import { facetTurnDeg, isClosedMesh, meshVolume, PLANAR_TURN_DEG, tessellationTolerance } from '../core/geometry'
+import {
+  facetTurnDeg,
+  isClosedMesh,
+  meshVolume,
+  PLANAR_TURN_DEG,
+  tessellationErrorMm3,
+  tessellationTolerance
+} from '../core/geometry'
 import { densityWeightG } from '../core/units'
 import { kindOf, overrideForPart, type PartWeightOverrides } from './kinds'
 import { innerCartonMm, type PackingSettings } from './settings'
@@ -109,20 +116,46 @@ export function openMeshParts(
     .map((part) => part.name)
 }
 
-// The tessellation's coarseness, memoized like closedness and for the same
-// reason. Only a B-rep's surface normals can answer (ADR-0015 addendum 2);
-// a mesh-origin part, or one with no normals, answers "unknown" as null.
-const turnCache = new WeakMap<ImportedPart, number | null>()
+// The tessellation's coarseness and its error bound, memoized like closedness
+// and for the same reason. Only a B-rep's surface normals can answer
+// (ADR-0015 addendum 2); a mesh-origin part, or one with no normals, answers
+// "unknown" as null.
+const tessellationCache = new WeakMap<ImportedPart, Tessellation | null>()
+
+/** What one part's mesh says about the surfaces it was cut from. */
+export interface Tessellation {
+  /** Largest turn of the surface normals within one triangle, in degrees. */
+  turnDeg: number
+  /** The deflection bound on the enclosed volume's error, mm³ (addendum 3). */
+  errorMm3: number
+  /** The enclosed volume the bound qualifies, mm³. */
+  volumeMm3: number
+  /** `errorMm3 / volumeMm3` — the fraction a density weight is banded by. */
+  tolerance: number
+}
+
+/** The tessellation facts for one part — or null when its normals cannot say
+ *  (an STL, or no normals at all). One measurement for the warning, the
+ *  exports and inspect_model. */
+export function tessellationOf(part: ImportedPart): Tessellation | null {
+  const cached = tessellationCache.get(part)
+  if (cached !== undefined) return cached
+  let facts: Tessellation | null = null
+  if (part.origin === 'brep' && part.normals) {
+    const turnDeg = facetTurnDeg(part.normals, part.indices)
+    const errorMm3 =
+      turnDeg > PLANAR_TURN_DEG ? tessellationErrorMm3(part.positions, part.normals, part.indices) : 0
+    const volumeMm3 = meshVolume(part.positions, part.indices)
+    facts = { turnDeg, errorMm3, volumeMm3, tolerance: tessellationTolerance(errorMm3, volumeMm3) }
+  }
+  tessellationCache.set(part, facts)
+  return facts
+}
 
 /** Largest turn of the surface normals within one triangle, in degrees — or
- *  null when the part's normals cannot say (an STL, or no normals at all). */
+ *  null when the part's normals cannot say. */
 export function facetTurnOf(part: ImportedPart): number | null {
-  const cached = turnCache.get(part)
-  if (cached !== undefined) return cached
-  const turn =
-    part.origin === 'brep' && part.normals ? facetTurnDeg(part.normals, part.indices) : null
-  turnCache.set(part, turn)
-  return turn
+  return tessellationOf(part)?.turnDeg ?? null
 }
 
 /** The kinds whose counted weight rests on an approximate volume, and how
@@ -134,7 +167,7 @@ export interface ApproximateVolumes {
    *  for the headline; the band and the exports read `perKind` (18th dogfood:
    *  the bolt's 2.1% was being quoted for a pack that was 69% plate at 1.9%). */
   tolerance: number
-  /** Each kind's own `tessellationTolerance`, in `kinds` order. */
+  /** Each kind's own deflection-bound tolerance (addendum 3), in `kinds` order. */
   perKind: Array<{ kind: string; tolerance: number }>
 }
 
@@ -159,16 +192,15 @@ export function approximateVolumeKinds(
   for (const part of partsForRequest(parts, settings, unitPartName)) {
     if (overrideForPart(part, names, overrides) !== null) continue
     if (!isClosed(part)) continue
-    const turn = facetTurnOf(part)
-    if (turn === null || turn <= PLANAR_TURN_DEG) continue
+    const facts = tessellationOf(part)
+    if (facts === null || facts.turnDeg <= PLANAR_TURN_DEG) continue
     const kind = kindOf(part.name, names)
-    turnByKind.set(kind, Math.max(turnByKind.get(kind) ?? 0, turn))
+    // Instances of a kind share a mesh up to placement, so one speaks for
+    // all; the max is for the day one does not.
+    turnByKind.set(kind, Math.max(turnByKind.get(kind) ?? 0, facts.tolerance))
   }
   if (turnByKind.size === 0) return none
-  const perKind = [...turnByKind].map(([kind, turn]) => ({
-    kind,
-    tolerance: tessellationTolerance(turn)
-  }))
+  const perKind = [...turnByKind].map(([kind, tolerance]) => ({ kind, tolerance }))
   return {
     kinds: perKind.map((entry) => entry.kind),
     tolerance: Math.max(...perKind.map((entry) => entry.tolerance)),

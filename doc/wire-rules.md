@@ -1,9 +1,9 @@
-# Wire rules — what twenty-two dogfood runs taught about the MCP surface
+# Wire rules — what twenty-three dogfood runs taught about the MCP surface
 
 The rules a new tool, a new field, or a new sentence on the MCP surface has
 to pass before it ships. Each one was learned by a reader with a calculator
 finding a sentence no test asserted; the run and the amendment that taught it
-are named so the reasoning can be read in full. **Twenty-two runs found one
+are named so the reasoning can be read in full. **Twenty-three runs found one
 wrong number** (rule 6). Everything else was a sentence.
 
 Read this before writing the output schema of a tool. Read it again before
@@ -105,6 +105,17 @@ writing the prose that reads the schema. The order matters — see rule 1.
     reference file for eight runs. Before a warning ships, derive the path
     from the condition to the number; if there is none, there is no warning.
     *(Amendment 19; roadmap item 38.)*
+15. **A null is never the only spelling of an act.** Two tools took `null`
+    to mean *clear* and *house*; the first client whose serializer dropped
+    nulls could set an override and not remove it, enter a customer and
+    not leave, and ended its session asking the person at the keyboard
+    (rule 11) to do what the wire could not. The published schema was
+    right and the server parsed null — the client never sent one. Every
+    clearing act now has a boolean twin (`clear: true`, `house: true`)
+    beside the nullable field, and the handler refuses neither-and-both
+    rather than letting omission mean anything: on `set_inputs` omission
+    means *leave it*, and one surface keeps one convention.
+    *(Amendment 26; roadmap item 48.)*
 
 ## Before a new tool: the claims table
 
@@ -145,12 +156,12 @@ in a minute:
   sibling that answers it (ADR-0029 amendment 23), and two readers have now
   proposed the rename after reading the sibling.
 - **A `known: false` `packedWeight` (or a null `inputs.weight`) on a
-  space-only answer.** Three readers, from both sides of the wire. The value
+  space-only answer.** Four readers, from both sides of the wire. The value
   is the sum of the weights as given — 0 lb for a part nobody weighed — and
   `weightInput.supplied: false` beside it is the claim that it is not a
   measurement; every rendered surface reads that and prints *none* or a
   blank. Changing the shape of a value scripts read is a major under
-  ADR-0020 §3 (rule 7). *(Roadmap items 41, 46.)*
+  ADR-0020 §3 (rule 7). *(Roadmap items 41, 46, 48.)*
 - **A `presetSavedWithOverrides` comparison.** A preset does not record
   overrides at all (ADR-0034 §2); the seam is the preset-vs-receipt mental
   model, pinned under roadmap item 33.

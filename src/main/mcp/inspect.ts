@@ -4,10 +4,9 @@ import {
   computeAabb,
   isClosedMesh,
   meshVolume,
-  PLANAR_TURN_DEG,
-  tessellationTolerance
+  PLANAR_TURN_DEG
 } from '../../renderer/src/core/geometry'
-import { facetTurnOf } from '../../renderer/src/packing/request'
+import { tessellationOf as measureTessellation } from '../../renderer/src/packing/request'
 import type { Known } from './estimate'
 import { groupByKind, instanceAgreement } from '../../renderer/src/packing/kinds'
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
@@ -112,8 +111,8 @@ export interface InspectQualifications {
 function tessellationOf(
   part: ImportedPart
 ): KindReport['tessellation'] {
-  const turn = facetTurnOf(part)
-  if (turn === null) {
+  const facts = measureTessellation(part)
+  if (facts === null) {
     return {
       known: false,
       reason:
@@ -123,10 +122,10 @@ function tessellationOf(
   }
   return {
     known: true,
-    curvedFaces: turn > PLANAR_TURN_DEG,
-    facetTurnDeg: turn,
-    volumeTolerance: tessellationTolerance(turn),
-    volumeTolerancePercent: percentOf(tessellationTolerance(turn))
+    curvedFaces: facts.turnDeg > PLANAR_TURN_DEG,
+    facetTurnDeg: facts.turnDeg,
+    volumeTolerance: facts.tolerance,
+    volumeTolerancePercent: percentOf(facts.tolerance)
   }
 }
 

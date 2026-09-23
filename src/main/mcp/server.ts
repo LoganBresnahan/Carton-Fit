@@ -116,6 +116,35 @@ function toolError(err: unknown): CallToolResult {
   return { content: [{ type: 'text', text: message }], isError: true }
 }
 
+/**
+ * One value from two spellings of "clear" (ADR-0029 amendment 26). The 23rd
+ * dogfood's client never delivered a JSON null — both clears came back
+ * "Invalid input" and the session ended with an override it could not remove
+ * and a customer it could not leave — so each clearing tool also takes a
+ * boolean sibling. Exactly one of the two must be given: neither is not a
+ * quiet no-op (on set_inputs an omitted field means "leave it", and this is
+ * the same surface), and both is a contradiction the caller should hear about.
+ */
+function clearOrValue<V, R>(
+  valueName: string,
+  value: V | null | undefined,
+  flagName: string,
+  flag: boolean | undefined,
+  convert: (v: V) => R
+): R | null {
+  const hasValue = value !== undefined
+  if (flag === true && hasValue) {
+    throw new Error(`Give ${valueName} or ${flagName}: true, not both.`)
+  }
+  if (flag === true) return null
+  if (!hasValue) {
+    throw new Error(
+      `Give ${valueName} (null to clear) or ${flagName}: true — one of them, not neither.`
+    )
+  }
+  return value === null ? null : convert(value)
+}
+
 /** A successful reply. The report goes back BOTH as structured content — which
  *  the SDK validates against the tool's output schema, so a dropped
  *  qualification fails the call — and as text, because a client that does not
@@ -320,17 +349,19 @@ function registerDriveTools(server: McpServer, drive: DriveBridge, version: stri
       description:
         'Set the weight of every part of one kind by hand (ADR-0018), overriding the direct or ' +
         'density-derived weight — use it when someone has actually weighed the part, which also ' +
-        'retires the open-mesh warning for that kind. Pass null to clear. ' +
+        'retires the open-mesh warning for that kind. Pass weight: null to clear — or clear: true ' +
+        'if your client cannot send null. ' +
         SETTLED,
       inputSchema: wire(setPartWeightInput),
       outputSchema: wire(driveOutcomeOutput)
     },
-    async ({ kind, weight, outputUnits }) => {
+    async ({ kind, weight, clear, outputUnits }) => {
       try {
+        const grams = clearOrValue('weight', weight, 'clear', clear, toG)
         const result = await drive.call({
           type: 'set_part_weight',
           partKind: kind,
-          grams: weight === null ? null : toG(weight),
+          grams,
           units: outputUnits
         })
         if (result.kind !== 'outcome') throw new Error('unexpected drive reply')
@@ -586,15 +617,17 @@ function registerDataTools(
       title: 'Switch who the app is working for',
       description:
         'Make the running app work for a customer (an id from list_customers) or for house ' +
-        '(null). From then on its lists show that customer’s presets and receipts plus ' +
-        'house, and anything saved is tagged for them. Changes what the app shows and ' +
-        'tags, never what it computes; not an undo step. Answers with where the app stands.',
+        '(id: null — or house: true if your client cannot send null). From then on its lists ' +
+        'show that customer’s presets and receipts plus house, and anything saved is tagged ' +
+        'for them. Changes what the app shows and tags, never what it computes; not an undo ' +
+        'step. Answers with where the app stands.',
       inputSchema: wire(setCustomerInput),
       outputSchema: wire(driveOutcomeOutput)
     },
-    async ({ id, outputUnits }) => {
+    async ({ id, house, outputUnits }) => {
       try {
-        const result = await drive.call({ type: 'set_customer', id, units: outputUnits })
+        const customerId = clearOrValue('id', id, 'house', house, (v) => v)
+        const result = await drive.call({ type: 'set_customer', id: customerId, units: outputUnits })
         if (result.kind !== 'outcome') throw new Error('unexpected drive reply')
         return toolOk(stamped(result.outcome, version))
       } catch (err) {

@@ -1635,6 +1635,44 @@ true."
 The fourth call, the export filename, is ADR-0017 addendum 9. Twenty-two
 runs and seventeen straight matches; the loop on this surface rests again.
 
+### Amendment 26 (2026-09-23, twenty-third dogfood, roadmap item 48) — a clear needs a spelling every client can send, and the band is the holes' own
+
+The first run against ADR-0035 amendment 2, on a machine with a customer
+and a second document. Eighteenth straight run of matching counts; two of
+its four findings are on the wire.
+
+- **`null` never reached the server.** `set_part_weight {weight: null}` and
+  `set_customer {id: null}` both came back `-32602 Invalid input` from the
+  client, and the session ended with an override the reader could only
+  remove by reloading the file and a customer it could not leave — it
+  closed by asking the person to switch back in the window, which the brief
+  forbids and the tool's failure forced. Not a schema defect: the published
+  schema is `anyOf [{type: integer}, {type: null}]`, the server parses a
+  real null, and `e2e/mcp-data-tools.spec.ts` sends one over the real stdio
+  transport. What arrived was a dropped key or the string `"null"`; zod
+  says *Invalid input* for both, so the message cannot tell which. The fix
+  is a spelling every serializer carries: **`set_customer {house: true}`**
+  and **`set_part_weight {kind, clear: true}`**, booleans beside the
+  nullable field, with null still accepted. `id` and `weight` become
+  optional so the boolean can stand alone — additive under rule 7 — and the
+  handler (`clearOrValue`) refuses a call that gives neither spelling and one
+  that gives both: on `set_inputs` an omitted field means *leave it*, and
+  one surface keeps one convention, so omission is not a third way to
+  clear. Both descriptions name the sibling. Rule 15 of `doc/wire-rules.md`
+  records the general form.
+- **`volumeTolerance` carries the deflection bound** (ADR-0015 addendum 3).
+  Same field, same shape, same percent sibling; a value two orders of
+  magnitude smaller on a block with holes, and the `inspect_model`
+  description says what the number now is. `couldChangeCount` and
+  `couldChangeBinding` read the new band unchanged, so the 36.5 lb note the
+  reader was sent to weigh a plate by no longer fires, and the wire tests
+  moved to the caps that do (27.552 and 36.73 lb) with the arithmetic
+  beside them.
+
+The receipt row and the export label from the same run are ADR-0017
+addendum 10. Refuted and recorded: `packedWeight {0, lb}` on a space-only
+answer, the fourth reader (standing refutation).
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

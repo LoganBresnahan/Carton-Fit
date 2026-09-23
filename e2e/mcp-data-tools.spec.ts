@@ -198,6 +198,9 @@ test.describe('the data tier against a real database', () => {
       expect(counted.state.customer).toBeNull()
       const toHouse = await callStructured<Outcome>(client, 'set_customer', { id: null })
       expect(toHouse.state.customer).toBeNull()
+      // The boolean spelling, over the real transport (ADR-0029 amendment 26).
+      const toHouseFlag = await callStructured<Outcome>(client, 'set_customer', { house: true })
+      expect(toHouseFlag.state.customer).toBeNull()
       const noSuchCustomer = await client.callTool({ name: 'set_customer', arguments: { id: 99 } })
       expect(noSuchCustomer.isError).toBe(true)
       expect(JSON.stringify(noSuchCustomer.content)).toMatch(/created at the app/)

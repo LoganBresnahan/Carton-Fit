@@ -203,11 +203,21 @@ describe('inspect_model against the hand-computed goldens', () => {
         if (curved) {
           // Whatever deflection occt chose, the step is a real tessellation's
           // — coarser than noise, finer than a crease — and the tolerance is
-          // what 2·(1 − sin θ/θ) gives for it.
+          // the deflection bound for it (ADR-0015 addendum 3): positive, and
+          // never the old whole-volume 2·(1 − sin θ/θ), which the 23rd
+          // dogfood found wider than every curved feature on the plate.
           expect(t.facetTurnDeg).toBeGreaterThan(1)
           expect(t.facetTurnDeg).toBeLessThan(30)
           const theta = (t.facetTurnDeg * Math.PI) / 180
-          expect(t.volumeTolerance).toBeCloseTo(2 * (1 - Math.sin(theta) / theta), 9)
+          expect(t.volumeTolerance).toBeGreaterThan(0)
+          expect(t.volumeTolerance).toBeLessThan(2 * (1 - Math.sin(theta) / theta))
+          // And inside what the product's own geometry allows, where the
+          // golden has worked that out by hand.
+          const bracket = golden.volumeToleranceBounds?.[kind]
+          if (bracket) {
+            expect(t.volumeTolerance, `${kind} bound`).toBeGreaterThanOrEqual(bracket[0])
+            expect(t.volumeTolerance, `${kind} bound`).toBeLessThanOrEqual(bracket[1])
+          }
           // The percent sibling is the fraction ×100 — a unit in the name for
           // the one value here that had none (amendment 23).
           expect(t.volumeTolerancePercent).toBeCloseTo(t.volumeTolerance * 100, 9)

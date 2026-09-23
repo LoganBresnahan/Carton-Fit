@@ -6,6 +6,7 @@ import {
   partWeightG
 } from '../src/renderer/src/packing/request'
 import { useAppStore, type PackingSettings } from '../src/renderer/src/store'
+import { meshVolume, tessellationErrorMm3, tessellationTolerance } from '../src/renderer/src/core/geometry'
 import type { ImportedPart } from '../src/renderer/src/workers/import-protocol'
 
 // buildPackRequest is the settings→contract translation (roadmap item 4): the
@@ -232,13 +233,25 @@ function curvedPart(name: string, turnDeg: number, origin: 'brep' | 'mesh' = 'br
   return { ...part, normals, origin }
 }
 
+/** The deflection bound for a part, from the geometry functions the tests in
+ *  geometry.test.ts pin by hand — what `approximateVolumeKinds` must carry
+ *  for it (ADR-0015 addendum 3). */
+function boundOf(part: ImportedPart): number {
+  return tessellationTolerance(
+    tessellationErrorMm3(part.positions, part.normals!, part.indices),
+    meshVolume(part.positions, part.indices)
+  )
+}
+
 describe('approximateVolumeKinds (ADR-0015 addendum 2)', () => {
   const density = settings({ weightMode: 'density', densityGPerCm3: 7.85 })
 
   it('names a density-priced kind whose surface normals turn, with the tolerance for its step', () => {
-    const report = approximateVolumeKinds([curvedPart('bolt', 14.5)], density, null, {})
+    const bolt = curvedPart('bolt', 14.5)
+    const report = approximateVolumeKinds([bolt], density, null, {})
     expect(report.kinds).toEqual(['bolt'])
-    expect(report.tolerance).toBeCloseTo(0.0213, 3)
+    expect(report.tolerance).toBeGreaterThan(0)
+    expect(report.tolerance).toBe(boundOf(bolt))
     expect(report.perKind).toHaveLength(1)
     expect(report.perKind[0].kind).toBe('bolt')
     expect(report.perKind[0].tolerance).toBe(report.tolerance)
@@ -269,15 +282,17 @@ describe('approximateVolumeKinds (ADR-0015 addendum 2)', () => {
     const parts = [curvedPart('bolt', 14.5), curvedPart('rod', 10)]
     const report = approximateVolumeKinds(parts, density, null, { bolt: 50 })
     expect(report.kinds).toEqual(['rod'])
-    expect(report.tolerance).toBeCloseTo(0.0101, 3)
+    expect(report.tolerance).toBe(boundOf(parts[1]))
   })
 
   it('carries each kind’s own tolerance, and the headline is the largest (18th dogfood)', () => {
     const parts = [curvedPart('rod', 10), curvedPart('bolt', 14.5)]
     const report = approximateVolumeKinds(parts, density, null, {})
     expect(report.perKind.map((entry) => entry.kind)).toEqual(['rod', 'bolt'])
-    expect(report.perKind[0].tolerance).toBeCloseTo(0.0101, 3)
-    expect(report.perKind[1].tolerance).toBeCloseTo(0.0213, 3)
+    expect(report.perKind[0].tolerance).toBe(boundOf(parts[0]))
+    expect(report.perKind[1].tolerance).toBe(boundOf(parts[1]))
+    // A coarser step is a wider band, on the same mesh.
+    expect(report.perKind[1].tolerance).toBeGreaterThan(report.perKind[0].tolerance)
     expect(report.tolerance).toBe(report.perKind[1].tolerance)
   })
 
@@ -296,6 +311,6 @@ describe('approximateVolumeKinds (ADR-0015 addendum 2)', () => {
     const parts = [curvedPart('bolt', 10), curvedPart('bolt (2)', 14.5)]
     const report = approximateVolumeKinds(parts, density, null, {})
     expect(report.kinds).toEqual(['bolt'])
-    expect(report.tolerance).toBeCloseTo(0.0213, 3)
+    expect(report.tolerance).toBe(boundOf(parts[1]))
   })
 })

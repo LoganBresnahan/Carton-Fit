@@ -7,7 +7,9 @@ import {
   packedWeightG,
   utilizationPercent,
   verdictCaption,
+  tieProven,
   verdictHeadline,
+  weighOneToSettle,
   weightless
 } from '../packing/verdict'
 import { decimal, dimsText, lengthText, modeLabel, tierLabel, volumeText, weightText } from './format'
@@ -125,7 +127,16 @@ export function buildCsv(input: EstimateExport): string {
   // panel and the wire carry for it (ADR-0017 §2, second addendum).
   const binding = bindingReport(result, request)
   lines.push(row(['Limit bound', binding.bound ? 'yes' : 'no']))
+  // The tie as a cell, not only inside the note (23rd dogfood): "Limited by,
+  // weight" over a note that says both limits landed is the headline
+  // contradicting its own next line. The cell above keeps its value for the
+  // scripts that read it; this row is where "both" lives.
+  lines.push(row(['Both limits', tieProven(result) ? 'yes' : 'no']))
   lines.push(row(['Limit note', binding.note]))
+  // The band, as a cell (same run, same reader): the Warning row at the foot
+  // carries the sentence, and a yes/no beside the limit rows is what a script
+  // can test. One predicate with the warning and the receipt row.
+  lines.push(row(['Weigh one to settle', weighOneToSettle(input.meshVolumes) ? 'yes' : 'no']))
   lines.push(row(['Fill', utilizationPercent(result.utilization)]))
   // ADDED beside `Fill`, not folded into it: a script already reads that cell,
   // and every other row here names its unit or its basis in its FIELD name
@@ -133,6 +144,13 @@ export function buildCsv(input: EstimateExport): string {
   // one artifact where the qualification cannot be hovered for.
   lines.push(row(['Fill basis', utilizationBasis(result.mode, input.unitPartName).label]))
   lines.push(row([`Carton inner (${length})`, dimsText(request.carton, units)]))
+  // How the carton was entered, when that differs from what was packed — the
+  // summary has printed this since ADR-0017; the CSV never did (23rd dogfood).
+  // Outer plus a wall is the box someone buys; inner is what the engine used.
+  if (input.settings.enterOuter) {
+    lines.push(row([`Carton outer (${length})`, dimsText(input.settings.boxDimsMm, units)]))
+    lines.push(row([`Wall (${length})`, lengthText(input.settings.wallMm, units)]))
+  }
   lines.push(
     row([`Clearance between parts (${length})`, lengthText(request.clearances.betweenParts, units)])
   )

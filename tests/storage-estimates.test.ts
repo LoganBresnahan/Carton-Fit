@@ -155,7 +155,10 @@ describe('saveEstimate', () => {
     expect(api.recorded).toHaveLength(1)
     expect(api.recorded[0].fileName).toBe('bracket.stp')
     expect(api.recorded[0].contentHash).toBe('hash-abc')
-    expect(api.recorded[0].result).toBe(RESULT)
+    // The result, plus the band flags beside it (ADR-0017 addendum 10) —
+    // null here, because this stub state cannot build the report, and a save
+    // never fails over the mark.
+    expect(api.recorded[0].result).toEqual({ ...RESULT, meshVolumes: null })
     // Settings PLUS the per-kind overrides (ADR-0018 §4). They ride alongside
     // rather than inside PackingSettings, because they are file-scoped and
     // folding them in would put them in presets and localStorage.

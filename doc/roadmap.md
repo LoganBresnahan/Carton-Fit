@@ -193,6 +193,115 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [x] 48. Dogfood follow-ups, 23rd run — one Claude Opus 5 pass (Cowork, over
+      the remote-devices bridge) on `1.2.0+c2fb974`, 2026-09-23, the first
+      run against item 47 and the first the reader ran with a customer on the
+      machine (Acme) and a second document in the list. **Eighteenth straight
+      run of matching counts**: 3 plates on both paths at 35, 36.5 and 100
+      lb, byte-identical wording, 24 lb under the 8 lb override, the
+      whole-file 1, fill 4.297%, 13.229 lb / 37.8%, and every list count
+      reconciled with `file.savedEstimates` (17 = 3 + 14; `withheldByCustomer`
+      1 read before deduced). Station 4 derived before the call and the 36.5
+      lb band flags came back exactly as predicted. The report never reached
+      the brief's new station-6 copy check (bf445c0 landed after the paste).
+      Five findings survive verification; none is a wrong number. **All
+      four built 2026-09-23 on "do all 4"** (ADR-0029 amendment 26,
+      ADR-0015 addendum 3, ADR-0017 addendum 10).
+      - [x] **`null` never reached the server from this client** (worst by
+        consequence: `set_part_weight {weight: null}` and `set_customer
+        {id: null}` both came back `-32602 Invalid input`, so clearing an
+        override took a reload and there was no way back to house — the
+        reader ended the session asking the person to switch in the window,
+        which the brief forbids and which the tool's own failure forced). A
+        client/transport gap, not a schema one: the published schema is
+        `anyOf [{type: integer}, {type: null}]` (zod 4's `toJSONSchema`,
+        checked), the server parses a real null, and
+        `e2e/mcp-data-tools.spec.ts` proves `{id: null}` over the real stdio
+        transport — so the reader's "neither parameter declares a JSON type"
+        is wrong on the schema, and what arrived was either a dropped key or
+        the string `"null"` (zod says *Invalid input* for both, so the
+        message cannot tell). Derived fix: an explicit boolean sibling that
+        every serializer carries — `set_customer {house: true}` and
+        `set_part_weight {kind, clear: true}` — with null still accepted and
+        both descriptions naming it. Rejected: omission means clear, because
+        on `set_inputs` omission means *leave it*, and one convention per
+        surface. ADR-0029 amendment 26 when built. The wire's first
+        client-side null. *Built:* `clear: true` / `house: true`, `id` and
+        `weight` optional, `clearOrValue` refuses neither-and-both; unit
+        and stdio tests for both spellings; wire-rules rule 15.
+      - [x] **The curved-face band is a whole-volume bound and the note
+        states it as a spread** (station 4, 36.5 lb): "can run about 1.9%
+        light or heavy… weigh one and enter it directly to settle it". The
+        reader's arithmetic holds and is checked here: the plate's box is
+        180×150×20 mm = 540 000 mm³ (32.95 in³) and its mesh volume 530 625
+        mm³ (32.38 in³), so every non-block feature — the six bolt holes the
+        capture shows — is 9 375 mm³ (0.57 in³) in total; the band is 1.897%
+        × 530 625 = 10 066 mm³ (0.61 in³), MORE than all of it. A faceted
+        hole is out by about θ²/6 of the hole, ~1% of 0.57 in³ ≈ 0.006 in³
+        ≈ 0.02% of the plate; four plates then weigh ≥ 36.72 lb, over 36.5,
+        and `couldChangeBinding` is false. This is ADR-0015 addendum 2's own
+        revisit trigger ("a density-derived weight lands within a few
+        percent of the cap on a part with curved faces — then the addendum
+        above is the bug") met for the first time, and the work it deferred
+        on purpose. **Half-right on the mechanism**: "scale the tolerance to
+        the curved volume" needs a number the mesh does not hold; the
+        computable bound is the deflection one the addendum named — per
+        triangle on a curved face, area × sagitta of its longest chord
+        (`(c/2)·tan(θ/4)` at that triangle's turn), summed per kind into a
+        volume error in mm³, with `volumeTolerance` = error / volume. The
+        wire field keeps its name and shape (rule 7); its value shrinks by
+        two orders of magnitude on the plate. ADR-0015 addendum 3 when
+        built; `samples/goldens.ts` gains the plate's bound by hand. *Built:*
+        `tessellationErrorMm3` resolves the normal change ALONG each edge
+        before taking its sagitta (the first cut did not, and said 17% on
+        the bolt: a facet's diagonal spans the chord's turn over four times
+        the length); plate 1.9% → 0.016%, rod/bolt → 0.9%; goldens carry
+        by-hand brackets for plate and rod; the wire tests moved to 27.552
+        and 36.73 lb, the caps that reach inside the holes' band.
+      - [x] **Two receipts that differ in cap and in qualification read the
+        same line** — #17 (35 lb, band clear) and #18 (36.5 lb, "weigh one")
+        both say *3 fit · of plate · 11×6×10 in · both limits*; the reader
+        told them apart only by restoring one. The "hedged on screen, flat in
+        a list" failure the brief names, in the one list ADR-0017 §2 does not
+        yet reach. Derived fix: the row reads the cap from the receipt's
+        settings when a finite cap applied (*· 36.5 lb cap*), and a receipt
+        saves `meshVolumes` beside `result` (an additive key in the opaque
+        blob, no migration — ADR-0018 §3's pattern) so the row can carry
+        *· weigh one to settle it* when `couldChangeCount` or
+        `couldChangeBinding` was true. Rows from before the key stay as they
+        are. ADR-0017 addendum 10 when built. *Built:* `capPhrase` and
+        `bandPhrase` on the row; `saveEstimate` writes `meshVolumes` into
+        the result blob, null when it cannot be built, never a failed save.
+      - [x] **"Limited by: weight" above "Both limits land on 3"** in both
+        exports at 36.5 lb — the headline says one and the note says two.
+        Confirmed: `bindingLabel` reads `binding` alone, and the tie predicate
+        (`bothLimitsProven`, 19th run) reaches the caption, the note and the
+        receipt row but not this label. Derived fix, **wording for the user**:
+        the label reads *weight and space* on a proven tie (one function,
+        rule 5), in the panel and the summary; the CSV keeps `Limited by`'s
+        value for scripts and gains a `Both limits` yes/no row beside `Limit
+        bound`. Two smaller CSV gaps from the same reader, both additive rows:
+        the outer dims and wall the summary prints ("entered as outer 11×6×10
+        in with 1 in walls") have no CSV row, and the tie / band flags live
+        only in `Limit note` prose. *Not a defect*: station 2's "Limited
+        by,space" over "Limit bound,no" — ADR-0017's second addendum kept the
+        cell's name for scripts and put the qualification in the row beside
+        it, and the summary's "Only limit" (19th run) is prose the CSV cannot
+        have. *Built, as proposed:* `limitLabel` on the panel and summary;
+        CSV rows *Both limits*, *Weigh one to settle*, *Carton outer*,
+        *Wall*.
+      - [x] **`packedWeight {0, lb}` on a space-only run** — the fourth
+        reader; standing refutation in `doc/wire-rules.md`, recurrence
+        recorded there. *Refuted.*
+      - [x] **`carton-fit-updater\installer.exe` rewritten at 10:07** — the
+        reader's own observation, correctly not filed as a defect: that is
+        electron-builder's NSIS installer copying itself to
+        `%LOCALAPPDATA%` when it runs, and 10:07 is when this build was
+        installed (`dist-live/` is stamped the same minute). The app has no
+        updater and nothing installs on next launch. *Explained.*
+      - Held from earlier runs: the reader's "Please switch the app back to
+        house in the window" is the first ask-the-human since the brief
+        forbade it, and it was forced by finding 1, not chosen.
 - [x] 47. Customers can be renamed and deleted — **ADR-0035 amendment 2,
       built 2026-09-18**, the user's ask on reading the ADR for its verdict:
       create was the only act, so "Acme" beside "ACME" was permanent. *Manage

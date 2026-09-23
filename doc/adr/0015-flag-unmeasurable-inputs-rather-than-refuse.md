@@ -191,11 +191,79 @@ importer's deflection. Both are real work that no run has needed; the revisit
 trigger above still stands, and `facetTurnDeg` on the wire is the number a
 reader needs to do either by hand.
 
+## Addendum 3, 2026-09-23 (twenty-third dogfood): the band is a bound on the curved faces, not a fraction of the block
+
+The revisit trigger below fired for the first time — a density-derived weight
+within a few percent of the cap on a part with curved faces — and the
+addendum above was the bug, exactly as it said it would be. At a 36.5 lb
+cap the plate's reply read *can run about 1.9% light or heavy… weigh one and
+enter it directly to settle it*. The reader put the figure beside the part:
+the plate's box is 180 × 150 × 20 mm (32.95 in³), its mesh volume 32.38 in³,
+so every non-block feature on it — six Ø10 bolt holes — is 0.57 in³
+together, and a 1.9% band is 0.61 in³: wider than all the holes put
+together, let alone the sliver of each a facet can miss. The sentence
+stated a whole-volume bound as a realistic spread, and the arithmetic sent
+an engineer to weigh a plate the holes could not make that light.
+
+**The bound, per triangle.** `2·(1 − sin θ/θ)` was the fraction of a
+*sector* a chord loses, applied to the whole volume as if every face were
+curved. The deflection bound this addendum deferred is computable from the
+mesh alone (`tessellationErrorMm3` in `core/geometry.ts`): for each triangle
+whose surface normals turn, and each of its edges, resolve the change in
+normal along the edge — `d = (n_q − n_p)·ê`, which is `2·sin(φ_e/2)` for the
+normal section's own angle — and take the sagitta of the circular arc
+through both ends, `s = (L/2)·tan(φ_e/4)`. Resolving matters: a facet's
+diagonal on a cylinder spans the same turn as its chord but is several times
+longer, and the chord's turn taken as the diagonal's puts the arc off by
+the square of that ratio (the first cut of this bound said 17% on the bolt
+for exactly that reason). The volume between facet and surface is at most
+the facet's area × its largest edge sagitta; summed over the mesh, that is a
+bound on the enclosed volume's error, and `volumeTolerance` is it over the
+volume. On a faceted cylinder the true error is two-thirds of the bound —
+segment over chord × sagitta — which the geometry test pins on a 24-gon by
+hand. On a doubly curved face the facet's centre can sit further off than
+its edges' midpoints, but the error is an integral and the facet's average
+deviation stays under the edge sagitta for any triangle a tessellator
+produces; a deliberately sliver-triangulated sphere is the case this does
+not promise.
+
+**What it does to the numbers.** The bound scales with curved *area* over
+volume, which is the property the reader was reaching for:
+
+| kind | old (whole volume) | new (curved faces) | true, by hand |
+| --- | --- | --- | --- |
+| plate | 1.90% | 0.016% | ~0.010% (six hole-walls, 34 facets each) |
+| l-bracket | 1.86% | 0.029% | — |
+| nut | 1.90% | 0.31% | — |
+| bolt | 2.13% | 0.88% | — |
+| rod | 1.86% | 0.89% | ~0.5% (36 facets) |
+
+Four plates lighter by the plate's band are 36.727 lb, over 36.5, so
+`couldChangeBinding` is false there and the note is gone; the cap that
+reaches inside the band is 36.73 lb, which is how far a faceted hole can
+move it. The whole-file headline moves from the bolt's 2.1% to the rod's
+0.9%, the kind whose volume is most nearly all cylinder. Nothing on the
+wire changes name or shape (rule 7): `volumeTolerance` and its percent
+sibling carry a smaller value, `facetTurnDeg` still says how coarse, and
+`inspect_model`'s description of the field says what the number now is.
+The goldens carry by-hand brackets for the plate and the rod (30–40 facets
+around each cylinder), and the wire tests pin the app's figure inside them.
+
+**Still not done:** the sign per kind. A hole overstates and a boss
+understates, and the bound is either way; the band is symmetric. No run
+has needed the sign, and the bound is now small enough on every kind of the
+reference file that the symmetric version costs nothing a reader has
+noticed.
+
 ## Revisit triggers
 
 - **A density-derived weight lands within a few percent of the cap** on a
   part with curved faces — then the addendum above is the bug, and item 40
-  is the fix.
+  is the fix. *Fired 2026-09-23 (twenty-third dogfood); addendum 3.* The
+  trigger that remains is a **doubly curved part near the cap** — a sphere,
+  a fillet-heavy casting — where the edge-sagitta bound is an estimate of
+  the interior; the fix then is the deflection the importer was asked for,
+  passed explicitly.
 - Users report the warning firing on parts they consider closed → the weld
   tolerance in `defaultWeldTolerance` is the suspect, not this decision.
 - A material/density library arrives (ADR-0004's trigger) → density mode gets

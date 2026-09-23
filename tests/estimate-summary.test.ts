@@ -36,6 +36,46 @@ describe('estimateSummary', () => {
     expect(estimateSummary(row())).toBe('500 fit · 12×12×12 in · weight-limited')
   })
 
+  it('carries the cap in the unit it was typed in, and the band mark (23rd dogfood)', () => {
+    // Receipts at 35 lb and 36.5 lb over the same plate read identically —
+    // "3 fit · of plate · 11×6×10 in · both limits" — and the 36.5 lb one
+    // carried "weigh one to settle it" on screen and nothing in the list.
+    const base = {
+      result: { mode: 'max-quantity', count: 3, binding: 'weight', geometryBound: 3 },
+      settings: {
+        boxDimsMm: [279.4, 152.4, 254],
+        unitSystem: 'imperial',
+        unitPartName: 'plate',
+        maxWeightG: 15875.7,
+        maxWeightUnit: 'lb'
+      }
+    }
+    expect(estimateSummary(row(base))).toBe('3 fit · of plate · 11×6×10 in · 35 lb cap · both limits')
+    expect(
+      estimateSummary(
+        row({
+          result: { ...base.result, meshVolumes: { couldChangeCount: false, couldChangeBinding: true } },
+          settings: { ...base.settings, maxWeightG: 16556.1 }
+        })
+      )
+    ).toBe('3 fit · of plate · 11×6×10 in · 36.5 lb cap · both limits · weigh one to settle it')
+    // The cap in the unit the person typed, not a converted one.
+    expect(estimateSummary(row({ ...base, settings: { ...base.settings, maxWeightG: 5000, maxWeightUnit: 'kg' } }))).toBe(
+      '3 fit · of plate · 11×6×10 in · 5 kg cap · both limits'
+    )
+    // An infinite cap is null in JSON; a row without a unit, or with flags
+    // that are not booleans, makes no claim.
+    expect(estimateSummary(row({ ...base, settings: { ...base.settings, maxWeightG: null } }))).toBe(
+      '3 fit · of plate · 11×6×10 in · both limits'
+    )
+    expect(estimateSummary(row({ ...base, settings: { ...base.settings, maxWeightUnit: undefined } }))).toBe(
+      '3 fit · of plate · 11×6×10 in · both limits'
+    )
+    expect(
+      estimateSummary(row({ ...base, result: { ...base.result, meshVolumes: { couldChangeCount: 'yes' } } }))
+    ).toBe('3 fit · of plate · 11×6×10 in · 35 lb cap · both limits')
+  })
+
   it('says a weight was typed by hand, naming the kind (11th dogfood)', () => {
     const base = {
       result: { mode: 'max-quantity', count: 2, binding: 'weight', geometryBound: 3 },

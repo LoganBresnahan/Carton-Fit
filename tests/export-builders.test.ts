@@ -511,6 +511,48 @@ describe('buildSummary', () => {
     expect(buildCsv(input())).toContain('Limit bound,no')
   })
 
+  it('names both limits on a proven tie, in the label and as a CSV row (23rd dogfood)', () => {
+    // 36.5 lb over the plate: weight-bound at 3 with a geometry bound of 3.
+    // The headline read "Limited by: weight" one line above "Both limits
+    // land on 3". The summary's label now says both; the CSV's cell keeps
+    // its value for scripts and the tie is its own row.
+    const tie = qtyResult({ count: 3, binding: 'weight', geometryBound: 3, spaceOnlyCount: 3 })
+    const summary = buildSummary(input({ result: tie }))
+    const csv = buildCsv(input({ result: tie }))
+    expect(summary).toContain('Limited by: weight and space')
+    expect(csv).toContain('Limited by,weight')
+    expect(csv).toContain('Both limits,yes')
+    const single = qtyResult({ count: 3, binding: 'weight', geometryBound: 5, spaceOnlyCount: 3 })
+    expect(buildSummary(input({ result: single }))).toContain('Limited by: weight')
+    expect(buildCsv(input({ result: single }))).toContain('Both limits,no')
+  })
+
+  it('carries the band as a CSV row beside the limit rows (23rd dogfood)', () => {
+    const band = {
+      approximateKinds: ['plate'],
+      volumeTolerance: 0.019,
+      perKind: [],
+      couldChangeCount: false,
+      couldChangeBinding: true
+    }
+    expect(buildCsv(input({ meshVolumes: band }))).toContain('Weigh one to settle,yes')
+    expect(buildCsv(input())).toContain('Weigh one to settle,no')
+  })
+
+  it('prints the outer dims and wall the carton was entered as (23rd dogfood)', () => {
+    const csv = buildCsv(
+      input({
+        settings: settings({ enterOuter: true, wallMm: inToMm(1), boxDimsMm: [inToMm(11), inToMm(6), inToMm(10)] }),
+        request: request({ carton: [inToMm(9), inToMm(4), inToMm(8)] })
+      })
+    )
+    expect(csv).toContain('Carton inner (in),9 × 4 × 8')
+    expect(csv).toContain('Carton outer (in),11 × 6 × 10')
+    expect(csv).toContain('Wall (in),1')
+    // Entered as inner: no outer rows, so a script never reads a wall of 0.
+    expect(buildCsv(input())).not.toContain('Carton outer')
+  })
+
   it('reuses the panel’s own caption rather than inventing a second wording', () => {
     expect(buildSummary(input())).toContain('a concrete arrangement was found')
     expect(buildSummary(input({ result: qtyResult() }))).toContain(

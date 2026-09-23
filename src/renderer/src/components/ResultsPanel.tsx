@@ -1,7 +1,7 @@
 import { useAppStore } from '../store'
 import {
   bindingHeading,
-  bindingLabel,
+  limitLabel,
   freeSpaceNote,
   meshVolumeReport,
   meshVolumeWarning,
@@ -168,7 +168,7 @@ export default function ResultsPanel() {
       <dl className="results-facts">
         <div>
           <dt data-testid="results-binding-heading">{bindingHeading(result, request)}</dt>
-          <dd data-testid="results-binding">{bindingLabel(result.binding)}</dd>
+          <dd data-testid="results-binding">{limitLabel(result)}</dd>
         </div>
         <div>
           <dt title={utilizationBasis(result.mode, unitPartName).note}>Fill</dt>
