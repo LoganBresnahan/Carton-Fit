@@ -8,11 +8,13 @@ import {
   utilizationPercent,
   verdictCaption,
   tieProven,
+  toleranceText,
   verdictHeadline,
   weighOneToSettle,
   weightless
 } from '../packing/verdict'
 import { decimal, dimsText, lengthText, modeLabel, tierLabel, volumeText, weightText } from './format'
+import { weightSourcePhrase } from './summary'
 import { measurementRows, type EstimateExport } from './types'
 
 // The measurements CSV (ADR-0017 §1) — the table a spreadsheet ingests.
@@ -219,6 +221,16 @@ export function buildCsv(input: EstimateExport): string {
   const overridden = Object.keys(input.overrides)
   if (overridden.length > 0) {
     lines.push(row(['Weight overrides', overridden.join('; ')]))
+  }
+  // Where the per-part weights above came from (24th dogfood, ADR-0017
+  // addendum 11): the summary has said so since it was written; this file
+  // printed the number alone, and a number alone reads as weighed. The same
+  // phrase as the summary, and each approximate kind's own tolerance beside
+  // it, so a script can read the band the sentence describes.
+  const source = weightSourcePhrase(input)
+  lines.push(row(['Weight from', source ?? 'none given']))
+  for (const entry of input.meshVolumes.perKind) {
+    lines.push(row([`Volume tolerance: ${entry.kind}`, toleranceText(entry.volumeTolerance)]))
   }
 
   for (const warning of input.warnings) lines.push(row(['Warning', warning]))

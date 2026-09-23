@@ -1,9 +1,9 @@
-# Wire rules — what twenty-three dogfood runs taught about the MCP surface
+# Wire rules — what twenty-four dogfood runs taught about the MCP surface
 
 The rules a new tool, a new field, or a new sentence on the MCP surface has
 to pass before it ships. Each one was learned by a reader with a calculator
 finding a sentence no test asserted; the run and the amendment that taught it
-are named so the reasoning can be read in full. **Twenty-three runs found one
+are named so the reasoning can be read in full. **Twenty-four runs found one
 wrong number** (rule 6). Everything else was a sentence.
 
 Read this before writing the output schema of a tool. Read it again before
@@ -156,12 +156,12 @@ in a minute:
   sibling that answers it (ADR-0029 amendment 23), and two readers have now
   proposed the rename after reading the sibling.
 - **A `known: false` `packedWeight` (or a null `inputs.weight`) on a
-  space-only answer.** Four readers, from both sides of the wire. The value
+  space-only answer.** Five readers, from both sides of the wire. The value
   is the sum of the weights as given — 0 lb for a part nobody weighed — and
   `weightInput.supplied: false` beside it is the claim that it is not a
   measurement; every rendered surface reads that and prints *none* or a
   blank. Changing the shape of a value scripts read is a major under
-  ADR-0020 §3 (rule 7). *(Roadmap items 41, 46, 48.)*
+  ADR-0020 §3 (rule 7). *(Roadmap items 41, 46, 48, 49.)*
 - **A `presetSavedWithOverrides` comparison.** A preset does not record
   overrides at all (ADR-0034 §2); the seam is the preset-vs-receipt mental
   model, pinned under roadmap item 33.

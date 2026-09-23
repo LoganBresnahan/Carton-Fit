@@ -1673,6 +1673,43 @@ The receipt row and the export label from the same run are ADR-0017
 addendum 10. Refuted and recorded: `packedWeight {0, lb}` on a space-only
 answer, the fourth reader (standing refutation).
 
+### Amendment 27 (2026-09-23, twenty-fourth dogfood, roadmap item 49) — the unit's weight, one figure per kind, and a top-level type for null
+
+The first run against amendment 26. Nineteenth straight match; every
+item-48 fix held on first contact, including `clear: true` and
+`house: true`, on which the reader ended its session on house with no
+override. Three things on the wire.
+
+- **`outcome.unitWeight` on a max-quantity answer.** *One more would
+  exceed the weight cap* is checked against the weight of one unit, which
+  the exports have printed as *9.183 lb each* since ADR-0017 and the wire
+  never carried — the reader divided `packedWeight` by `count`. A `Known`
+  weight: the request's unit parts summed (`unitWeightG`, the same sum
+  `packedWeightG` multiplies), `known: false` with the reason when no part
+  weight was given, like the cap's own qualification. Additive (rule 7).
+- **`inspect_model` and the estimate agree to the last figure.** Their
+  tolerances for the nut and bolt differed in the ninth digit: the estimate
+  took the largest bound over a kind's instances and `inspect_model` read
+  one, and a bound summed over a placed mesh moves in float32. Cosmetic,
+  and correctly filed so; `inspect_model` now takes the same max, and the
+  test that had loosened to seven figures on the 23rd run is equality
+  again. One function, one rule, one figure.
+- **A top-level `type` beside the `anyOf` on the two nullable inputs.**
+  `null` still did not arrive from this client (the twins worked). The
+  reader's mechanism — the properties are declared with no JSON type —
+  is half-right: the `anyOf` carries `{type: null}` inside it, but a client
+  that reads only the top-level key sees nothing to keep a null for.
+  Whether that is what the bridge does cannot be told from here, and
+  zod's `.meta({type: ['integer', 'null']})` merges the array beside the
+  `anyOf` at no cost to validation, so it ships as an experiment the next
+  reader's null answers. If null arrives, that was it and the rule is
+  worth writing; if not, the twins remain the answer.
+
+Refuted and recorded: `packedWeight {0, lb}` on a space-only answer with
+the 0-lb sentinel beside it (fifth and third readers); *`changedThisSession`
+should say it compares values* — it does, beside `setThisSession`
+(amendment 16; rule 3). The CSV's weight source is ADR-0017 addendum 11.
+
 ## Alternatives considered
 
 - **Claude assistant inside the app** — rejected for now, reasons in Context. The

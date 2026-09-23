@@ -349,6 +349,25 @@ by, space* over *Limit bound, no* on a fit where nothing bound — addendum 2
 kept the cell's name for scripts and put the qualification in the row
 beside it, and the summary's *Only limit* is prose the CSV cannot carry.
 
+## Addendum 11, 2026-09-23 (twenty-fourth dogfood): the CSV says where its weights came from
+
+The first run against addendum 10 found the row it had missed. The summary
+prints *Part weight: density 7.85 g/cm³ × part volume (mesh volumes of
+curved faces, approximate either way: plate 0.02%)*; the CSV printed *Unit
+weight (lb) 9.183* with no row naming density, mesh volume or the
+tolerance, so a pasted 9.183 reads as weighed — accurate here, and on an
+open mesh or a wrong density the whole point. The reader called it the
+line that would embarrass an engineer, in the one artifact that leaves the
+building.
+
+The CSV now carries *Weight from*, the summary's own source phrase
+(`weightSourcePhrase`, one function for both, rule 5: *density 7.85 g/cm³
+× part volume (…)*, *10 lb per part, entered directly*, or *none given*),
+and one *Volume tolerance: kind* row per approximate kind from
+`meshVolumes.perKind`, so a script can read the band the phrase describes.
+Beside *Weight overrides*, which already said which kinds were corrected
+by hand. Additive rows; nothing a script reads moved.
+
 ## Revisit triggers
 
 - A real request to hand a formatted document to a customer → PDF, seeded from

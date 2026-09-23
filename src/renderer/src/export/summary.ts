@@ -50,6 +50,28 @@ function cartonLines(input: EstimateExport): string[] {
   return lines
 }
 
+/**
+ * Where the grams came from, in words — the summary's *Part weight* line
+ * and the CSV's *Weight from* row read this one phrase (ADR-0017 addendum
+ * 11, rule 5): the CSV printed *Unit weight (lb) 9.183* with nothing saying
+ * it was density × a mesh volume, and a pasted 9.183 reads as weighed. Null
+ * when no weight was given at all.
+ */
+export function weightSourcePhrase(input: EstimateExport): string | null {
+  const { settings, request } = input
+  if (weightless(request)) return null
+  return settings.weightMode === 'direct'
+    ? `${weightText(settings.partWeightG, settings.partWeightUnit)} ` +
+        `${settings.partWeightUnit} per part, entered directly`
+    : `density ${settings.densityGPerCm3} g/cm³ × part volume` +
+        // The volume is a tessellation's wherever a face curves (ADR-0015
+        // addendum 2): the line claims where the grams came from, so it
+        // says how exact that was, whether or not the cap is near.
+        (meshVolumeClause(input.meshVolumes) !== null
+          ? ` (${meshVolumeClause(input.meshVolumes)})`
+          : '')
+}
+
 function weightLines(input: EstimateExport): string[] {
   const { settings, request, result } = input
   // Packed-vs-cap shows in the cap's unit; per-part figures in the per-part
@@ -65,17 +87,7 @@ function weightLines(input: EstimateExport): string[] {
     ]
   }
   const packed = weightText(packedWeightG(result, request), unit)
-  const source =
-    settings.weightMode === 'direct'
-      ? `${weightText(settings.partWeightG, settings.partWeightUnit)} ` +
-        `${settings.partWeightUnit} per part, entered directly`
-      : `density ${settings.densityGPerCm3} g/cm³ × part volume` +
-        // The volume is a tessellation's wherever a face curves (ADR-0015
-        // addendum 2): the line claims where the grams came from, so it
-        // says how exact that was, whether or not the cap is near.
-        (meshVolumeClause(input.meshVolumes) !== null
-          ? ` (${meshVolumeClause(input.meshVolumes)})`
-          : '')
+  const source = weightSourcePhrase(input) ?? ''
 
   // Naming the source alone would misdescribe a mixed assembly (ADR-0018): the
   // per-part figures below come from entered weights for some kinds, so a flat

@@ -6,7 +6,10 @@ import {
   meshVolume,
   PLANAR_TURN_DEG
 } from '../../renderer/src/core/geometry'
-import { tessellationOf as measureTessellation } from '../../renderer/src/packing/request'
+import {
+  tessellationOf as measureTessellation,
+  type Tessellation
+} from '../../renderer/src/packing/request'
 import type { Known } from './estimate'
 import { groupByKind, instanceAgreement } from '../../renderer/src/packing/kinds'
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
@@ -106,12 +109,18 @@ export interface InspectQualifications {
 
 
 /** The per-kind tessellation facts, from the one memoized measurement the
- *  renderer's warning also reads. Rotation-invariant, so one instance speaks
- *  for the kind. */
-function tessellationOf(
-  part: ImportedPart
-): KindReport['tessellation'] {
-  const facts = measureTessellation(part)
+ *  renderer's warning also reads. Taken over EVERY instance, the way the
+ *  estimate's `approximateVolumeKinds` takes them (24th dogfood): the bound
+ *  is summed over a placed mesh, and float32 placement moves it in the ninth
+ *  figure, so one instance and the largest over all of them disagreed there.
+ *  Same rule on both tools, so the two figures are one figure. */
+function tessellationOf(instances: readonly ImportedPart[]): KindReport['tessellation'] {
+  let facts: Tessellation | null = null
+  for (const part of instances) {
+    const measured = measureTessellation(part)
+    if (measured === null) continue
+    if (facts === null || measured.tolerance > facts.tolerance) facts = measured
+  }
   if (facts === null) {
     return {
       known: false,
@@ -183,7 +192,7 @@ export function inspectParts(
         units.length
       ),
       closedMesh: closed,
-      tessellation: tessellationOf(sample),
+      tessellation: tessellationOf(instances),
       instancesAlike: alike
     })
   }

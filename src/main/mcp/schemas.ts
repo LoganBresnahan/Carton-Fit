@@ -323,6 +323,15 @@ export const estimateOutput = {
             'Equal to count on a space-bound answer, it IS that answer. This is the field ' +
             'that tells a roomy carton from a full one.'
         ),
+      // ADR-0029 amendment 27 (24th dogfood): the number "one more would
+      // exceed the cap" is checked against, which a reader had been deriving
+      // as packedWeight ÷ count.
+      unitWeight: z
+        .union([z.object({ known: z.literal(true), weight: weightValue }), knownFalse])
+        .describe(
+          'The weight of ONE unit this count replicates — packedWeight is count × this. ' +
+            'Unknown when no part weight was given.'
+        ),
       layout: z.union([
         z.object({ complete: z.literal(true) }),
         z.object({
@@ -675,6 +684,12 @@ export const setPartWeightInput = {
   weight: z
     .union([weightValue, z.null()])
     .optional()
+    // A top-level `type` beside the anyOf (24th dogfood): the anyOf carries
+    // {type: null} inside it, but a client that reads only the top-level key
+    // sees nothing to keep a null for. Merged by zod's meta; validation is
+    // the union above, unchanged. An experiment the next reader's null
+    // answers — amendment 27.
+    .meta({ type: ['object', 'null'] })
     .describe(
       'The measured weight of one part of this kind, or null to clear the override and return to the computed weight. ' +
         'If your client cannot send null, omit this and pass clear: true instead.'
@@ -768,6 +783,8 @@ export const setCustomerInput = {
   id: z
     .union([z.number().int(), z.null()])
     .optional()
+    // See setPartWeightInput.weight: a top-level type beside the anyOf.
+    .meta({ type: ['integer', 'null'] })
     .describe(
       'A customer id as list_customers reports it, or null for house. ' +
         'If your client cannot send null, omit this and pass house: true instead.'

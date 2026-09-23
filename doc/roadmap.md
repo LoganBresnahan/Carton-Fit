@@ -193,6 +193,70 @@ item they belong to. Product intent lives in `VISION.md`; decisions in `adr/`.
       alternative ADR-0034 records with its reason, and each has a revisit
       trigger rather than a checkbox.
 
+- [x] 49. Dogfood follow-ups, 24th run — one Claude Opus 5 pass (Cowork, over
+      the remote-devices bridge) on `1.2.0+f749cce`, 2026-09-23, the first
+      run against item 48. **Nineteenth straight run of matching counts**,
+      and every item-48 fix held on first contact: the 36.5 lb note is gone
+      and the reader's own probe at 27.55 lb found `couldChangeCount` true
+      with the note beside it, exactly at the cap inside the holes' band;
+      `clear: true` and `house: true` both worked and the session ended on
+      house with no override; the plate's 0.016% was checked against the
+      six holes and called right. Station 1's predict-then-read caught the
+      reader calling the plate planar again, and the capture settled it.
+      The pre-paste copy of the reference file was not on the machine, so
+      the same-bytes check (bf445c0) is still unread. Six findings; two
+      confirmed, one held, three refuted. **All three built 2026-09-23 on
+      "go"** (ADR-0017 addendum 11, ADR-0029 amendment 27).
+      - [x] **The CSV loses the weight's source** (worst: the one artifact
+        that leaves the building). The summary prints *Part weight: density
+        7.85 g/cm³ × part volume (approximate either way: plate 0.02%)*; the
+        CSV prints *Unit weight (lb) 9.183* with no row naming density, mesh
+        volume or the tolerance, so a pasted 9.183 reads as weighed. ADR-0017
+        §2 exactly. Derived fix, additive rows beside *Weigh one to settle*:
+        *Weight from* (the summary's own source phrase — direct / density ×
+        part volume / entered by hand, one function, rule 5) and *Volume
+        tolerance* per approximate kind from `meshVolumes.perKind`. ADR-0017
+        addendum 11 when built. *Built:* `weightSourcePhrase` shared by both
+        exports; rows *Weight from* and *Volume tolerance: kind*.
+      - [x] **No per-unit weight on the live max-quantity reply.** "One more
+        would exceed the weight cap" is checked by dividing `packedWeight`
+        by `count`; the exports print *9.183 lb each* and the wire does not.
+        Confirmed absent (`unitWeight` appears nowhere in the schema). Derived
+        fix: `outcome.unitWeight` on max-quantity, a `Known` weight (false
+        when weightless), additive under rule 7. ADR-0029 amendment 27 when
+        built. *Built:* `unitWeightG` in verdict.ts (the sum `packedWeightG`
+        multiplies), `outcome.unitWeight` Known, pinned at station 4
+        (4 165.4 g) and unknown on a weightless pack.
+      - [x] **`null` still does not arrive from this client**; the boolean
+        twins worked, which is what amendment 26 promised. Held, not new.
+        The reader's mechanism — *both properties are declared with no JSON
+        type; type them `["integer","null"]`* — is half-right: the published
+        schema is an `anyOf` with `{type: null}` inside it, which is a type,
+        but it has no TOP-LEVEL `type`, and a client that reads only that
+        key sees nothing to keep a null for. Whether that is what the bridge
+        does cannot be told from here. Zod 4's `.meta({type: [...]})` merges
+        a top-level type array beside the `anyOf` (checked) at no cost to
+        validation, so the experiment is one line per field: ship it and
+        let the next reader's null say whether it was the cause. Folded
+        into amendment 27 when built. *Shipped:* `type: ['object','null']`
+        and `['integer','null']` beside the anyOf.
+      - [x] **`packedWeight {0, lb}` on a space-only run** — the fifth
+        reader, with the 0-lb sentinel beside it (third). Standing
+        refutations in `doc/wire-rules.md`, recurrence recorded. *Refuted.*
+      - [x] **`changedThisSession` should say it compares values.** It does:
+        the description reads *a comparison of values, not a history of
+        edits* and names `setThisSession` beside it (amendment 16). A reader
+        reading values and not descriptions, rule 3. *Refuted.*
+      - [x] **Ninth-figure disagreement between `inspect_model` and the
+        estimate on the nut and bolt** (0.0031475474 vs 0.0031475486).
+        Cosmetic, and correctly filed so. Cause: the estimate takes the
+        largest bound over a kind's instances and `inspect_model` reads one,
+        and a bound summed over a placed mesh differs from the same mesh
+        elsewhere in float32. One function already; make inspect take the
+        same max, and the test that loosened to seven figures on the 23rd
+        run tightens back to equality. Small; with the two above. *Built:*
+        inspect's `tessellationOf(instances)` takes the max; the test is
+        `toBe` again.
 - [x] 48. Dogfood follow-ups, 23rd run — one Claude Opus 5 pass (Cowork, over
       the remote-devices bridge) on `1.2.0+c2fb974`, 2026-09-23, the first
       run against item 47 and the first the reader ran with a customer on the

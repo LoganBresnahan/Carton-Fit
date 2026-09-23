@@ -12,6 +12,17 @@ build order lives in [`doc/roadmap.md`](doc/roadmap.md).
 
 ### Changed
 
+- **The CSV says where its weights came from.** A *Weight from* row carries
+  the same phrase as the summary — density × part volume, entered directly,
+  or none given — and each approximate kind gets a *Volume tolerance* row,
+  so a unit weight pasted from the CSV no longer reads as weighed.
+  ([ADR-0017 addendum 11](doc/adr/0017-export-is-presentation-of-the-live-estimate.md))
+- **An assistant's max-quantity reply carries the weight of one unit**, the
+  number "one more would exceed the cap" is checked against, instead of
+  leaving it to be derived from the packed weight and the count. The model
+  inspection and the estimate now agree on every kind's volume tolerance to
+  the last figure. ([ADR-0029 amendment 27](doc/adr/0029-expose-the-packing-engine-to-ai-clients.md))
+
 - **The curved-face band is the holes' own, not a fraction of the block.**
   A part's density weight comes from a mesh volume, and the estimate bands
   it by how far a faceted surface can sit off the true one. That band was a

@@ -32,6 +32,8 @@ import {
   verdictCaption,
   type BindingReport,
   weightlessWarning,
+  weightless,
+  unitWeightG,
   utilizationPercent
 } from '../../renderer/src/packing/verdict'
 import type { ImportedPart } from '../../renderer/src/workers/import-protocol'
@@ -165,6 +167,12 @@ export type EstimateOutcome =
        *  the run itself, since a cap that did not bind hid nothing. Absent in
        *  one case only, with the reason. */
       spaceOnlyCount: Known<{ count: number }>
+      /** The weight of one unit — what `count + 1` is weighed against. The
+       *  exports have printed it since ADR-0017; the wire had only
+       *  `packedWeight`, and a reader divided (24th dogfood, amendment 27).
+       *  `known: false` when no part weight was given, like the cap's own
+       *  qualification. */
+      unitWeight: Known<{ weight: WeightValue }>
       /** Whether the placements behind the count were all materialized. */
       layout: { complete: true } | { complete: false; shown: number; counted: number; note: string }
     }
@@ -319,6 +327,7 @@ function knownSpace(
 
 function outcomeOf(
   result: PackResult,
+  request: PackRequest,
   units: OutputUnits
 ): EstimateOutcome {
   if (result.mode === 'fit-check') {
@@ -381,6 +390,12 @@ function outcomeOf(
     // wire would be a major under ADR-0020 §3, clients already branch on it,
     // and narrowing which arm we send breaks nobody.
     spaceOnlyCount: { known: true, count: result.spaceOnlyCount },
+    unitWeight: weightless(request)
+      ? {
+          known: false,
+          reason: 'no part weight was given — see qualifications.weightInput'
+        }
+      : { known: true, weight: fromG(unitWeightG(request), units.weight) },
     layout:
       truncated === null
         ? { complete: true }
@@ -552,7 +567,7 @@ export function buildEstimateReport(
       packedWeight: fromG(packedWeightG(result, request), units.weight),
       unitPart: request.mode === 'max-quantity' ? context.unitPart : null
     },
-    outcome: outcomeOf(result, units),
+    outcome: outcomeOf(result, request, units),
     binding: bindingReport(result, request),
     utilization: {
       fraction: result.utilization,

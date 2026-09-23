@@ -302,6 +302,10 @@ describe('every answer arrives qualified', () => {
     if (!report.qualifications.weightInput.supplied) {
       expect(report.qualifications.weightInput.note).toMatch(/space only/)
     }
+    // And the unit's weight is unknown for the same reason, not 0 (amendment 27).
+    if (report.outcome.mode === 'max-quantity') {
+      expect(report.outcome.unitWeight).toMatchObject({ known: false })
+    }
     expect(report.binding.constraint).toBe('geometry')
   })
 
@@ -647,6 +651,18 @@ describe('every answer arrives qualified', () => {
       // where the whole-volume fraction it replaced said 1.9% — wider than
       // the holes themselves (23rd dogfood). 3 plates at 9.18 lb sit at
       // 27.55 lb, and a band of 0.0015 lb a plate reaches nothing near 35.
+      // The unit's own weight rides the outcome (amendment 27): 9.183 lb,
+      // which the 24th reader had been getting as 27.549 ÷ 3.
+      if (report.outcome.mode === 'max-quantity') {
+        expect(report.outcome.unitWeight.known).toBe(true)
+        if (report.outcome.unitWeight.known) {
+          // Canonical grams here (no outputUnits asked): 530 625 mm³ × 7.85
+          // g/cm³ = 4 165.4 g, the 9.183 lb of the brief.
+          expect(report.outcome.unitWeight.weight.unit).toBe('g')
+          expect(report.outcome.unitWeight.weight.value).toBeCloseTo(4165.4, 0)
+          expect(report.outcome.unitWeight.weight.value * 3).toBeCloseTo(report.request.packedWeight.value, 6)
+        }
+      }
       expect(weightInput.meshVolumes.approximateKinds).toEqual(['plate'])
       expect(weightInput.meshVolumes.volumeTolerance).toBeGreaterThan(1.3e-4)
       expect(weightInput.meshVolumes.volumeTolerance).toBeLessThan(2.5e-4)
@@ -763,14 +779,13 @@ describe('every answer arrives qualified', () => {
       const rod = perKind.find((entry) => entry.kind === 'rod')!
       expect(bolt.volumeTolerance).toBeGreaterThan(plate.volumeTolerance)
       expect(rod.volumeTolerance).toBe(volumeTolerance)
-      // Each kind's figure agrees with inspect_model's, the same function —
-      // to float32 placement: the estimate takes the largest over a kind's
-      // instances, inspect_model reads one, and a bound summed over a placed
-      // mesh differs from the same mesh elsewhere in the ninth figure.
+      // Each kind's figure IS inspect_model's: both take the largest bound
+      // over a kind's instances (24th dogfood — one instance and the max
+      // over all of them disagreed in the ninth figure, float32 placement).
       const inspect = await call<InspectReport>('inspect_model', { path: AS1 })
       for (const entry of perKind) {
         const kind = inspect.kinds.find((k) => k.kind === entry.kind)!
-        expect(kind.tessellation.known && kind.tessellation.volumeTolerance).toBeCloseTo(entry.volumeTolerance, 7)
+        expect(kind.tessellation.known && kind.tessellation.volumeTolerance).toBe(entry.volumeTolerance)
       }
     })
 

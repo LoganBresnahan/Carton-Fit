@@ -260,6 +260,15 @@ export function bothLimitsProven(
   )
 }
 
+/** The weight of ONE unit a max-quantity count replicates — the parts the
+ *  request packs, summed. What "one more would exceed the weight cap" is
+ *  checked against; the exports print it as "9.183 lb each" and the wire
+ *  carries it as `outcome.unitWeight` (24th dogfood, ADR-0029 amendment 27),
+ *  where a reader had been dividing packedWeight by count to get it. */
+export function unitWeightG(request: PackRequest): number {
+  return request.parts.reduce((sum, part) => sum + part.weightG, 0)
+}
+
 /** Which hard constraint bound the result — ADR-0004 requires stating it. */
 export function bindingLabel(binding: BindingConstraint): string {
   return binding === 'weight' ? 'weight' : 'space'
@@ -609,8 +618,7 @@ export function utilizationPercent(utilization: number): string {
  */
 export function packedWeightG(result: PackResult, request: PackRequest): number {
   if (result.mode === 'max-quantity') {
-    const unitWeight = request.parts.reduce((sum, part) => sum + part.weightG, 0)
-    return result.count * unitWeight
+    return result.count * unitWeightG(request)
   }
   const weightByName = new Map<string, number>()
   for (const part of request.parts) weightByName.set(part.name, part.weightG)

@@ -527,6 +527,32 @@ describe('buildSummary', () => {
     expect(buildCsv(input({ result: single }))).toContain('Both limits,no')
   })
 
+  it('says where the weights came from, in the summary’s words (24th dogfood)', () => {
+    // "Unit weight (lb) 9.183" with no row naming density or mesh volume
+    // reads as weighed once pasted. The CSV now carries the summary's own
+    // phrase and each approximate kind's tolerance.
+    const band = {
+      approximateKinds: ['plate'],
+      volumeTolerance: 0.000158,
+      perKind: [{ kind: 'plate', volumeTolerance: 0.000158 }],
+      couldChangeCount: false,
+      couldChangeBinding: false
+    }
+    const density = settings({ weightMode: 'density', densityGPerCm3: 7.85 })
+    const csv = buildCsv(input({ settings: density, meshVolumes: band }))
+    const summary = buildSummary(input({ settings: density, meshVolumes: band }))
+    const phrase = 'density 7.85 g/cm³ × part volume (mesh volumes of curved faces, approximate either way: plate 0.02%)'
+    expect(csv).toContain(`Weight from,"${phrase}"`)
+    expect(summary).toContain(`Part weight: ${phrase}`)
+    expect(csv).toContain('Volume tolerance: plate,0.02%')
+    // Entered directly: the phrase says so, and no tolerance row exists.
+    const direct = buildCsv(input({ settings: settings({ weightMode: 'direct', partWeightG: 4536, partWeightUnit: 'lb' }) }))
+    expect(direct).toContain('Weight from,"10 lb per part, entered directly"')
+    expect(direct).not.toContain('Volume tolerance')
+    // No weight at all: the row says none given, like the summary's line.
+    expect(buildCsv(input({ request: request({ maxWeightG: Infinity, parts: [] }) }))).toContain('Weight from,')
+  })
+
   it('carries the band as a CSV row beside the limit rows (23rd dogfood)', () => {
     const band = {
       approximateKinds: ['plate'],
